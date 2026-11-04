@@ -369,6 +369,33 @@
       }).then(function () { b.disabled = false; });
     };
 
+    // Pide el código de 6 dígitos de la app de autenticación y sube la sesión a dos pasos
+    function mfaStep(msg) {
+      return new Promise(function (done) {
+        var f = $("pw-form"), box = document.getElementById("pw-mfa");
+        if (!box) {
+          box = document.createElement("div"); box.id = "pw-mfa"; box.className = "pw-mfa";
+          box.innerHTML = '<p><b>' + (lang() === "es" ? "Verificación en dos pasos" : "Two-step verification") + '</b><br>' +
+            (lang() === "es" ? "Tu cuenta tiene verificación en dos pasos. Escribe el código de 6 dígitos de tu app de autenticación para guardar la nueva contraseña." : "Your account uses two-step verification. Enter the 6-digit code from your authenticator app to save the new password.") +
+            '</p><input id="pw-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456"><button type="button" class="btn gold" id="pw-code-go">' + (lang() === "es" ? "Verificar y guardar" : "Verify and save") + "</button>";
+          f.appendChild(box);
+        }
+        box.hidden = false; say(msg, ""); var inp = $("pw-code"); inp.value = ""; inp.focus();
+        $("pw-code-go").onclick = async function () {
+          var code = inp.value.replace(/\D/g, "");
+          if (code.length !== 6) { say(msg, lang() === "es" ? "Escribe los 6 dígitos." : "Enter the 6 digits.", "err"); return; }
+          try {
+            var fl = await sb.auth.mfa.listFactors();
+            var fac = fl.data && ((fl.data.totp || [])[0] || (fl.data.all || []).filter(function (x) { return x.status === "verified"; })[0]);
+            if (!fac) { say(msg, "m_err", "err"); return done(false); }
+            var v = await sb.auth.mfa.challengeAndVerify({ factorId: fac.id, code: code });
+            if (v.error) { say(msg, lang() === "es" ? "Código incorrecto. Revisa la app e inténtalo otra vez." : "Wrong code. Check the app and try again.", "err"); return; }
+            box.hidden = true; done(true);
+          } catch (x) { say(msg, "m_err", "err"); done(false); }
+        };
+      });
+    }
+
     $("pw-form").addEventListener("submit", async function (e) {
       e.preventDefault();
       var a = $("pw-1").value, b2 = $("pw-2").value, msg = $("pw-msg"), b = this.querySelector("[type=submit]");
@@ -377,6 +404,12 @@
       b.disabled = true; say(msg, "m_loading");
       try {
         var r = await sb.auth.updateUser({ password: a });
+        // Cuentas con verificación en dos pasos: Supabase pide el código antes de cambiar la contraseña
+        if (r.error && /aal|mfa|factor/i.test((r.error.code || "") + " " + (r.error.message || ""))) {
+          var ok2 = await mfaStep(msg);
+          if (!ok2) { b.disabled = false; return; }
+          r = await sb.auth.updateUser({ password: a });
+        }
         if (r.error) {
           var code = (r.error.code || "") + " " + (r.error.message || "");
           say(msg, /same/i.test(code) ? "pw_same" : /weak|short|characters/i.test(code) ? "pw_short" : "m_err", "err");
