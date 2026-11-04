@@ -679,18 +679,19 @@
   function memberArea() {
     var c = sb(); if (!c) return;
     c.auth.getSession().then(function (r) {
-      $$(".kx-staffbtn").forEach(function (b) { b.remove(); }); var old = $("#kx-mbox"); if (old) old.remove();
+      $$(".kx-staffbtn, .kx-none-acts").forEach(function (b) { b.remove(); }); var old = $("#kx-mbox"); if (old) old.remove();
       if (!r.data || !r.data.session) return;
       c.rpc("staff_me").then(function (x) {
         if (x.data && x.data.roles && x.data.roles.length) {
           var btn = '<a class="btn gold kx-staffbtn" href="#/staff">' + xx("Panel del equipo", "Team panel") + "</a>";
           var out = $("#m-in .mhead .m-out");
           if (out && !$("#m-in .kx-staffbtn")) { if (!out.parentNode.classList.contains("kx-acts")) { var w = document.createElement("div"); w.className = "kx-acts"; out.parentNode.insertBefore(w, out); w.appendChild(out); } out.insertAdjacentHTML("beforebegin", btn); }
-          var nf = $("#m-none .form"); if (nf && !$(".kx-staffbtn", nf)) {
+          var nf = $("#m-none .form"); if (nf && !$(".kx-none-acts", nf)) {
             var h3 = $("h3", nf), p = $("p.sub", nf);
             if (h3) { h3.removeAttribute("data-i"); h3.textContent = xx("Todavía no tienes credencial de miembro", "You don't have a member credential yet"); }
             if (p) { p.removeAttribute("data-i"); p.textContent = xx("Tu cuenta del equipo ya está activa. Cuando llenes tu aplicación y quede aprobada, tu credencial aparecerá aquí.", "Your team account is active. Once you fill out your application and it is approved, your credential will appear here."); }
-            nf.insertAdjacentHTML("beforeend", '<div class="kx-acts" style="margin-top:14px">' + btn + '<a class="btn navy" href="#/apply">' + xx("Llenar mi aplicación", "Fill out my application") + "</a></div>");
+            var outb = $(".m-out", nf), acts = '<div class="kx-acts kx-none-acts" style="margin:6px 0 14px">' + btn.replace('class="btn gold kx-staffbtn"', 'class="btn gold"') + '<a class="btn navy" href="#/apply">' + xx("Llenar mi aplicación", "Fill out my application") + "</a></div>";
+            if (outb) outb.insertAdjacentHTML("beforebegin", acts); else nf.insertAdjacentHTML("beforeend", acts);
           }
         }
       });
