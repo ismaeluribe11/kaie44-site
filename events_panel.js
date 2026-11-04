@@ -56,9 +56,12 @@
       function row(e) {
         var team = (e.team || []).slice(0, 5).map(function (n) { return "<span title=\"" + esc(n) + "\">" + esc(initials(n)) + "</span>"; }).join("");
         var isPast = new Date(e.starts_at).getTime() <= now - 6 * 3600e3;
-        return '<a class="pe-ev" href="#/staff/event/' + e.id + '">' + cal(e.starts_at) + "<div><h4>" + esc(ttl(e)) + "</h4><p>" + esc(ldate(e.starts_at)) + " · " + esc(ltime(e.starts_at)) + (e.venue ? " · " + esc(e.venue) : "") + "</p></div>" +
-          '<div class="pe-m"><small>' + (isPast ? xx("Asistencia", "Attendance") : xx("Registrados", "Registered")) + "</small><b>" + (isPast ? e.arrived + xx(" de ", " of ") + e.people : e.people) + "</b> <span>" + (isPast ? (e.people ? "· " + Math.round(100 * e.arrived / e.people) + "%" : "") : xx("personas · ", "people · ") + e.adults + xx(" adultos · ", " adults · ") + e.minors + xx(" menores", " minors")) + '</span><div class="pe-pb"><i style="width:' + (isPast ? (e.people ? 100 * e.arrived / e.people : 0) : (e.capacity ? Math.min(100, 100 * e.people / e.capacity) : Math.min(100, e.people))) + '%"></i></div></div>' +
-          xx("<div class=\"pe-m\"><small>Equipo</small><div class=\"pe-team\">", "<div class=\"pe-m\"><small>Team</small><div class=\"pe-team\">") + (team || xx("<em>Sin asignar</em>", "<em>Unassigned</em>")) + "</div></div><div>" + pill(e) + (e.unpaid ? '<div class="pe-due">' + e.unpaid + xx(" pago(s) pendiente(s)</div>", " pending payment(s)</div>") : "") + '</div><div class="pe-go">›</div></a>';
+        var pct = isPast ? (e.people ? 100 * e.arrived / e.people : 0) : (e.capacity ? Math.min(100, 100 * e.people / e.capacity) : Math.min(100, e.people));
+        var capL = isPast ? "<span><b>" + e.arrived + "</b>" + xx(" de ", " of ") + e.people + xx(" llegaron", " arrived") + "</span><span>" + (e.people ? Math.round(pct) + "%" : "") + "</span>"
+          : "<span><b>" + e.people + "</b>" + xx(" registrados", " registered") + "</span><span>" + (e.capacity ? e.capacity + xx(" lugares", " spots") : e.adults + xx(" adultos · ", " adults · ") + e.minors + xx(" menores", " minors")) + "</span>";
+        return '<a class="pe-card" href="#/staff/event/' + e.id + '"><div class="pc-ph' + (e.photo_url ? "" : " none") + '"' + (e.photo_url ? ' style="background-image:url(\'' + esc(e.photo_url) + '\')"' : "") + '><div class="pc-dt"><small>' + esc(la(e.starts_at, { month: "short" }).replace(".", "").toUpperCase()) + "</small><b>" + esc(la(e.starts_at, { day: "numeric" })) + '</b></div><div class="pc-ps">' + pill(e) + "</div></div>" +
+          '<div class="pc-bd"><h4>' + esc(ttl(e)) + "</h4><p>" + esc(ldate(e.starts_at)) + " · " + esc(ltime(e.starts_at)) + (e.venue ? " · " + esc(e.venue) : "") + '</p><div class="pc-cap">' + capL + '</div><div class="pe-pb"><i style="width:' + pct + '%"></i></div>' +
+          '<div class="pc-ft"><div class="pe-team">' + (team || "<em>" + xx("Sin equipo asignado", "No team assigned") + "</em>") + "</div>" + (e.unpaid ? '<span class="pe-due">' + e.unpaid + xx(" pago(s) pendiente(s)", " pending payment(s)") + "</span>" : "") + '<span class="pc-lk">' + xx("Abrir", "Open") + " ›</span></div></div></a>";
       }
       show.forEach(function (e) {
         if (e.series && !seen[e.series]) {
@@ -71,7 +74,7 @@
       K.put(K.hero("events", xx("Panel del equipo", "Team panel"), xx("Eventos", "Events")) + K.body(kpi +
         '<div class="pe-bar"><div class="pe-flt">' + [["next", xx("Próximos", "Upcoming"), up.length], ["past", xx("Pasados", "Past"), past.length], ["draft", xx("Borradores", "Drafts"), drafts.length]].map(function (x) { return '<a href="#/staff/events/' + x[0] + '"' + (f === x[0] ? ' class="on"' : "") + ">" + x[1] + " (" + x[2] + ")</a>"; }).join("") + "</div>" +
         (can ? xx("<a class=\"btn gold pe-btn\" href=\"#/staff/event/new\">+ Nuevo evento</a>", "<a class=\"btn gold pe-btn\" href=\"#/staff/event/new\">+ New event</a>") : "") + "</div>" +
-        (html || '<div class="pe-empty">' + (f === "draft" ? xx("No hay borradores.", "No drafts.") : f === "past" ? xx("Todavía no hay eventos pasados.", "No past events yet.") : xx("No hay eventos próximos.", "No upcoming events.") + (can ? xx(" <a href=\"#/staff/event/new\">Crear un evento</a>", " <a href=\"#/staff/event/new\">Create an event</a>") : "")) + "</div>")));
+        (html ? '<div class="pe-cards">' + html + "</div>" : '<div class="pe-empty">' + (f === "draft" ? xx("No hay borradores.", "No drafts.") : f === "past" ? xx("Todavía no hay eventos pasados.", "No past events yet.") : xx("No hay eventos próximos.", "No upcoming events.") + (can ? xx(" <a href=\"#/staff/event/new\">Crear un evento</a>", " <a href=\"#/staff/event/new\">Create an event</a>") : "")) + "</div>")));
     }).catch(function (e) { K.put(K.hero0(xx("No pudimos cargar los eventos", "We couldn't load the events"), esc(K.errMsg(e)))); });
   }
 

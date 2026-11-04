@@ -128,10 +128,46 @@
   function hero(cur, eyebrow, title, sub, back) {
     var roles = (ST.me.roles || []).map(function (r) { return '<span class="st-role">' + ROLE_N[r] + "</span>"; }).join(" ");
     return '<div class="hero sm st-hero"><div class="wrap">' + (back ? '<a class="st-back" href="' + back[0] + '">‹ ' + back[1] + "</a>" : "") +
-      '<div class="eyebrow">' + esc(eyebrow) + "</div><h1>" + esc(title) + '</h1><div class="st-who">' + (sub != null ? sub : xx("<span>Hola, ", "<span>Hello, ") + esc(ST.me.name) + "</span>" + roles) + "</div>" + (back ? "" : tabs(cur)) + "</div></div>";
+      '<div class="eyebrow">' + esc(eyebrow) + "</div><h1>" + esc(title) + '</h1><div class="st-who">' + (sub != null ? sub : (back ? "" : '<span class="sx-hi">' + sxHello() + "</span>") + '<span class="sx-roles">' + roles + "</span>") + "</div>" + (back ? "" : tabs(cur)) + "</div></div>";
+  }
+  function sxHello() {
+    var h = new Date().getHours(), n = String((ST.me && ST.me.name) || "").split(" ")[0];
+    return (h < 12 ? xx("Buenos días", "Good morning") : h < 19 ? xx("Buenas tardes", "Good afternoon") : xx("Buenas noches", "Good evening")) + (n ? ", " + esc(n) : "") + ".";
   }
   function body(html) { return '<section class="st-body"><div class="wrap">' + html + "</div></section>"; }
-  function put(html) { if (ROOT) { ROOT.innerHTML = html; } }
+  /* ---------- menú lateral del panel ---------- */
+  var SX_ICO = {
+    inbox: "M4 13h4l2 3h4l2-3h4M4 13l2.5-8h11l2.5 8v6H4z", apps: "M9 12h6M9 16h6M7 3h7l5 5v13H7z",
+    members: "M9 4.5a3.5 3.5 0 1 1 0 7a3.5 3.5 0 0 1 0-7M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20c-.4-2.6-1.9-4.3-4-5",
+    needs: "M4 19V9M10 19V5M16 19v-7M22 19H2", care: "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z",
+    events: "M3 5h18v16H3zM16 3v4M8 3v4M3 10h18", cred: "M3 5h18v14H3zM14 10h4M14 14h3M9 9a2 2 0 1 1 0 4a2 2 0 0 1 0-4"
+  };
+  function sxCur() {
+    var p = (location.hash || "").replace(/^#\/?/, "").split("/"), v = p[1] || "";
+    return { app: "apps", member: "members", event: "events" }[v] || v || (has("president") ? "inbox" : has("admin", "membership", "care") ? "apps" : "members");
+  }
+  function shell(html) {
+    var ov = ST.ov || {}, apps = ov.apps || {}, cur = sxCur(), me = ST.me || {};
+    function it(k, label, n) { return '<a class="' + (cur === k ? "on" : "") + '" href="#/staff/' + k + '"><svg viewBox="0 0 24 24"><path d="' + SX_ICO[k] + '"/></svg><span>' + label + "</span>" + (n ? "<i>" + n + "</i>" : "") + "</a>"; }
+    var m = "";
+    if (has("president")) m += it("inbox", xx("Para su aprobación", "For your approval"), apps.recommended);
+    if (has("admin", "membership", "president", "care")) m += it("apps", xx("Aplicaciones", "Applications"), apps["new"] || 0);
+    m += it("members", xx("Miembros", "Members"), ov.members_total);
+    if (has("admin", "membership", "president", "care")) m += it("needs", xx("Necesidades", "Needs"), null);
+    if (has("care")) m += it("care", xx("Cuidado pastoral", "Pastoral care"), ov.care);
+    var roles = (me.roles || []).map(function (r) { return String(ROLE_N[r] || r); }).join(" · ");
+    return '<div class="sx"><aside class="sx-side"><div class="sx-in"><div class="sx-me"><div class="sx-av">' + esc(ini(me.name)) + '</div><div><b>' + esc(me.name || "") + "</b><span>" + esc(roles) + "</span></div></div>" +
+      '<div class="sx-nav"><div class="sx-lbl">' + xx("Membresía", "Membership") + "</div>" + m +
+      '<div class="sx-lbl">' + xx("Actividades", "Activities") + "</div>" + it("events", xx("Eventos", "Events"), null) +
+      '<div class="sx-lbl">' + xx("Yo", "Me") + '</div><a href="#/membership"><svg viewBox="0 0 24 24"><path d="' + SX_ICO.cred + '"/></svg><span>' + xx("Mi credencial", "My credential") + "</span></a></div></div></aside>" +
+      '<div class="sx-main">' + html + "</div></div>";
+  }
+  function put(html) {
+    if (!ROOT) return;
+    var h = (location.hash || "").replace(/^#\/?/, ""), me = ST.me;
+    if (me && me.aal === "aal2" && me.roles && me.roles.length && /^staff(\/|$)/.test(h) && html.indexOf("st-hero") >= 0) html = shell(html);
+    ROOT.innerHTML = html;
+  }
   function loading(cur, title) { put(hero(cur, xx("Panel del equipo", "Team panel"), title) + body(xx("<p class=\"st-wait\">Cargando…</p>", "<p class=\"st-wait\">Loading…</p>"))); }
 
   /* ---------- acceso: sesión, rol y verificación en dos pasos ---------- */
