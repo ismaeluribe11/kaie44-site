@@ -25,8 +25,11 @@
   function ftime(iso) { try { return new Date(iso).toLocaleTimeString(lang() === "es" ? "es-US" : "en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" }).replace(/\s?a\.\s?m\./, " a.m.").replace(/\s?p\.\s?m\./, " p.m."); } catch (e) { return ""; } }
   function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
   function money(n) { n = +n || 0; return "$" + (n % 1 ? n.toFixed(2) : n.toFixed(0)); }
-  function title(e) { return lang() === "en" && e.title_en ? e.title_en : e.title; }
-  function desc(e) { return lang() === "en" && e.description_en ? e.description_en : e.description; }
+  // Texto según el idioma elegido; si falta en ese idioma, se usa el otro
+  function pick(es, en) { return lang() === "en" ? (en || es || "") : (es || en || ""); }
+  function title(e) { return pick(e.title, e.title_en); }
+  function desc(e) { return pick(e.description, e.description_en); }
+  function arrive(e) { return pick(e.arrive_note, e.arrive_note_en); }
   function paid(e) { return (+e.price_adult || 0) > 0 || (+e.price_child || 0) > 0; }
   function mapsUrl(a) { return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(a || ""); }
   function errText(e) {
@@ -141,7 +144,7 @@
   }
   function renderEvent() {
     var e = EV, m = ME && ME.m, other = (e.other || [])[0], cty = e.courtesy;
-    var info = '<div class="evd-in"><div>' + IC.cal + '<p><b>' + esc(cap(fdate(e.starts_at))) + "</b><span>" + esc(ftime(e.starts_at)) + (e.ends_at ? " – " + esc(ftime(e.ends_at)) : "") + (e.arrive_note ? " · " + esc(e.arrive_note) : "") + "</span></p></div>" +
+    var info = '<div class="evd-in"><div>' + IC.cal + '<p><b>' + esc(cap(fdate(e.starts_at))) + "</b><span>" + esc(ftime(e.starts_at)) + (e.ends_at ? " – " + esc(ftime(e.ends_at)) : "") + (arrive(e) ? " · " + esc(arrive(e)) : "") + "</span></p></div>" +
       (e.venue || e.address ? "<div>" + IC.pin + "<p><b>" + esc(e.venue || "") + "</b><span>" + esc(e.address || "") + "</span></p></div>" : "") +
       (paid(e) ? "<div>" + IC.tag + "<p><b>" + money(e.price_adult) + " " + T("por adulto", "per adult") + (+e.price_child ? " · " + money(e.price_child) + " " + T("por menor", "per minor") : "") + "</b><span>" + T("Pago por Zelle al registrarte", "Pay by Zelle after registering") + "</span></p></div>" : "") +
       "<div>" + IC.ppl + "<p><b>" + (e.audience === "members" ? T("Solo miembros de KAI", "KAI members only") : T("Pastores, cónyuges, familias e invitados", "Pastors, spouses, families and guests")) + "</b><span>" + (e.left != null ? e.left + " " + T("lugares disponibles", "spots left") : T("Confirma cuántas personas vienen contigo", "Tell us who is coming with you")) + "</span></p></div></div>";
@@ -170,11 +173,11 @@
       '<div class="eyebrow evd-ey">' + esc(cap(fdate(e.starts_at))) + "</div><h2>" + esc(title(e)) + "</h2>" +
       (e.photo_url ? '<div class="evd-ph" style="background-image:url(' + esc(e.photo_url) + ')"></div>' : "") +
       (desc(e) ? '<p class="evd-desc">' + esc(desc(e)).replace(/\n/g, "<br>") + "</p>" : "") + info + map +
-      (other ? '<p class="evd-other">' + T("¿Te queda más cerca otra zona?", "Is another location closer?") + ' <a class="evx-lnk" href="#/ev/' + esc(other.slug) + (e.code ? "?c=" + esc(e.code) : "") + '">' + esc(other.title) + " · " + esc(fdate(other.starts_at, { weekday: "long", day: "numeric", month: "long" })) + " →</a></p>" : "") +
+      (other ? '<p class="evd-other">' + T("¿Te queda más cerca otra zona?", "Is another location closer?") + ' <a class="evx-lnk" href="#/ev/' + esc(other.slug) + (e.code ? "?c=" + esc(e.code) : "") + '">' + esc(pick(other.title, other.title_en)) + " · " + esc(fdate(other.starts_at, { weekday: "long", day: "numeric", month: "long" })) + " →</a></p>" : "") +
       "</div><div id=\"rsvp-col\">" + form + "</div></div></div></section>");
     if (e.preview) {
-      var st = { draft: "BORRADOR · el público todavía no ve este evento", published: "PUBLICADO · así lo ve el público", closed: "REGISTRO CERRADO", cancelled: "CANCELADO · el público no lo ve" }[e.status] || e.status;
-      var sec = $(".evd-s"); if (sec) sec.insertAdjacentHTML("afterbegin", '<div class="evx-prev"><b>👁 Vista previa</b> · ' + esc(st) + '. El formulario no guarda registros en esta vista. <a href="#" onclick="window.close();return false">Cerrar</a></div>');
+      var st = { draft: T("BORRADOR · el público todavía no ve este evento", "DRAFT · the public cannot see this event yet"), published: T("PUBLICADO · así lo ve el público", "PUBLISHED · this is what the public sees"), closed: T("REGISTRO CERRADO", "REGISTRATION CLOSED"), cancelled: T("CANCELADO · el público no lo ve", "CANCELLED · the public cannot see it") }[e.status] || e.status;
+      var sec = $(".evd-s"); if (sec) sec.insertAdjacentHTML("afterbegin", '<div class="evx-prev"><b>👁 ' + T("Vista previa", "Preview") + "</b> · " + esc(st) + ". " + T("Cambia el idioma arriba para revisar las dos versiones. El formulario no guarda registros en esta vista.", "Switch the language at the top to check both versions. The form does not save registrations in this view.") + ' <a href="#" onclick="window.close();return false">' + T("Cerrar", "Close") + "</a></div>");
     }
     var f = $("#rsvp"); if (!f) return;
     var ng = $("#ev-ng");
@@ -194,7 +197,7 @@
       if (!p.phone) return (msg.textContent = T("Escribe tu teléfono.", "Enter your phone."));
       if (!p.city || !p.state) return (msg.textContent = T("Escribe tu ciudad y estado.", "Enter your city and state."));
       if (p.guests.some(function (g) { return !g.first_name || !g.last_name; })) return (msg.textContent = errText("missing_guest_name"));
-      if (EV.preview) { msg.textContent = "Vista previa: el formulario funciona, pero aquí no se guarda ningún registro."; return; }
+      if (EV.preview) { msg.textContent = T("Vista previa: el formulario funciona, pero aquí no se guarda ningún registro.", "Preview: the form works, but no registration is saved here."); return; }
       msg.textContent = ""; btn.disabled = true; btn.textContent = T("Enviando…", "Sending…");
       rpc("ev_register", { p_slug: EV.slug, p: p }).then(function (r) { kick(); location.hash = "#/evr/" + r.token; })
         .catch(function (er) { msg.textContent = errText(er); btn.disabled = false; renderTotals(); });

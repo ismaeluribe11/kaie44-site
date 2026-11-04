@@ -213,54 +213,60 @@
 
   /* ---------- CREAR / EDITAR ---------- */
   var TASKS = ["Coordinador(a)", "Mesa de registro", "Bienvenida", "Alabanza", "Comida"];
+  var TASK_EN = { "Coordinador(a)": "Coordinator", "Mesa de registro": "Registration desk", "Bienvenida": "Welcome", "Alabanza": "Worship", "Comida": "Food" };
+  function taskName(t) { return TASK_EN[t] || t; }
   function edit(x) {
     if (!K.has("admin", "president")) { K.put(K.denied()); return; }
     var load = x ? Promise.resolve(x) : K.rpc("ev_staff_options").catch(function () { return null; });
     load.then(function (y) {
-      var e = (x && x.event) || { status: "draft", audience: "open", max_guests: 10, pay_zelle: true, courtesy_per_board: 4, arrive_note: "Por favor llega 15 minutos antes.", eval_enabled: true, price_adult: 0, price_child: 0 };
+      var e = (x && x.event) || { status: "draft", audience: "open", max_guests: 10, pay_zelle: true, courtesy_per_board: 4, arrive_note: "Por favor llega 15 minutos antes.", arrive_note_en: "Please arrive 15 minutes early.", eval_enabled: true, price_adult: 0, price_child: 0 };
       var opts = (x && x.team_options) || (y && y.team_options) || [], series = (x && x.series_options) || (y && y.series_options) || [];
       var S = {}; TASKS.forEach(function (t) { S[t] = []; }); ((x && x.staff) || []).forEach(function (s) { (S[s.task] = S[s.task] || []).push(s.email); });
       var st = parts(e.starts_at), en = parts(e.ends_at), paidEv = (+e.price_adult || 0) > 0 || (+e.price_child || 0) > 0;
       function f(l, inner, cls) { return '<div class="pe-f' + (cls ? " " + cls : "") + '"><small>' + l + "</small>" + inner + "</div>"; }
       function inp(n, v, t, ph) { return '<input class="st-in" name="' + n + '" type="' + (t || "text") + '" value="' + esc(v == null ? "" : v) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : "") + ">"; }
+      function pair(l, a, b) { return '<div class="pe-pair"><div class="pe-pl">' + l + '</div><div class="g2">' + f('<span class="pe-lg">EN</span> English', a) + f('<span class="pe-lg">ES</span> Spanish', b) + '</div></div>'; }
+      function ta(n, v) { return '<textarea class="st-in" name="' + n + '" rows="3">' + esc(v || "") + "</textarea>"; }
       function rad(n, v, o) { return '<div class="rad" data-r="' + n + '">' + o.map(function (q) { return '<button type="button" data-v="' + q[0] + '"' + (String(v) === String(q[0]) ? ' class="on"' : "") + ">" + q[1] + "</button>"; }).join("") + "</div>"; }
       var html = '<form id="pe-form" class="pe-form" novalidate><div>' +
-        '<div class="pe-sec"><h3>Información del evento</h3><div class="in">' + f("Nombre del evento", inp("title", e.title, "text", "Convivio Navideño KAI · Zona San Diego")) +
-        f("Serie (opcional)", '<input class="st-in" name="series" list="pe-series" value="' + esc(e.series || "") + '" placeholder="Ej. Convivio Navideño 2026"><datalist id="pe-series">' + series.filter(Boolean).map(function (s) { return '<option value="' + esc(s) + '">'; }).join("") + "</datalist>") +
-        '<div class="g3">' + f("Fecha", inp("date", st.date, "date")) + f("Empieza", inp("time", st.time || "17:00", "time")) + f("Termina", inp("end", en.time, "time")) + "</div>" +
-        f("Descripción", '<textarea class="st-in" name="description" rows="3">' + esc(e.description || "") + "</textarea>") +
-        '<details class="pe-en"><summary>Versión en inglés (opcional)</summary>' + f("Nombre en inglés", inp("title_en", e.title_en)) + f("Descripción en inglés", '<textarea class="st-in" name="description_en" rows="3">' + esc(e.description_en || "") + "</textarea>") + "</details>" +
-        f("Foto", '<div class="pe-photo" id="pe-ph" style="' + (e.photo_url ? "background-image:url(" + esc(e.photo_url) + ")" : "") + '"><div class="pe-phb"><button type="button" class="pe-phbtn" id="pe-adj"' + (e.photo_url ? "" : " hidden") + '>✥ Ajustar foto</button><label class="pe-phbtn">' + (e.photo_url ? "Cambiar foto" : "Subir foto") + '<input type="file" accept="image/*" id="pe-file" hidden></label></div></div><input type="hidden" name="photo_url" value="' + esc(e.photo_url || "") + '"><input type="hidden" name="photo_orig" value="' + esc(e.photo_orig || "") + '"><input type="hidden" name="photo_pos" value="' + esc(e.photo_pos ? JSON.stringify(e.photo_pos) : "") + '">') +
+        '<div class="pe-note-lang">The public page has an <b>English / Español</b> switch. Fill in both languages so everything changes when visitors switch. If a Spanish or English box is left empty, the other language is shown instead.</div>' +
+        '<div class="pe-sec"><h3>Event details</h3><div class="in">' +
+        pair("Event title *", inp("title_en", e.title_en, "text", "KAI Christmas Gathering · San Diego"), inp("title", e.title, "text", "Convivio Navideño KAI · Zona San Diego")) +
+        f("Series (optional)", '<input class="st-in" name="series" list="pe-series" value="' + esc(e.series || "") + '" placeholder="e.g. Convivio Navideño 2026"><datalist id="pe-series">' + series.filter(Boolean).map(function (s) { return '<option value="' + esc(s) + '">'; }).join("") + "</datalist>" + '<span class="pe-hint">Groups related events (for example, the same event in two locations) so their reports can be compared. Only the team sees it.</span>') +
+        '<div class="g3">' + f("Date *", inp("date", st.date, "date")) + f("Starts *", inp("time", st.time || "17:00", "time")) + f("Ends", inp("end", en.time, "time")) + "</div>" +
+        pair("Description", ta("description_en", e.description_en), ta("description", e.description)) +
+        f("Photo", '<div class="pe-photo" id="pe-ph" style="' + (e.photo_url ? "background-image:url(" + esc(e.photo_url) + ")" : "") + '"><div class="pe-phb"><button type="button" class="pe-phbtn" id="pe-adj"' + (e.photo_url ? "" : " hidden") + '>✥ Adjust photo</button><label class="pe-phbtn">' + (e.photo_url ? "Change photo" : "Upload photo") + '<input type="file" accept="image/*" id="pe-file" hidden></label></div></div><input type="hidden" name="photo_url" value="' + esc(e.photo_url || "") + '"><input type="hidden" name="photo_orig" value="' + esc(e.photo_orig || "") + '"><input type="hidden" name="photo_pos" value="' + esc(e.photo_pos ? JSON.stringify(e.photo_pos) : "") + '">') +
         "</div></div>" +
-        '<div class="pe-sec"><h3>Lugar</h3><div class="in">' + f("Nombre del lugar", inp("venue", e.venue, "text", "Iglesia o salón")) + f("Dirección", inp("address", e.address, "text", "Calle, ciudad, estado y código postal")) +
-        '<div class="pe-mapp" id="pe-map">' + (e.address ? '<iframe loading="lazy" src="https://maps.google.com/maps?q=' + encodeURIComponent(e.address) + '&output=embed"></iframe>' : "El mapa aparece al escribir la dirección") + "</div>" + f("Nota de llegada", inp("arrive_note", e.arrive_note)) + "</div></div>" +
-        '<div class="pe-sec"><h3>Registro</h3><div class="in">' + f("¿Quién puede registrarse?", rad("audience", e.audience, [["open", "Abierto: miembros e invitados"], ["members", "Solo miembros"]])) +
-        '<div class="g3">' + f("Registro abierto hasta", inp("reg_until", e.reg_until, "date") + '<span class="pe-hint">Incluye todo ese día. Si lo deja vacío, se cierra a la hora en que empieza el evento.</span>') + f("Cupo máximo", inp("capacity", e.capacity, "number", "Sin límite")) + f("Invitados por persona", '<select class="st-in" name="max_guests">' + [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(function (n) { return "<option" + (+e.max_guests === n ? " selected" : "") + ' value="' + n + '">' + (n ? "Hasta " + n : "Sin invitados") + "</option>"; }).join("") + "</select>") + "</div>" +
-        (e.status === "cancelled" ? '<div class="pe-cx" style="margin-top:12px"><b>Evento cancelado.</b> Ya no se puede volver a publicar; si se reprograma, cree un evento nuevo.</div>' : f("Estado", rad("status", e.status, [["draft", "Borrador"], ["published", "Publicado"], ["closed", "Registro cerrado"]]))) + "</div></div>" +
-        '<div class="pe-sec"><h3>Costo</h3><div class="in">' + f("¿Tiene costo?", rad("paid", paidEv ? "1" : "0", [["0", "Gratis"], ["1", "Con costo"]])) +
-        '<div id="pe-cost"' + (paidEv ? "" : " hidden") + '><div class="g2">' + f("Precio por adulto", inp("price_adult", paidEv ? e.price_adult : "", "number", "20")) + f("Precio por menor", inp("price_child", paidEv ? e.price_child : "", "number", "10")) + "</div>" +
-        f("Formas de pago al registrarse", '<label class="pe-chk"><input type="checkbox" name="pay_zelle"' + (e.pay_zelle !== false ? " checked" : "") + "> Zelle</label><label class=\"pe-chk off\"><input type=\"checkbox\" name=\"pay_card\" disabled> Tarjeta (Stripe) · pronto</label>") +
-        f("Enlace de cortesía · personas por miembro del Board", inp("courtesy_per_board", e.courtesy_per_board, "number")) +
-        '<div class="note2"><b>Board KAI:</b> los 10 se registran sin costo automáticamente. <b>Pago en la puerta:</b> no se ofrece al registrarse; si alguien llega con pago pendiente, el equipo lo cobra en el check-in.</div></div></div></div>' +
+        '<div class="pe-sec"><h3>Location</h3><div class="in">' + f("Venue name", inp("venue", e.venue, "text", "Church or hall")) + f("Address", inp("address", e.address, "text", "Street, city, state and ZIP code")) +
+        '<div class="pe-mapp" id="pe-map">' + (e.address ? '<iframe loading="lazy" src="https://maps.google.com/maps?q=' + encodeURIComponent(e.address) + '&output=embed"></iframe>' : "The map appears when you type the address") + "</div>" +
+        pair("Arrival note", inp("arrive_note_en", e.arrive_note_en, "text", "Please arrive 15 minutes early."), inp("arrive_note", e.arrive_note, "text", "Por favor llega 15 minutos antes.")) + "</div></div>" +
+        '<div class="pe-sec"><h3>Registration</h3><div class="in">' + f("Who can register?", rad("audience", e.audience, [["open", "Open: members and guests"], ["members", "Members only"]])) +
+        '<div class="g3">' + f("Registration open until", inp("reg_until", e.reg_until, "date") + '<span class="pe-hint">Includes that whole day. If left empty, registration closes when the event starts.</span>') + f("Maximum capacity", inp("capacity", e.capacity, "number", "No limit")) + f("Guests per person", '<select class="st-in" name="max_guests">' + [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(function (n) { return "<option" + (+e.max_guests === n ? " selected" : "") + ' value="' + n + '">' + (n ? "Up to " + n : "No guests") + "</option>"; }).join("") + "</select>") + "</div>" +
+        (e.status === "cancelled" ? '<div class="pe-cx" style="margin-top:12px"><b>Event cancelled.</b> It can no longer be published again; if it is rescheduled, create a new event.</div>' : f("Status", rad("status", e.status, [["draft", "Draft"], ["published", "Published"], ["closed", "Registration closed"]]) + '<span class="pe-hint">Draft: only the team can see it (use the preview). Published: it appears on the Events page and registration opens.</span>')) + "</div></div>" +
+        '<div class="pe-sec"><h3>Cost</h3><div class="in">' + f("Is there a cost?", rad("paid", paidEv ? "1" : "0", [["0", "Free"], ["1", "Paid"]])) +
+        '<div id="pe-cost"' + (paidEv ? "" : " hidden") + '><div class="g2">' + f("Price per adult", inp("price_adult", paidEv ? e.price_adult : "", "number", "20")) + f("Price per minor", inp("price_child", paidEv ? e.price_child : "", "number", "10")) + "</div>" +
+        f("Payment methods at registration", '<label class="pe-chk"><input type="checkbox" name="pay_zelle"' + (e.pay_zelle !== false ? " checked" : "") + "> Zelle</label><label class=\"pe-chk off\"><input type=\"checkbox\" name=\"pay_card\" disabled> Card (Stripe) · coming soon</label>") +
+        f("Courtesy link · people per Board member", inp("courtesy_per_board", e.courtesy_per_board, "number")) +
+        '<div class="note2"><b>KAI Board:</b> the 10 Board members register at no cost automatically. <b>Pay at the door:</b> not offered at registration; if someone arrives with a pending payment, the team collects it at check-in.</div></div></div></div>' +
         "</div><div>" +
-        '<div class="pe-sec"><h3>Equipo asignado</h3><div class="in" id="pe-team"></div></div>' +
-        '<div class="pe-sec"><h3>Después del evento</h3><div class="in"><label class="pe-chk"><input type="checkbox" name="eval_enabled"' + (e.eval_enabled !== false ? " checked" : "") + "> Enviar la evaluación anónima a los 10 del Board al día siguiente (10:00 a.m.)</label></div></div>" +
-        '<div class="pe-sec"><h3>Correos automáticos</h3><div class="in"><div class="rem"><span>Confirmación al registrarse</span><span class="pe-pill g">Activo</span></div><div class="rem"><span>Recordatorio · 4 días antes</span><span class="pe-pill g">Activo</span></div><div class="rem"><span>Recordatorio · 2 días antes</span><span class="pe-pill g">Activo</span></div><div class="rem"><span>Recordatorio · el mismo día, 9:00 a.m.</span><span class="pe-pill g">Activo</span></div></div></div>' +
-        '<p class="st-msg" id="pe-m"></p><div class="pe-save"><a class="btn navy" href="' + (x ? "#/staff/event/" + e.id : "#/staff/events") + '">Cancelar</a><button class="btn ol" type="button" id="pe-prev">Guardar y ver vista previa</button><button class="btn gold" type="submit">' + (x ? "Guardar cambios" : "Crear evento") + "</button></div></div></form>";
-      K.put(K.hero(null, x ? "Editar evento" : "Eventos", x ? e.title : "Nuevo evento", null, [x ? "#/staff/event/" + e.id : "#/staff/events", x ? "Evento" : "Eventos"]) + K.body(html));
+        '<div class="pe-sec"><h3>Assigned team</h3><div class="in" id="pe-team"></div></div>' +
+        '<div class="pe-sec"><h3>After the event</h3><div class="in"><label class="pe-chk"><input type="checkbox" name="eval_enabled"' + (e.eval_enabled !== false ? " checked" : "") + "> Send the anonymous evaluation to the 10 Board members the next day (10:00 a.m.)</label></div></div>" +
+        '<div class="pe-sec"><h3>Automatic emails</h3><div class="in"><div class="rem"><span>Confirmation at registration</span><span class="pe-pill g">Active</span></div><div class="rem"><span>Reminder · 4 days before</span><span class="pe-pill g">Active</span></div><div class="rem"><span>Reminder · 2 days before</span><span class="pe-pill g">Active</span></div><div class="rem"><span>Reminder · same day, 9:00 a.m.</span><span class="pe-pill g">Active</span></div><p class="st-muted" style="margin:8px 0 0">Each person receives the emails in the language they registered in.</p></div></div>' +
+        '<p class="st-msg" id="pe-m"></p><div class="pe-save"><a class="btn navy" href="' + (x ? "#/staff/event/" + e.id : "#/staff/events") + '">Cancel</a><button class="btn ol" type="button" id="pe-prev">Save and preview</button><button class="btn gold" type="submit">' + (x ? "Save changes" : "Create event") + "</button></div></div></form>";
+      K.put(K.hero(null, x ? "Edit event" : "Events", x ? (e.title_en || e.title) : "New event", null, [x ? "#/staff/event/" + e.id : "#/staff/events", x ? "Event" : "Events"]) + K.body(html));
       var F = $("#pe-form"), R = { audience: e.audience, status: e.status, paid: paidEv ? "1" : "0" };
       $$("[data-r]", F).forEach(function (g) { $$("button", g).forEach(function (b) { b.onclick = function () { R[g.dataset.r] = b.dataset.v; $$("button", g).forEach(function (z) { z.classList.toggle("on", z === b); }); if (g.dataset.r === "paid") $("#pe-cost").hidden = b.dataset.v !== "1"; }; }); });
       function drawTeam() {
         $("#pe-team").innerHTML = Object.keys(S).map(function (t) {
-          return '<div class="asg" data-t="' + esc(t) + '"><b>' + esc(t) + '</b><div class="chips">' + S[t].map(function (em) { var o = opts.filter(function (z) { return z.email === em; })[0]; return '<span>' + esc(o ? o.name : em) + ' <button type="button" data-rm="' + esc(em) + '" aria-label="Quitar">×</button></span>'; }).join("") +
-            '<select class="pe-add"><option value="">+ Agregar</option>' + opts.filter(function (o) { return S[t].indexOf(o.email) < 0; }).map(function (o) { return '<option value="' + esc(o.email) + '">' + esc(o.name) + "</option>"; }).join("") + "</select></div></div>";
-        }).join("") + '<div class="asg"><input class="st-in" id="pe-nt" placeholder="+ Otra tarea (ej. Niños, Sonido)"></div><p class="st-muted" style="margin:10px 0 0">Al publicar, cada persona recibe un correo con su asignación.</p>';
+          return '<div class="asg" data-t="' + esc(t) + '"><b>' + esc(taskName(t)) + '</b><div class="chips">' + S[t].map(function (em) { var o = opts.filter(function (z) { return z.email === em; })[0]; return '<span>' + esc(o ? o.name : em) + ' <button type="button" data-rm="' + esc(em) + '" aria-label="Remove">×</button></span>'; }).join("") +
+            '<select class="pe-add"><option value="">+ Add</option>' + opts.filter(function (o) { return S[t].indexOf(o.email) < 0; }).map(function (o) { return '<option value="' + esc(o.email) + '">' + esc(o.name) + "</option>"; }).join("") + "</select></div></div>";
+        }).join("") + '<div class="asg"><input class="st-in" id="pe-nt" placeholder="+ Another task (e.g. Kids, Sound) · press Enter"></div><p class="st-muted" style="margin:10px 0 0">When the event is published, each person receives an email with their assignment.</p>';
         $$("#pe-team .pe-add").forEach(function (s) { s.onchange = function () { var t = s.closest(".asg").dataset.t; if (s.value) { S[t].push(s.value); drawTeam(); } }; });
         $$("#pe-team [data-rm]").forEach(function (b) { b.onclick = function () { var t = b.closest(".asg").dataset.t; S[t] = S[t].filter(function (z) { return z !== b.dataset.rm; }); drawTeam(); }; });
         var nt = $("#pe-nt"); nt.onkeydown = function (ev) { if (ev.key === "Enter") { ev.preventDefault(); var v = nt.value.trim(); if (v && !S[v]) { S[v] = []; drawTeam(); } } };
       }
       drawTeam();
-      var adr = F.elements.address, mt = null; adr.oninput = function () { clearTimeout(mt); mt = setTimeout(function () { var v = adr.value.trim(); $("#pe-map").innerHTML = v.length > 8 ? '<iframe loading="lazy" src="https://maps.google.com/maps?q=' + encodeURIComponent(v) + '&output=embed"></iframe>' : "El mapa aparece al escribir la dirección"; }, 700); };
+      var adr = F.elements.address, mt = null; adr.oninput = function () { clearTimeout(mt); mt = setTimeout(function () { var v = adr.value.trim(); $("#pe-map").innerHTML = v.length > 8 ? '<iframe loading="lazy" src="https://maps.google.com/maps?q=' + encodeURIComponent(v) + '&output=embed"></iframe>' : "The map appears when you type the address"; }, 700); };
       var PH = { orig: null };   // archivo original en memoria (para volver a ajustar sin perder calidad)
       $("#pe-file").onchange = function () {
         var file = this.files[0]; this.value = ""; if (!file) return;
@@ -269,20 +275,20 @@
       $("#pe-adj").onclick = function () {
         var pos = null; try { pos = JSON.parse(F.elements.photo_pos.value || "null"); } catch (er) { pos = null; }
         var src = PH.orig ? Promise.resolve(PH.orig) : fetch(F.elements.photo_orig.value || F.elements.photo_url.value).then(function (r) { if (!r.ok) throw new Error("foto"); return r.blob(); });
-        $("#pe-m").textContent = "Abriendo la foto…";
+        $("#pe-m").textContent = "Opening the photo…";
         src.then(function (file) { $("#pe-m").textContent = ""; var hasOrig = !!(PH.orig || F.elements.photo_orig.value);
           cropEvent(file, hasOrig ? pos : null, function (blob, p2) { uploadPhoto(blob, F, p2, hasOrig ? null : file); }); })
-          .catch(function () { $("#pe-m").textContent = "No se pudo abrir la foto. Use “Cambiar foto” para subirla de nuevo."; });
+          .catch(function () { $("#pe-m").textContent = "Could not open the photo. Use “Change photo” to upload it again."; });
       };
       F.onsubmit = function (ev) {
         ev.preventDefault();
         var v = function (n) { return (F.elements[n] && F.elements[n].value || "").trim(); }, m = $("#pe-m");
-        if (!v("title")) return (m.textContent = "Escriba el nombre del evento.");
-        if (!v("date") || !v("time")) return (m.textContent = "Escriba la fecha y la hora de inicio.");
-        if (R.paid === "1" && !(+v("price_adult") > 0)) return (m.textContent = "Escriba el precio por adulto, o elija Gratis.");
+        if (!v("title_en") || !v("title")) return (m.textContent = "Enter the event title in English and in Spanish.");
+        if (!v("date") || !v("time")) return (m.textContent = "Enter the date and start time.");
+        if (R.paid === "1" && !(+v("price_adult") > 0)) return (m.textContent = "Enter the price per adult, or choose Free.");
         var staff = []; Object.keys(S).forEach(function (t) { S[t].forEach(function (em) { staff.push({ task: t, email: em }); }); });
         var p = { id: x ? e.id : "", title: v("title"), title_en: v("title_en"), series: v("series"), starts_at: toIso(v("date"), v("time")), ends_at: v("end") ? toIso(v("date"), v("end")) : "",
-          venue: v("venue"), address: v("address"), description: v("description"), description_en: v("description_en"), photo_url: v("photo_url"), photo_orig: v("photo_orig"), photo_pos: v("photo_pos"), arrive_note: v("arrive_note"),
+          venue: v("venue"), address: v("address"), description: v("description"), description_en: v("description_en"), photo_url: v("photo_url"), photo_orig: v("photo_orig"), photo_pos: v("photo_pos"), arrive_note: v("arrive_note"), arrive_note_en: v("arrive_note_en"),
           audience: R.audience, status: R.status, reg_until: v("reg_until"), capacity: v("capacity"), max_guests: v("max_guests"),
           price_adult: R.paid === "1" ? v("price_adult") : "0", price_child: R.paid === "1" ? (v("price_child") || "0") : "0",
           pay_zelle: F.elements.pay_zelle.checked, pay_card: false, courtesy_per_board: v("courtesy_per_board") || "4", eval_enabled: F.elements.eval_enabled.checked, staff: staff };
@@ -291,24 +297,24 @@
           (new Date(e.starts_at).getTime() !== new Date(p.starts_at).getTime() || String(e.ends_at ? new Date(e.ends_at).getTime() : "") !== String(p.ends_at ? new Date(p.ends_at).getTime() : "") ||
            (e.venue || "") !== p.venue || (e.address || "") !== p.address);
         if (changed && F._notify == null) {
-          var ovn = K.modal('<h3>¿Avisar a los registrados?</h3><div class="bd"><p style="margin:0 0 12px">Cambió la fecha, la hora o el lugar. Hay <b>' + x.people_active + " persona(s)</b> registradas.</p><ul><li>Si avisa, les llega un correo con los datos nuevos y un botón para actualizar su calendario.</li><li>Los recordatorios ya saldrán con los datos nuevos.</li></ul>" +
-            '<div class="ft"><button class="btn navy" id="nt-no">Guardar sin avisar</button><button class="btn gold" id="nt-yes">Guardar y avisar</button></div></div>');
+          var ovn = K.modal('<h3>Notify registered people?</h3><div class="bd"><p style="margin:0 0 12px">The date, time or place changed. There are <b>' + x.people_active + " registered people</b>.</p><ul><li>If you notify them, they receive an email (in their language) with the new details and buttons to update their calendar.</li><li>Reminders will already go out with the new details.</li></ul>" +
+            '<div class="ft"><button class="btn navy" id="nt-no">Save without notifying</button><button class="btn gold" id="nt-yes">Save and notify</button></div></div>');
           $("#nt-yes", ovn).onclick = function () { F._notify = true; ovn.remove(); F._prev = prev; F.onsubmit({ preventDefault: function () {} }); };
           $("#nt-no", ovn).onclick = function () { F._notify = false; ovn.remove(); F._prev = prev; F.onsubmit({ preventDefault: function () {} }); };
           return;
         }
         p.notify = !!F._notify; F._notify = null;
         var win = prev ? window.open("about:blank", "_blank") : null;
-        var b = $("button[type=submit]", F); b.disabled = true; m.textContent = "Guardando…";
+        var b = $("button[type=submit]", F); b.disabled = true; m.textContent = "Saving…";
         K.rpc("ev_staff_save", { p: p }).then(function (id) {
           if (prev) {
             return K.rpc("ev_staff_get", { p_id: id }).then(function (y) {
               var u = SITE + "/#/ev/" + y.event.slug + "?preview=1";
               if (win && !win.closed) win.location.href = u; else window.open(u, "_blank");
-              K.toast("Guardado. La vista previa se abrió en otra pestaña.");
+              K.toast("Saved. The preview opened in another tab.");
               if (!x) location.hash = "#/staff/event/" + id + "/edit"; else { b.disabled = false; m.textContent = ""; }
             });
-          } if (window.KAIEV_KICK) KAIEV_KICK(); K.toast(R.status === "published" ? "Evento guardado y publicado" : "Evento guardado"); location.hash = "#/staff/event/" + id; })
+          } if (window.KAIEV_KICK) KAIEV_KICK(); K.toast(R.status === "published" ? "Event saved and published" : "Event saved"); location.hash = "#/staff/event/" + id; })
           .catch(function (er) { b.disabled = false; m.textContent = err(er); if (win && !win.closed) win.close(); });
       };
       $("#pe-prev").onclick = function () { F._prev = true; setTimeout(function () { F._prev = false; }, 0); if (F.requestSubmit) F.requestSubmit(); else F.onsubmit({ preventDefault: function () {} }); };
@@ -341,7 +347,7 @@
   function uploadPhoto(blob, F, pos, orig) {
     var c = K.sb(); if (!c) return; var m = $("#pe-m");
     var stamp = Date.now() + "-" + Math.random().toString(36).slice(2, 7), name = "ev-" + stamp + ".jpg";
-    m.textContent = "Subiendo foto…";
+    m.textContent = "Uploading photo…";
     var up = function (n, b) { return c.storage.from("event-photos").upload(n, b, { contentType: "image/jpeg", upsert: false, cacheControl: "31536000" }).then(function (r) { if (r.error) throw r.error; return c.storage.from("event-photos").getPublicUrl(n).data.publicUrl; }); };
     (orig ? shrink(orig, 2400).then(function (b) { return up("orig-" + stamp + ".jpg", b); }) : Promise.resolve(null)).then(function (ou) {
       if (ou) F.elements.photo_orig.value = ou;
@@ -349,17 +355,17 @@
     }).then(function (url) {
       F.elements.photo_url.value = url; F.elements.photo_pos.value = pos ? JSON.stringify(pos) : "";
       $("#pe-ph").style.backgroundImage = "url(\"" + url + "\")"; $("#pe-adj").hidden = false;
-      var lb = $("#pe-ph label"); if (lb && lb.firstChild) lb.firstChild.nodeValue = "Cambiar foto";
-      m.textContent = "Foto lista. Recuerde guardar el evento.";
-    }).catch(function (er) { m.textContent = "No se pudo subir la foto: " + (er && er.message ? er.message : K.errMsg(er)); });
+      var lb = $("#pe-ph label"); if (lb && lb.firstChild) lb.firstChild.nodeValue = "Change photo";
+      m.textContent = "Photo ready. Remember to save the event.";
+    }).catch(function (er) { m.textContent = "Could not upload the photo: " + (er && er.message ? er.message : K.errMsg(er)); });
   }
   // Ajustar la foto: arrastrar para mover y deslizar para acercar/alejar (formato 16:10, como la tarjeta del evento)
   function cropEvent(file, start, done) {
     var W = 1600, H = 1000, pos = start && start.z ? { x: +start.x || 0, y: +start.y || 0, z: +start.z || 1 } : { x: 0, y: 0, z: 1 }, url = URL.createObjectURL(file), nat = { w: 1, h: 1 }, o = { ox: 0, oy: 0 };
-    var ov = K.modal('<h3>Ajuste la foto del evento</h3><div class="bd"><p style="margin:0 0 12px">Arrastre la foto para moverla y use la barra para acercar o alejar.</p>' +
+    var ov = K.modal('<h3>Adjust the event photo</h3><div class="bd"><p style="margin:0 0 12px">Drag the photo to move it and use the slider to zoom in or out. What you see in the frame is exactly what is published.</p>' +
       '<div class="pe-crop"><img alt=""><i class="g1"></i><i class="g2"></i></div>' +
-      '<div class="pe-zoom"><span>−</span><input type="range" min="1" max="3" step="0.01" value="' + pos.z + '" aria-label="Acercar o alejar"><span>+</span></div>' +
-      '<div class="ft"><button class="btn navy" data-close>Cancelar</button><button class="btn gold" id="pc-ok">Usar esta foto</button></div></div>');
+      '<div class="pe-zoom"><span>−</span><input type="range" min="1" max="3" step="0.01" value="' + pos.z + '" aria-label="Zoom"><span>+</span></div>' +
+      '<div class="ft"><button class="btn navy" data-close>Cancel</button><button class="btn gold" id="pc-ok">Use this photo</button></div></div>');
     var box = $(".pe-crop", ov), im = $("img", box), rg = $("input", ov);
     function draw() {
       var bw = box.clientWidth, bh = box.clientHeight, base = Math.max(bw / nat.w, bh / nat.h), sc = base * pos.z, dw = nat.w * sc, dh = nat.h * sc;
@@ -380,7 +386,7 @@
     rg.addEventListener("input", function () { pos.z = +rg.value; draw(); });
     window.addEventListener("resize", draw);
     $("#pc-ok", ov).onclick = function () {
-      var b = this; b.disabled = true; b.textContent = "Preparando…";
+      var b = this; b.disabled = true; b.textContent = "Preparing…";
       var c = document.createElement("canvas"); c.width = W; c.height = H;
       var base = Math.max(W / nat.w, H / nat.h), sc = base * pos.z, dw = nat.w * sc, dh = nat.h * sc, ox = (dw - W) / 2, oy = (dh - H) / 2;
       c.getContext("2d").drawImage(im, -ox - pos.x * ox, -oy - pos.y * oy, dw, dh);
