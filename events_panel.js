@@ -59,8 +59,8 @@
         var pct = isPast ? (e.people ? 100 * e.arrived / e.people : 0) : (e.capacity ? Math.min(100, 100 * e.people / e.capacity) : Math.min(100, e.people));
         var capL = isPast ? "<span><b>" + e.arrived + "</b>" + xx(" de ", " of ") + e.people + xx(" llegaron", " arrived") + "</span><span>" + (e.people ? Math.round(pct) + "%" : "") + "</span>"
           : "<span><b>" + e.people + "</b>" + xx(" registrados", " registered") + "</span><span>" + (e.capacity ? e.capacity + xx(" lugares", " spots") : e.adults + xx(" adultos · ", " adults · ") + e.minors + xx(" menores", " minors")) + "</span>";
-        return '<a class="pe-card" href="#/staff/event/' + e.id + '"><div class="pc-ph' + (e.photo_url ? "" : " none") + '"' + (e.photo_url ? ' style="background-image:url(\'' + esc(e.photo_url) + '\')"' : "") + '><div class="pc-dt"><small>' + esc(la(e.starts_at, { month: "short" }).replace(".", "").toUpperCase()) + "</small><b>" + esc(la(e.starts_at, { day: "numeric" })) + '</b></div><div class="pc-ps">' + pill(e) + "</div></div>" +
-          '<div class="pc-bd"><h4>' + esc(ttl(e)) + "</h4><p>" + esc(ldate(e.starts_at)) + " · " + esc(ltime(e.starts_at)) + (e.venue ? " · " + esc(e.venue) : "") + '</p><div class="pc-cap">' + capL + '</div><div class="pe-pb"><i style="width:' + pct + '%"></i></div>' +
+        return '<a class="pe-card' + (e.status === "draft" ? " draft" : "") + '" href="#/staff/event/' + e.id + '"><div class="pc-ph' + (e.photo_url ? "" : " none") + '"' + (e.photo_url ? ' style="background-image:url(\'' + esc(e.photo_url) + '\')"' : "") + '><div class="pc-dt"><small>' + esc(la(e.starts_at, { month: "short" }).replace(".", "").toUpperCase()) + "</small><b>" + esc(la(e.starts_at, { day: "numeric" })) + '</b></div><div class="pc-ps">' + pill(e) + "</div></div>" +
+          '<div class="pc-bd">' + (e.status === "draft" ? '<span class="pc-dr">' + xx("Borrador · todavía no es público", "Draft · not public yet") + "</span>" : "") + '<h4>' + esc(ttl(e)) + "</h4><p>" + esc(ldate(e.starts_at)) + " · " + esc(ltime(e.starts_at)) + (e.venue ? " · " + esc(e.venue) : "") + '</p><div class="pc-cap">' + capL + '</div><div class="pe-pb"><i style="width:' + pct + '%"></i></div>' +
           '<div class="pc-ft"><div class="pe-team">' + (team || "<em>" + xx("Sin equipo asignado", "No team assigned") + "</em>") + "</div>" + (e.unpaid ? '<span class="pe-due">' + e.unpaid + xx(" pago(s) pendiente(s)", " pending payment(s)") + "</span>" : "") + '<span class="pc-lk">' + xx("Abrir", "Open") + " ›</span></div></div></a>";
       }
       show.forEach(function (e) {
@@ -93,6 +93,7 @@
         '<div class="pe-acts">' + pill(e) + (x.can_edit ? (x.regs ? (e.status !== "cancelled" ? xx(" <button class=\"btn sm danger\" id=\"pe-cancel-ev\">Cancelar evento</button>", " <button class=\"btn sm danger\" id=\"pe-cancel-ev\">Cancel event</button>") : "") : xx(" <button class=\"btn sm danger\" id=\"pe-del-ev\">Eliminar</button>", " <button class=\"btn sm danger\" id=\"pe-del-ev\">Delete</button>")) : "") + ' <a class="btn sm ol" target="_blank" rel="noopener" href="' + SITE + "/#/ev/" + esc(e.slug) + (e.status === "published" ? "" : "?preview=1") + '">' + (e.status === "published" ? xx("Ver página ↗", "View page ↗") : xx("Vista previa ↗", "Preview ↗")) + "</a></div></div>";
       K.put(head + K.body(nav + xx("<div id=\"pe-tab\"><p class=\"st-wait\">Cargando…</p></div>", "<div id=\"pe-tab\"><p class=\"st-wait\">Loading…</p></div>")));
       if (e.status === "cancelled") $(".pe-bar").insertAdjacentHTML("afterend", xx("<div class=\"pe-cx\"><b>Evento cancelado</b>", "<div class=\"pe-cx\"><b>Event cancelled</b>") + (e.cancelled_at ? xx(" el ", " on ") + esc(la(e.cancelled_at, { day: "numeric", month: "long" })) : "") + (e.cancel_reason ? " · " + esc(e.cancel_reason) : "") + "</div>");
+      if (e.status === "draft" && x.can_edit) draftBox(x);
       var dl = $("#pe-del-ev"); if (dl) dl.onclick = function () { delEvent(x); };
       var cx = $("#pe-cancel-ev"); if (cx) cx.onclick = function () { cancelEvent(x); };
       ({ regs: regs, team: team, report: report, "eval": evalTab })[tab](x);
@@ -329,6 +330,48 @@
       };
       $("#pe-prev").onclick = function () { F._prev = true; setTimeout(function () { F._prev = false; }, 0); if (F.requestSubmit) F.requestSubmit(); else F.onsubmit({ preventDefault: function () {} }); };
     });
+  }
+  /* ---------- borrador: aviso grande con lista y botón Publicar ---------- */
+  function checks(x) {
+    var e = x.event, st = x.staff || [], paid = (+e.price_adult || 0) > 0 || (+e.price_child || 0) > 0;
+    return [
+      [!!(e.title && e.title_en), xx("Título en inglés y español", "Title in English and Spanish"), xx("Falta el título en un idioma", "Title missing in one language")],
+      [!!(e.description && e.description_en), xx("Descripción en los dos idiomas", "Description in both languages"), xx("Falta la descripción en un idioma", "Description missing in one language")],
+      [true, xx("Fecha y hora", "Date and time"), ""],
+      [!!e.photo_url, xx("Foto", "Photo"), xx("Sin foto", "No photo")],
+      [!!e.address, xx("Dirección", "Address"), xx("Sin dirección todavía", "No address yet")],
+      [true, paid ? xx("Precio ", "Price ") + money(e.price_adult) : xx("Evento gratis", "Free event"), ""],
+      [st.length > 0, xx("Equipo asignado", "Team assigned") + " (" + st.length + ")", xx("Sin equipo asignado", "No team assigned")]
+    ];
+  }
+  function draftBox(x) {
+    var e = x.event, c = checks(x);
+    var h = '<div class="pe-draft"><div class="ic">✎</div><div><b>' + xx("Este evento es un borrador", "This event is a draft") + "</b><p>" +
+      xx("Solo lo ve el equipo. Cuando lo publique, aparece en kaie44.org y se abre el registro.", "Only the team can see it. When you publish it, it appears on kaie44.org and registration opens.") + '</p><div class="ck">' +
+      c.map(function (k) { return k[0] ? "<span>✓ " + esc(k[1]) + "</span>" : '<span class="w">⚠ ' + esc(k[2]) + "</span>"; }).join("") + "</div></div>" +
+      '<div class="ac"><button class="pb" id="pe-pub">' + xx("Publicar evento", "Publish event") + '</button><a class="pv" target="_blank" rel="noopener" href="' + SITE + "/#/ev/" + esc(e.slug) + '?preview=1">' + xx("Vista previa ↗", "Preview ↗") + "</a></div></div>";
+    var bar = $(".pe-bar"); if (!bar) return; bar.insertAdjacentHTML("beforebegin", h);
+    $("#pe-pub").onclick = function () { publishModal(x); };
+  }
+  function publishModal(x) {
+    var e = x.event, paid = (+e.price_adult || 0) > 0 || (+e.price_child || 0) > 0, st = x.staff || [];
+    var miss = checks(x).filter(function (k) { return !k[0]; });
+    var ov = K.modal("<h3>" + xx("¿Publicar este evento?", "Publish this event?") + '</h3><div class="bd"><p style="margin:0 0 12px"><b>' + esc(ttl(e)) + "</b> · " + esc(ldate(e.starts_at)) + "</p>" +
+      '<ul style="margin:0 0 14px"><li>' + xx("Aparece en la página de Eventos de kaie44.org y se abre el registro.", "It appears on the kaie44.org Events page and registration opens.") + "</li>" +
+      (paid ? "<li>" + xx("Cada miembro del Board recibe por correo su enlace de cortesía.", "Each Board member receives their courtesy link by email.") + "</li>" : "") +
+      (st.length ? "<li>" + (st.length === 1 ? xx("La persona asignada del equipo recibe un correo con su tarea.", "The assigned team member receives an email with their task.") : xx("Las " + st.length + " personas del equipo reciben un correo con su tarea.", "The " + st.length + " team members receive an email with their task.")) + "</li>" : "") +
+      "<li>" + xx("Puede seguir editándolo después; si cambia la fecha, hora o lugar, el panel le pregunta si quiere avisar a los registrados.", "You can keep editing it afterwards; if the date, time or place changes, the panel asks whether to notify registered people.") + "</li></ul>" +
+      (miss.length ? '<div class="pe-due-box" style="margin:0 0 14px"><b>' + xx("Pendiente:", "Still missing:") + "</b> " + miss.map(function (k) { return esc(k[2]); }).join(" · ") + ". " + xx("Puede publicar de todos modos y completarlo después.", "You can publish anyway and complete it later.") + "</div>" : "") +
+      '<p class="st-msg" id="pb-m"></p><div class="ft"><button class="btn navy" data-close>' + xx("Todavía no", "Not yet") + '</button><button class="btn gold" id="pb-go">' + xx("Sí, publicar", "Yes, publish") + "</button></div></div>");
+    $("#pb-go", ov).onclick = function () {
+      var b = this; b.disabled = true; b.textContent = xx("Publicando…", "Publishing…");
+      var p = Object.assign({}, e, { status: "published" }); delete p.staff;
+      if (p.photo_pos && typeof p.photo_pos === "object") p.photo_pos = JSON.stringify(p.photo_pos);
+      K.rpc("ev_staff_save", { p: p }).then(function () {
+        ov.remove(); K.toast(xx("¡Evento publicado! Ya está en kaie44.org.", "Event published! It's now live on kaie44.org."));
+        detail(e.id, "regs");
+      }).catch(function (er) { b.disabled = false; b.textContent = xx("Sí, publicar", "Yes, publish"); $("#pb-m", ov).textContent = err(er); });
+    };
   }
   function delEvent(x) {
     var e = x.event, ov = K.modal(xx("<h3>Eliminar evento</h3><div class=\"bd\"><p style=\"margin:0 0 12px\">Se eliminará <b>", "<h3>Delete event</h3><div class=\"bd\"><p style=\"margin:0 0 12px\"><b>") + esc(ttl(e)) + xx("</b> por completo, con su equipo asignado y sus enlaces de cortesía. Nadie se ha registrado todavía.</p><p class=\"st-msg\" id=\"dl-m\"></p><div class=\"ft\"><button class=\"btn navy\" data-close>No eliminar</button><button class=\"btn danger\" id=\"dl-go\">Sí, eliminar</button></div></div>", "</b> will be deleted completely, with its assigned team and its courtesy links. No one has registered yet.</p><p class=\"st-msg\" id=\"dl-m\"></p><div class=\"ft\"><button class=\"btn navy\" data-close>Don't delete</button><button class=\"btn danger\" id=\"dl-go\">Yes, delete</button></div></div>"));

@@ -596,3 +596,19 @@ a.st-mrow:hover{background:#f8fafd}
 .sx-main table.pe tr:not(:first-child):hover td{background:#f7f9fd}
 .sx-main .pe-sec table.pe{border:0}
 .sx-main .pe-card .pc-ph.none::after{content:"";position:absolute;inset:0;background:url(images/logo.png) center/120px no-repeat;opacity:.08;filter:grayscale(1) brightness(3)}
+/* borrador de evento */
+.pe-draft{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;background:linear-gradient(135deg,#fffaf0,#fdf3dc);border:1.5px solid #ecd391;border-radius:16px;padding:18px 22px;margin:0 0 18px;box-shadow:0 6px 20px rgba(184,137,46,.12)}
+.pe-draft .ic{width:46px;height:46px;border-radius:12px;background:var(--gold);display:grid;place-items:center;color:#fff;font-size:20px}
+.pe-draft b{display:block;font:600 18px var(--serif);color:var(--navy)}
+.pe-draft p{margin:3px 0 10px;font-size:13.5px;color:var(--mut)}
+.pe-draft .ck{display:flex;flex-wrap:wrap;gap:6px}
+.pe-draft .ck span{font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;background:#e7f6ee;color:#1a7f4b}
+.pe-draft .ck span.w{background:#fdecdc;color:#b4541a}
+.pe-draft .ac{display:flex;flex-direction:column;gap:8px}
+.pe-draft .pb{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--navy);font:700 13px var(--sans);letter-spacing:.06em;text-transform:uppercase;padding:14px 22px;border-radius:12px;border:0;cursor:pointer;box-shadow:0 6px 18px rgba(184,137,46,.35);white-space:nowrap}
+.pe-draft .pb:hover{filter:brightness(1.05)}
+.pe-draft .pv{background:#fff;color:var(--navy);font:700 12px var(--sans);letter-spacing:.06em;text-transform:uppercase;padding:10px 18px;border-radius:10px;border:1.5px solid var(--navy);text-align:center;text-decoration:none}
+.pe-card.draft{border:2px dashed #d9c48a;box-shadow:none}
+.pe-card.draft .pc-ph{filter:saturate(.55) brightness(.92)}
+.pe-card .pc-dr{display:inline-block;align-self:flex-start;font:700 11px var(--sans);color:#8a6516;background:#fbf3e0;border-radius:6px;padding:3px 9px;margin-bottom:8px}
+@media (max-width:760px){.pe-draft{grid-template-columns:1fr}.pe-draft .ic{display:none}.pe-draft .ac{flex-direction:row}.pe-draft .ac>*{flex:1}}
