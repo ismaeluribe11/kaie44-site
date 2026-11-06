@@ -335,6 +335,9 @@ footer .c{padding-top:22px;font-size:12px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .gn{background:var(--bg2);border-color:var(--line)}:root:not([data-theme="light"]) .gn b,:root:not([data-theme="light"]) .gd b{color:var(--ink)}
   :root:not([data-theme="light"]) .gn-lk .o,:root:not([data-theme="light"]) .gd-lk .o{border-color:var(--ink);color:var(--ink)}}
 @media(max-width:800px){.gw-in{grid-template-columns:1fr;gap:40px}.gw-cov{width:200px;margin:0 auto}.gn-lk{margin-left:0;width:100%}.gn-lk a{flex:1;justify-content:center}.gd{grid-template-columns:1fr}.gd img{width:90px}}
+.jband{background:linear-gradient(135deg,#fbf6ea,#f6ecd2)!important;color:var(--ink);border-top:4px solid var(--gold2)}
+.jband h2{color:var(--navy)!important}.jband p{color:var(--mut)!important}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .jband{background:var(--bg2)!important}:root:not([data-theme="light"]) .jband h2{color:var(--ink)!important}}
 </style>
 <link rel="stylesheet" href="apply.css"><link rel="stylesheet" href="staff.css">
 <link rel="stylesheet" href="events.css">
@@ -492,7 +495,7 @@ footer .c{padding-top:22px;font-size:12px}
 <div class="pcard"><div class="eyebrow" data-i="e4"></div><h3 data-i="pr"></h3><p data-i="prp"></p></div></div></section>
 <section class="s"><div class="wrap"><h2 data-i="bt"></h2><div class="bf" id="bj"></div></div></section>
 <section class="s gw" id="gw-join"></section>
-<section class="s band"><div class="wrap"><h2 data-i="ap_t"></h2><p data-i="ap_p"></p><a class="btn gold" id="jbot" href="#/apply" data-i="ap_b"></a></div></section>
+<section class="s band jband"><div class="wrap"><h2 data-i="ap_t"></h2><p data-i="ap_p"></p><a class="btn gold" id="jbot" href="#/apply" data-i="ap_b"></a></div></section>
 </div>
 
 <form name="application" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden><input type="hidden" name="form-name" value="application"><input name="bot-field"><input name="app_no"><input name="name"><input name="church"><input name="city"><input name="email"><input name="tier"><input name="language"></form>
