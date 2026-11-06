@@ -311,6 +311,30 @@ footer .c{padding-top:22px;font-size:12px}
   .vx-pr,.vx-pil{padding:72px 0}
   .vx-verse{font-size:15px}
 }
+/* ===== Guía de bienvenida ===== */
+.gw{background:linear-gradient(135deg,#0b1f4b,#132a5e 60%,#1b3a7a);color:#fff;overflow:hidden}
+.gw-in{display:grid;grid-template-columns:300px 1fr;gap:60px;align-items:center}
+.gw-cov{position:relative;transform:rotate(-3deg);z-index:0}.gw-cov img{width:100%;display:block;border-radius:10px;box-shadow:0 30px 60px rgba(0,0,0,.45)}
+.gw-cov:before{content:"";position:absolute;inset:14px -14px -14px 14px;border-radius:10px;background:var(--gold2);opacity:.9;z-index:-1}
+.gw .eyebrow{color:var(--gold2)}.gw h2{color:#fff;margin:14px 0}.gw p{color:#d6def2;font-size:1.08rem;line-height:1.7;max-width:560px}
+.gw-meta{display:flex;flex-wrap:wrap;gap:8px 18px;list-style:none;padding:0;margin:18px 0 26px;font-size:13px;color:#b9c6e4}.gw-meta li:before{content:"✦ ";color:var(--gold2)}
+.gw-btns,.gd-lk,.gn-lk{display:flex;gap:10px;flex-wrap:wrap}
+.gw-btns a,.gd-lk a,.gn-lk a{display:inline-flex;align-items:center;gap:8px;font:700 12.5px var(--sans);letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+.gw-btns a{padding:15px 22px}.gw-btns .g{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--navy)}.gw-btns .o{border:1.5px solid rgba(255,255,255,.5);color:#fff}
+.gw-btns .o:hover{background:rgba(255,255,255,.08)}
+.gn{background:#fbf6ea;border-bottom:1px solid #f0e2bf}
+.gn .wrap{display:flex;align-items:center;gap:16px;padding-top:16px;padding-bottom:16px;flex-wrap:wrap}
+.gn img{width:44px;border-radius:4px;box-shadow:0 4px 10px rgba(0,0,0,.2)}
+.gn b{color:var(--navy);font-size:15px}.gn .s2{color:var(--mut);font-size:14px}
+.gn-lk{margin-left:auto}.gn-lk a{padding:9px 14px;font-size:12px}
+.gn-lk .g{background:var(--navy);color:#fff}.gn-lk .o{border:1.5px solid var(--navy);color:var(--navy)}
+.gd{display:grid;grid-template-columns:96px 1fr;gap:20px;align-items:center;text-align:left;background:var(--bg2);border:1px solid var(--line);border-left:4px solid var(--gold2);border-radius:12px;padding:18px 20px;margin:26px 0 8px}
+.gd img{width:96px;border-radius:6px;box-shadow:0 8px 18px rgba(0,0,0,.2)}
+.gd b{display:block;color:var(--navy);font-size:16px;margin-bottom:4px}.gd p{margin:0 0 12px!important;font-size:14px;color:var(--mut)}
+.gd-lk a{padding:9px 14px;font-size:12px}.gd-lk .g{background:linear-gradient(135deg,var(--gold2),var(--gold));color:var(--navy)}.gd-lk .o{border:1.5px solid var(--navy);color:var(--navy)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .gn{background:var(--bg2);border-color:var(--line)}:root:not([data-theme="light"]) .gn b,:root:not([data-theme="light"]) .gd b{color:var(--ink)}
+  :root:not([data-theme="light"]) .gn-lk .o,:root:not([data-theme="light"]) .gd-lk .o{border-color:var(--ink);color:var(--ink)}}
+@media(max-width:800px){.gw-in{grid-template-columns:1fr;gap:40px}.gw-cov{width:200px;margin:0 auto}.gn-lk{margin-left:0;width:100%}.gn-lk a{flex:1;justify-content:center}.gd{grid-template-columns:1fr}.gd img{width:90px}}
 </style>
 <link rel="stylesheet" href="apply.css"><link rel="stylesheet" href="staff.css">
 <link rel="stylesheet" href="events.css">
@@ -467,6 +491,7 @@ footer .c{padding-top:22px;font-size:12px}
 <section class="s alt"><div class="wrap split"><div><div class="eyebrow" data-i="e2"></div><h2 style="margin:16px 0 18px" data-i="st"></h2><p data-i="sp"></p><p class="tag" data-i="tg"></p></div>
 <div class="pcard"><div class="eyebrow" data-i="e4"></div><h3 data-i="pr"></h3><p data-i="prp"></p></div></div></section>
 <section class="s"><div class="wrap"><h2 data-i="bt"></h2><div class="bf" id="bj"></div></div></section>
+<section class="s gw" id="gw-join"></section>
 <section class="s band"><div class="wrap"><h2 data-i="ap_t"></h2><p data-i="ap_p"></p><a class="btn gold" id="jbot" href="#/apply" data-i="ap_b"></a></div></section>
 </div>
 
@@ -485,6 +510,18 @@ footer .c{padding-top:22px;font-size:12px}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script src="members.js"></script>
+<script>
+/* Guía de bienvenida: botones en los dos idiomas (el de la página va primero) */
+window.KAIGUIDE=function(kind){var en=(window.L==="en"),es=!en,cov=en?"images/guia-cover-en.jpg":"images/guia-cover-es.jpg",
+ aES='<a class="'+(es?"g":"o")+'" href="guia-bienvenida.pdf" download="KAI-Guia-de-Bienvenida.pdf" target="_blank" rel="noopener">',
+ aEN='<a class="'+(en?"g":"o")+'" href="welcome-guide.pdf" download="KAI-Welcome-Guide.pdf" target="_blank" rel="noopener">',
+ tES=kind==="bar"?"Español":"⬇ Descargar en español",tEN=kind==="bar"?"English":"⬇ Download in English",
+ btn=en?aEN+tEN+"</a>"+aES+tES+"</a>":aES+tES+"</a>"+aEN+tEN+"</a>",
+ t=function(a,b){return en?b:a};
+ if(kind==="band")return '<div class="wrap gw-in"><div class="gw-cov"><img src="'+cov+'" alt="'+t("Guía de Bienvenida KAI","KAI Welcome Guide")+'" loading="lazy"></div><div><div class="eyebrow">'+t("Guía de bienvenida","Welcome guide")+'</div><h2>'+t("Su camino, paso a paso","Your path, step by step")+'</h2><p>'+t("Antes de aplicar, conozca los 7 pasos: desde llenar su aplicación hasta tener su credencial ministerial en la mano. Incluye la cuota anual, qué pasa después y cómo usar su Área de Miembros.","Before you apply, see the 7 steps: from filling out your application to holding your ministerial credential. It covers the annual fee, what happens next and how to use your Members Area.")+'</p><ul class="gw-meta"><li>18 '+t("páginas","pages")+'</li><li>PDF · 2 MB</li><li>'+t("5 min de lectura","5-min read")+'</li></ul><div class="gw-btns">'+btn+'</div></div></div>';
+ if(kind==="bar")return '<div class="gn"><div class="wrap"><img src="'+cov+'" alt=""><div><b>'+t("¿Primera vez? Lea la Guía de Bienvenida","First time? Read the Welcome Guide")+'</b><br><span class="s2">'+t("Los 7 pasos, la cuota y qué esperar después · 5 min","The 7 steps, the fee and what to expect next · 5 min")+'</span></div><div class="gn-lk">'+btn+'</div></div></div>';
+ return '<div class="gd"><img src="'+cov+'" alt=""><div><b>'+t("¿Qué sigue?","What happens next?")+'</b><p>'+t("Su Guía de Bienvenida explica cada paso: la revisión, el pago de su cuota, cómo crear su contraseña y cuándo recibe su credencial.","Your Welcome Guide explains every step: the review, paying your fee, creating your password and when you receive your credential.")+'</p><div class="gd-lk">'+btn+'</div></div></div>';};
+</script>
 <script src="apply_schema.js"></script>
 <script src="apply.js"></script>
 <script src="events_panel.js"></script>
@@ -580,7 +617,7 @@ function faith(){var h="",c="";(L==="es"?FES:F).forEach(function(f,i){var id="f"
 document.getElementById("fc").onclick=function(e){var a=e.target.closest("a");if(!a)return;e.preventDefault();document.getElementById(a.dataset.go).scrollIntoView({behavior:"smooth",block:"start"})};
 function render(){var c=nav(),r=(location.hash||"").slice(2),v=/^(ev|evr|checkin|eval)\//.test(r)?"evx":r.indexOf("verify/")===0?"verify":/^apply(\/|$)/.test(r)?"apply":/^(staff|pago)(\/|$)/.test(r)?"staff":r==="password"?"password":({home:1,vision:1,leadership:1,membership:1,events:1,contact:1,faith:1,join:1}[c]?c:"soon");
 document.querySelectorAll(".view").forEach(function(e){e.classList.toggle("on",e.dataset.v===v)});
-document.querySelectorAll("[data-i]").forEach(function(e){e.textContent=t(e.dataset.i)});document.querySelectorAll(".vx-hlw").forEach(function(e){e.innerHTML=e.innerHTML.replace(/\b(Conectar|Empoderar|Comisionar|Connect|Empower|Commission)\b/g,"<em>$1</em>")});
+document.querySelectorAll("[data-i]").forEach(function(e){e.textContent=t(e.dataset.i)});var gwj=document.getElementById("gw-join");if(gwj&&window.KAIGUIDE)gwj.innerHTML=KAIGUIDE("band");document.querySelectorAll(".vx-hlw").forEach(function(e){e.innerHTML=e.innerHTML.replace(/\b(Conectar|Empoderar|Comisionar|Connect|Empower|Commission)\b/g,"<em>$1</em>")});
 faith();document.getElementById("st2").textContent=t("n_"+c);H.lang=L;
 document.querySelectorAll(".lang button").forEach(function(b){b.setAttribute("aria-pressed",b.dataset.l===L)});if(window.KAI)KAI.view(v);if(window.KAIAPP)KAIAPP.view(v);if(window.KAISTAFF)KAISTAFF.view(v);if(window.KAIEV)KAIEV.view(v)}
 document.querySelectorAll(".lang button").forEach(function(b){b.onclick=function(){L=b.dataset.l;try{localStorage.setItem("kai-lang",L)}catch(e){}render()}});
