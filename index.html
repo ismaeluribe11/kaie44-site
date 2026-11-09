@@ -317,6 +317,7 @@ footer .c{padding-top:22px;font-size:12px}
 .gw-cov{position:relative;transform:rotate(-3deg);z-index:0}.gw-cov img{width:100%;display:block;border-radius:10px;box-shadow:0 30px 60px rgba(0,0,0,.45)}
 .gw-cov:before{content:"";position:absolute;inset:14px -14px -14px 14px;border-radius:10px;background:var(--gold2);opacity:.9;z-index:-1}
 .gw .eyebrow{color:var(--gold2)}.gw h2{color:#fff;margin:14px 0}.gw p{color:#d6def2;font-size:1.08rem;line-height:1.7;max-width:560px}
+.gw-alt{margin:14px 0 0;font-size:13.5px;color:#b9c6e4}.gw-alt a{color:#e3bf63;font-weight:700;text-decoration:underline;text-underline-offset:3px}.gd .gw-alt{color:var(--mut)}.gd .gw-alt a{color:#1f5fbf}
 .gw-meta{display:flex;flex-wrap:wrap;gap:8px 18px;list-style:none;padding:0;margin:18px 0 26px;font-size:13px;color:#b9c6e4}.gw-meta li:before{content:"✦ ";color:var(--gold2)}
 .gw-btns,.gd-lk,.gn-lk{display:flex;gap:10px;flex-wrap:wrap}
 .gw-btns a,.gd-lk a,.gn-lk a{display:inline-flex;align-items:center;gap:8px;font:700 12.5px var(--sans);letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
@@ -516,14 +517,18 @@ footer .c{padding-top:22px;font-size:12px}
 <script>
 /* Guía de bienvenida: botones en los dos idiomas (el de la página va primero) */
 window.KAIGUIDE=function(kind){var en=(window.L==="en"),es=!en,cov=en?"images/guia-cover-en.jpg":"images/guia-cover-es.jpg",
- aES='<a class="'+(es?"g":"o")+'" href="guia-bienvenida.pdf" download="KAI-Guia-de-Bienvenida.pdf" target="_blank" rel="noopener">',
- aEN='<a class="'+(en?"g":"o")+'" href="welcome-guide.pdf" download="KAI-Welcome-Guide.pdf" target="_blank" rel="noopener">',
+ mob=false;try{mob=window.matchMedia("(max-width: 820px)").matches||/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)}catch(e){}
+ var F={es:{m:["guia-bienvenida-movil.pdf","KAI-Guia-de-Bienvenida-Movil.pdf"],d:["guia-bienvenida-escritorio.pdf","KAI-Guia-de-Bienvenida-Escritorio.pdf"]},en:{m:["welcome-guide-mobile.pdf","KAI-Welcome-Guide-Mobile.pdf"],d:["welcome-guide-desktop.pdf","KAI-Welcome-Guide-Desktop.pdf"]}},
+ v=mob?"m":"d",o=mob?"d":"m",
+ A=function(lg,ver,cls,txt){var f=F[lg][ver];return '<a class="'+cls+'" href="'+f[0]+'" download="'+f[1]+'" target="_blank" rel="noopener">'+txt+'</a>'},
  tES=kind==="bar"?"Español":"⬇ Descargar en español",tEN=kind==="bar"?"English":"⬇ Download in English",
- btn=en?aEN+tEN+"</a>"+aES+tES+"</a>":aES+tES+"</a>"+aEN+tEN+"</a>",
- t=function(a,b){return en?b:a};
- if(kind==="band")return '<div class="wrap gw-in"><div class="gw-cov"><img src="'+cov+'" alt="'+t("Guía de Bienvenida KAI","KAI Welcome Guide")+'" loading="lazy"></div><div><div class="eyebrow">'+t("Guía de bienvenida","Welcome guide")+'</div><h2>'+t("Su camino, paso a paso","Your path, step by step")+'</h2><p>'+t("Antes de aplicar, conozca los 7 pasos: desde llenar su aplicación hasta tener su credencial ministerial en la mano. Incluye la cuota anual, qué pasa después y cómo usar su Área de Miembros.","Before you apply, see the 7 steps: from filling out your application to holding your ministerial credential. It covers the annual fee, what happens next and how to use your Members Area.")+'</p><ul class="gw-meta"><li>18 '+t("páginas","pages")+'</li><li>PDF · 2 MB</li><li>'+t("5 min de lectura","5-min read")+'</li></ul><div class="gw-btns">'+btn+'</div></div></div>';
- if(kind==="bar")return '<div class="gn"><div class="wrap"><img src="'+cov+'" alt=""><div><b>'+t("¿Primera vez? Lea la Guía de Bienvenida","First time? Read the Welcome Guide")+'</b><br><span class="s2">'+t("Los 7 pasos, la cuota y qué esperar después · 5 min","The 7 steps, the fee and what to expect next · 5 min")+'</span></div><div class="gn-lk">'+btn+'</div></div></div>';
- return '<div class="gd"><img src="'+cov+'" alt=""><div><b>'+t("¿Qué sigue?","What happens next?")+'</b><p>'+t("Su Guía de Bienvenida explica cada paso: la revisión, el pago de su cuota, cómo crear su contraseña y cuándo recibe su credencial.","Your Welcome Guide explains every step: the review, paying your fee, creating your password and when you receive your credential.")+'</p><div class="gd-lk">'+btn+'</div></div></div>';};
+ bES=A("es",v,es?"g":"o",tES),bEN=A("en",v,en?"g":"o",tEN),
+ btn=en?bEN+bES:bES+bEN,
+ t=function(a,b){return en?b:a},
+ alt='<p class="gw-alt">'+(mob?t("¿Lo va a leer en computadora? ","Reading on a computer? "):t("¿Lo va a leer en el celular? ","Reading on your phone? "))+A(en?"en":"es",o,"",mob?t("Versión para computadora","Computer version"):t("Versión para celular","Phone version"))+'</p>';
+ if(kind==="band")return '<div class="wrap gw-in"><div class="gw-cov"><img src="'+cov+'" alt="'+t("Guía de Bienvenida KAI","KAI Welcome Guide")+'" loading="lazy"></div><div><div class="eyebrow">'+t("Guía de bienvenida","Welcome guide")+'</div><h2>'+t("Su camino, paso a paso","Your path, step by step")+'</h2><p>'+t("Antes de aplicar, conozca los 5 pasos: dónde aplicar, qué tener a la mano, la cuota anual, cómo crear su contraseña y cuándo recibe su credencial ministerial.","Before you apply, see the 5 steps: where to apply, what to have ready, the annual fee, how to create your password and when you receive your ministerial credential.")+'</p><ul class="gw-meta"><li>5 '+t("pasos","steps")+'</li><li>'+(mob?t("6 páginas · para celular","6 pages · for phones"):t("4 páginas · para computadora","4 pages · for computers"))+'</li><li>PDF · 1 MB</li></ul><div class="gw-btns">'+btn+'</div>'+alt+'</div></div>';
+ if(kind==="bar")return '<div class="gn"><div class="wrap"><img src="'+cov+'" alt=""><div><b>'+t("¿Primera vez? Lea la Guía de Bienvenida","First time? Read the Welcome Guide")+'</b><br><span class="s2">'+t("Los 5 pasos, la cuota y qué esperar después","The 5 steps, the fee and what to expect next")+'</span></div><div class="gn-lk">'+btn+'</div></div></div>';
+ return '<div class="gd"><img src="'+cov+'" alt=""><div><b>'+t("¿Qué sigue?","What happens next?")+'</b><p>'+t("Su Guía de Bienvenida explica cada paso: la revisión, el pago de su cuota, cómo crear su contraseña y cuándo recibe su credencial.","Your Welcome Guide explains every step: the review, paying your fee, creating your password and when you receive your credential.")+'</p><div class="gd-lk">'+btn+'</div>'+alt+'</div></div>';};
 </script>
 <script src="apply_schema.js"></script>
 <script src="apply.js"></script>
