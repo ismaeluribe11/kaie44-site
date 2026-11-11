@@ -31,6 +31,7 @@
   function desc(e) { return pick(e.description, e.description_en); }
   function arrive(e) { return pick(e.arrive_note, e.arrive_note_en); }
   function paid(e) { return (+e.price_adult || 0) > 0 || (+e.price_child || 0) > 0; }
+  function couple(e) { return e && e.price_mode === "couple"; }
   function mapsUrl(a) { return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(a || ""); }
   function errText(e) {
     var m = String((e && (e.message || e.msg)) || e || "");
@@ -43,6 +44,8 @@
     if (/courtesy_full:(\d+)/.test(m)) return T("Este enlace de cortesía solo tiene " + m.match(/courtesy_full:(\d+)/)[1] + " lugar(es) disponible(s).", "This courtesy link only has " + m.match(/courtesy_full:(\d+)/)[1] + " spot(s) left.");
     if (/bad_code/.test(m)) return T("El enlace de cortesía no es válido.", "The courtesy link is not valid.");
     if (/members_only/.test(m)) return T("Este evento es solo para miembros de KAI. Inicia sesión en el Área de Miembros.", "This event is for KAI members only. Please sign in to the Members Area.");
+    if (/couple_spouse/.test(m)) return T("Este evento es para matrimonios: escribe el nombre de tu esposo(a).", "This event is for married couples: enter your spouse's name.");
+    if (/couple_only_kids/.test(m)) return T("En este evento solo puedes agregar a tu esposo(a) y a tus hijos menores.", "For this event you can only add your spouse and your minor children.");
     if (/too_many_guests/.test(m)) return T("Demasiados invitados para este evento.", "Too many guests for this event.");
     if (/too_many/.test(m)) return T("Ya hay varios registros con este correo hoy. Escríbenos a info@kaie44.org.", "There are already several registrations with this email today. Write to info@kaie44.org.");
     if (/bad_pin/.test(m)) return T("PIN incorrecto o no es el día del evento.", "Wrong PIN, or today is not the event day.");
@@ -119,22 +122,24 @@
   }
   function guestCard(i) {
     var g = FORM.guests[i] || {};
+    if (couple(EV)) return '<div class="gst" data-g="' + i + '"><div class="gh"><b>' + T("Hijo(a)", "Child") + " " + (i + 1) + '</b><span class="mn">' + T("Menor de edad", "Under 18") + '</span></div><div class="r2"><input data-gf="first_name" placeholder="' + T("Nombre", "First name") + '" value="' + esc(g.first_name || "") + '"><input data-gf="last_name" placeholder="' + T("Apellido", "Last name") + '" value="' + esc(g.last_name || "") + '"></div></div>';
     return '<div class="gst" data-g="' + i + '"><div class="gh"><b>' + T("Invitado", "Guest") + " " + (i + 1) + '</b><label class="mn"><input type="checkbox" data-gf="minor"' + (g.minor ? " checked" : "") + "> " + T("Menor de edad", "Under 18") + "</label></div>" +
       '<div class="r2"><input data-gf="first_name" placeholder="' + T("Nombre", "First name") + '" value="' + esc(g.first_name || "") + '"><input data-gf="last_name" placeholder="' + T("Apellido", "Last name") + '" value="' + esc(g.last_name || "") + '"></div>' +
       (g.minor ? "" : '<input data-gf="email" type="email" class="gm" placeholder="' + T("Correo (opcional) · le enviaremos su QR", "Email (optional) · we will send their QR") + '" value="' + esc(g.email || "") + '">') + "</div>";
   }
   function totals() {
-    var e = EV, n = 1 + FORM.guests.length, kids = FORM.guests.filter(function (g) { return g.minor; }).length, ad = n - kids;
+    var e = EV, cp = couple(e), n = 1 + FORM.guests.length + (cp ? 1 : 0), kids = cp ? FORM.guests.length : FORM.guests.filter(function (g) { return g.minor; }).length, ad = n - kids;
     var free = !!(e.courtesy && !e.courtesy.invalid);
-    var tot = free ? 0 : ad * (+e.price_adult || 0) + kids * (+e.price_child || 0);
-    return { n: n, ad: ad, kids: kids, tot: tot, free: free };
+    var tot = free ? 0 : (cp ? (+e.price_adult || 0) : ad * (+e.price_adult || 0)) + kids * (+e.price_child || 0);
+    return { n: n, ad: ad, kids: kids, tot: tot, free: free, cp: cp };
   }
   function renderTotals() {
     var b = $("#ev-tot"); if (!b) return; var t = totals(), e = EV;
     var s = '<p class="tot">' + T("Total registrado", "Total") + ": <b>" + t.n + " " + T(t.n === 1 ? "persona" : "personas", t.n === 1 ? "person" : "people") + "</b> (" + t.ad + " " + T(t.ad === 1 ? "adulto" : "adultos", t.ad === 1 ? "adult" : "adults") + (t.kids ? " · " + t.kids + " " + T(t.kids === 1 ? "menor" : "menores", t.kids === 1 ? "minor" : "minors") : "") + ")</p>";
     if (paid(e)) {
       if (t.free) s += '<div class="paybox sm"><div class="ln t"><span>' + T("Cortesía de ", "Courtesy of ") + esc(e.courtesy.by) + '</span><span>$0</span></div></div>';
-      else s += '<div class="paybox sm">' + (t.ad ? '<div class="ln"><span>' + t.ad + " " + T("adulto(s)", "adult(s)") + " × " + money(e.price_adult) + "</span><span>" + money(t.ad * e.price_adult) + "</span></div>" : "") +
+      else s += '<div class="paybox sm">' + (t.cp ? '<div class="ln"><span>' + T("1 matrimonio", "1 married couple") + " × " + money(e.price_adult) + "</span><span>" + money(e.price_adult) + "</span></div>" :
+        t.ad ? '<div class="ln"><span>' + t.ad + " " + T("adulto(s)", "adult(s)") + " × " + money(e.price_adult) + "</span><span>" + money(t.ad * e.price_adult) + "</span></div>" : "") +
         (t.kids ? '<div class="ln"><span>' + t.kids + " " + T("menor(es)", "minor(s)") + " × " + money(e.price_child) + "</span><span>" + money(t.kids * e.price_child) + "</span></div>" : "") +
         '<div class="ln t"><span>Total</span><span>' + money(t.tot) + "</span></div><p class=\"fine\" style=\"text-align:left;margin:6px 0 0\">" +
         T("Los miembros del Board de KAI no pagan; el sistema los reconoce por su correo.", "KAI Board members do not pay; they are recognized by email.") + "</p></div>";
@@ -146,15 +151,18 @@
     var e = EV, m = ME && ME.m, other = (e.other || [])[0], cty = e.courtesy;
     var info = '<div class="evd-in"><div>' + IC.cal + '<p><b>' + esc(cap(fdate(e.starts_at))) + "</b><span>" + esc(ftime(e.starts_at)) + (e.ends_at ? " – " + esc(ftime(e.ends_at)) : "") + (arrive(e) ? " · " + esc(arrive(e)) : "") + "</span></p></div>" +
       (e.venue || e.address ? "<div>" + IC.pin + "<p><b>" + esc(e.venue || "") + "</b><span>" + esc(e.address || "") + "</span></p></div>" : "") +
-      (paid(e) ? "<div>" + IC.tag + "<p><b>" + money(e.price_adult) + " " + T("por adulto", "per adult") + (+e.price_child ? " · " + money(e.price_child) + " " + T("por menor", "per minor") : "") + "</b><span>" + T("Pago por Zelle al registrarte", "Pay by Zelle after registering") + "</span></p></div>" : "") +
-      "<div>" + IC.ppl + "<p><b>" + (e.audience === "members" ? T("Solo miembros de KAI", "KAI members only") : T("Pastores, cónyuges, familias e invitados", "Pastors, spouses, families and guests")) + "</b><span>" + (e.left != null ? e.left + " " + T("lugares disponibles", "spots left") : T("Confirma cuántas personas vienen contigo", "Tell us who is coming with you")) + "</span></p></div></div>";
+      (paid(e) ? "<div>" + IC.tag + "<p><b>" + money(e.price_adult) + " " + (couple(e) ? T("por matrimonio", "per married couple") : T("por adulto", "per adult")) + (+e.price_child ? " · " + money(e.price_child) + " " + T("por menor", "per minor") : "") + "</b><span>" + T("Pago por Zelle al registrarte", "Pay by Zelle after registering") + "</span></p></div>" : "") +
+      "<div>" + IC.ppl + "<p><b>" + (couple(e) ? T("Para matrimonios", "For married couples") + (e.audience === "members" ? " · " + T("solo miembros de KAI", "KAI members only") : "") : e.audience === "members" ? T("Solo miembros de KAI", "KAI members only") : T("Pastores, cónyuges, familias e invitados", "Pastors, spouses, families and guests")) + "</b><span>" + (e.left != null ? e.left + " " + T("lugares disponibles", "spots left") : T("Confirma cuántas personas vienen contigo", "Tell us who is coming with you")) + "</span></p></div></div>";
     var map = e.address ? '<div class="evd-map"><iframe title="Mapa" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=' + encodeURIComponent(e.address) + '&output=embed"></iframe><div class="tx"><a href="' + mapsUrl(e.address) + '" target="_blank" rel="noopener">Google Maps ↗</a><a href="https://maps.apple.com/?q=' + encodeURIComponent(e.address) + '" target="_blank" rel="noopener">Apple Maps ↗</a><a href="https://waze.com/ul?q=' + encodeURIComponent(e.address) + '" target="_blank" rel="noopener">Waze ↗</a></div></div>' : "";
     var form;
     if (e.status === "cancelled") form = '<div class="evx-cx"><b>' + T("Este evento fue cancelado", "This event was cancelled") + "</b>" + esc(e.cancel_reason || T("Lamentamos el inconveniente.", "We apologize for the inconvenience.")) + "</div>";
     else if (!e.open) form = '<div class="rsvp"><h3>' + T("Registro cerrado", "Registration closed") + '</h3><p class="s2">' + (e.full ? T("Ya no hay lugares disponibles.", "This event is full.") : T("El registro para este evento ya está cerrado.", "Registration for this event is closed.")) + "</p></div>";
     else if (e.audience === "members" && !ME) form = '<div class="rsvp"><h3>' + T("Solo miembros", "Members only") + '</h3><p class="s2">' + T("Inicia sesión en el Área de Miembros para registrarte.", "Sign in to the Members Area to register.") + '</p><a class="btn gold" href="#/membership">' + T("Iniciar sesión", "Sign in") + "</a></div>";
     else {
-      var opts = ""; for (var i = 0; i <= (e.max_guests || 0); i++) opts += '<option value="' + i + '">' + (i === 0 ? T("Solo yo", "Just me") : i + " " + T(i === 1 ? "invitado" : "invitados", i === 1 ? "guest" : "guests")) + "</option>";
+      var cp = couple(e), opts = "", mg = cp ? Math.max((e.max_guests || 0) - 1, 0) : (e.max_guests || 0);
+      for (var i = 0; i <= mg; i++) opts += '<option value="' + i + '">' + (cp ? (i === 0 ? T("Sin hijos", "No children") : i + " " + T(i === 1 ? "hijo(a)" : "hijos", i === 1 ? "child" : "children")) : (i === 0 ? T("Solo yo", "Just me") : i + " " + T(i === 1 ? "invitado" : "invitados", i === 1 ? "guest" : "guests"))) + "</option>";
+      var sp = FORM.spouse || {};
+      var spouse = cp ? '<div class="gst sp"><div class="gh"><b>' + T("Tu esposo(a)", "Your spouse") + '</b><span class="mn">' + T("Incluido en el precio", "Included in the price") + '</span></div><div class="r2"><input id="sp-fn" placeholder="' + T("Nombre", "First name") + '" value="' + esc(sp.first_name || "") + '"><input id="sp-ln" placeholder="' + T("Apellido", "Last name") + '" value="' + esc(sp.last_name || "") + '"></div><input id="sp-em" type="email" class="gm" placeholder="' + T("Correo (opcional) · le enviaremos su QR", "Email (optional) · we will send their QR") + '" value="' + esc(sp.email || "") + '"></div>' : "";
       var nm = m && m.full_name ? m.full_name.split(" ") : [];
       form = '<form class="rsvp" id="rsvp" novalidate><h3>' + T("Confirma tu asistencia", "RSVP") + '</h3><p class="s2">' + (e.reg_until ? T("Registro abierto hasta el ", "Registration open until ") + esc(fdate(e.reg_until + "T12:00:00", { day: "numeric", month: "long" })) + "." : "") + "</p>" +
         (cty && !cty.invalid ? '<div class="evx-cty">🎁 ' + T("Cortesía de <b>", "Courtesy of <b>") + esc(cty.by) + "</b> · " + T("tu registro no tiene costo", "no cost for you") + (cty.left != null ? " (" + cty.left + " " + T("lugares", "spots") + ")" : "") + "</div>" : "") +
@@ -164,7 +172,7 @@
         '<div class="r2"><div><label class="l">' + T("Teléfono", "Phone") + '</label><input name="phone" type="tel" autocomplete="tel" value="' + esc(m && m.phone || "") + '"></div><div><label class="l">' + T("Correo", "Email") + '</label><input name="email" type="email" autocomplete="email" value="' + esc(ME ? ME.email : "") + '"></div></div>' +
         '<label class="l">' + T("Iglesia o ministerio", "Church or ministry") + '</label><input name="church" placeholder="' + T("Opcional", "Optional") + '" value="' + esc(m && m.church || "") + '">' +
         '<div class="r2 c3"><div><label class="l">' + T("Ciudad", "City") + '</label><input name="city" autocomplete="address-level2" value="' + esc(m && m.city || "") + '"></div><div><label class="l">' + T("Estado", "State") + '</label><input name="state" autocomplete="address-level1" value="' + esc(m && m.state || "") + '"></div></div>' +
-        ((e.max_guests || 0) > 0 ? '<label class="l">' + T("¿Traes invitados?", "Bringing guests?") + '</label><select id="ev-ng">' + opts + '</select><div id="ev-gs"></div>' : "") +
+        spouse + (mg > 0 ? '<label class="l">' + (cp ? T("¿Traen hijos menores de edad?", "Bringing children under 18?") : T("¿Traes invitados?", "Bringing guests?")) + '</label><select id="ev-ng">' + opts + '</select><div id="ev-gs"></div>' : "") +
         '<label class="l">' + T("Comentarios", "Comments") + '</label><textarea name="comments" placeholder="' + T("Alergias, necesidades especiales… (opcional)", "Allergies, special needs… (optional)") + '"></textarea>' +
         '<div id="ev-tot"></div><p class="evx-err" id="ev-msg" role="alert"></p><button class="btn gold" id="ev-go" type="submit"></button><p class="fine">' + T("Te enviaremos la confirmación por correo y recordatorios antes del evento.", "We will email your confirmation and reminders before the event.") + "</p></form>";
     }
@@ -191,7 +199,13 @@
       ev.preventDefault();
       var msg = $("#ev-msg"), btn = $("#ev-go"), fd = new FormData(f), p = {};
       ["first_name", "last_name", "phone", "email", "church", "city", "state", "comments"].forEach(function (k) { p[k] = String(fd.get(k) || "").trim(); });
-      p.lang = lang(); p.code = EV.code || ""; p.guests = FORM.guests.map(function (g) { return { first_name: (g.first_name || "").trim(), last_name: (g.last_name || "").trim(), email: g.minor ? "" : (g.email || "").trim(), minor: !!g.minor }; });
+      p.lang = lang(); p.code = EV.code || ""; p.guests = FORM.guests.map(function (g) { var mn = couple(EV) || !!g.minor; return { first_name: (g.first_name || "").trim(), last_name: (g.last_name || "").trim(), email: mn ? "" : (g.email || "").trim(), minor: mn }; });
+      if (couple(EV)) {
+        var spo = { first_name: ($("#sp-fn").value || "").trim(), last_name: ($("#sp-ln").value || "").trim(), email: ($("#sp-em").value || "").trim(), minor: false };
+        if (!spo.first_name || !spo.last_name) return (msg.textContent = errText("couple_spouse"));
+        if (spo.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(spo.email)) return (msg.textContent = errText("invalid_guest_email"));
+        p.guests.unshift(spo);
+      }
       if (!p.first_name || !p.last_name) return (msg.textContent = errText("missing_name"));
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p.email)) return (msg.textContent = errText("invalid_email"));
       if (!p.phone) return (msg.textContent = T("Escribe tu teléfono.", "Enter your phone."));
@@ -273,9 +287,10 @@
     if (act.length) {
       if (x.mine) {
         body += '<div class="evx-mng"><h4>' + T("¿Cambio de planes?", "Change of plans?") + "</h4>" + ppl.map(function (p) {
-          return '<div class="mrow' + (p.status !== "active" ? " off" : "") + '"><span>' + esc(p.name) + (p.status !== "active" ? " · " + T("cancelado", "cancelled") : "") + "</span>" + (p.status === "active" ? '<button class="lnkb" data-cancel="' + esc(p.id) + '">' + T("No podrá asistir", "Can't attend") + "</button>" : "") + "</div>";
+          return '<div class="mrow' + (p.status !== "active" ? " off" : "") + '"><span>' + esc(p.name) + (p.status !== "active" ? " · " + T("cancelado", "cancelled") : "") + "</span>" + (p.status === "active" && !(couple(e) && !p.minor) ? '<button class="lnkb" data-cancel="' + esc(p.id) + '">' + T("No podrá asistir", "Can't attend") + "</button>" : "") + "</div>";
         }).join("") + '<button class="lnkb" data-cancel="all">' + T("Cancelar todo el registro", "Cancel the whole registration") + "</button></div>";
-      } else body += '<div class="evx-mng"><button class="btn ol sm" data-cancel="me">' + T("No podré asistir", "I can't attend") + "</button></div>";
+        if (couple(e)) body = body.replace(/<\/div>$/, '<p class="fine" style="text-align:left;margin:8px 0 0">' + T("Es un registro por matrimonio: si uno de los dos no puede asistir, se cancela el registro completo.", "This is a couple registration: if one of you can't attend, the whole registration is cancelled.") + "</p></div>");
+      } else body += '<div class="evx-mng"><button class="btn ol sm" data-cancel="me">' + (couple(e) && !(ppl[0] && ppl[0].minor) ? T("No podremos asistir", "We can't attend") : T("No podré asistir", "I can't attend")) + "</button></div>";
     }
     put(hero("Kingdom Alliance International · E4:4", T("Eventos", "Events")) + '<section class="s"><div class="wrap"><div class="ok">' + head + tk + body +
       '<p class="fine" style="margin-top:22px">' + T("¿Preguntas? Escríbenos a ", "Questions? Write to ") + '<a href="mailto:info@kaie44.org">info@kaie44.org</a></p></div></div></section>');
