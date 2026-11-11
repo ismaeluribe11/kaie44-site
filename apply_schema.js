@@ -79,20 +79,26 @@ window.KAIAPP_SCHEMA = (function () {
       ] }
   ];
 
+  // Lo que le urge / lo que necesita (las llaves viejas se conservan para las aplicaciones anteriores)
+  var NEEDS = [
+    ["mentor", "Mentoría pastoral", "Pastoral mentoring"], ["care", "Cuidado pastoral o consejería", "Pastoral care or counseling"],
+    ["lead", "Formación de líderes", "Leadership training"], ["resources", "Materiales y recursos", "Materials and resources"],
+    ["legal", "Incorporación o asuntos legales", "Incorporation or legal matters"], ["church_fin", "Finanzas de la iglesia", "Church finances"],
+    ["personal_fin", "Finanzas personales y retiro", "Personal finances and retirement"], ["youth", "Ministerio de jóvenes", "Youth ministry"],
+    ["family", "Matrimonio y familia", "Marriage and family"], ["fellow", "Compañerismo con otros pastores", "Fellowship with other pastors"],
+    ["creds", "Credenciales para mi equipo", "Credentials for my team"]
+  ];
   var B = [
-    { id: "b1", t: ["Sus prioridades", "Your priorities"], h: ["De estos 8 beneficios, ¿cuáles 3 serían más valiosos para usted en este momento? Tóquelos en orden de importancia.", "Of these 8 benefits, which 3 would be most valuable to you right now? Tap them in order of importance."],
-      f: [{ k: "priorities", type: "pick" }] },
-    { id: "b2", t: ["Cada beneficio", "Each benefit"], h: ["Califique del 1 (no lo necesito) al 5 (lo necesito mucho).", "Rate from 1 (not needed) to 5 (much needed)."],
+    { id: "b1", t: ["Dónde está hoy", "Where you are today"], h: ["Una sola pregunta, la más importante.", "One question, the most important one."],
       f: [
-        { k: "n_mentor", tag: ["Mentoría", "Mentoring"], l: ["¿Cómo calificaría su necesidad de orientación, apoyo y retroalimentación honesta de un mentor pastoral con experiencia?", "How would you rate your need for guidance, support, and honest feedback from an experienced pastoral mentor?"], type: "scale", sc: NEED },
-        { k: "n_lead", tag: ["Liderazgo", "Leadership"], l: ["¿Cómo calificaría su necesidad de capacitación formal para fortalecer sus habilidades de liderazgo más allá de la predicación?", "How would you rate your need for formal training to strengthen your leadership skills beyond preaching?"], type: "scale", sc: NEED },
-        { k: "n_fellow", tag: ["Compañerismo", "Fellowship"], l: ["¿Cómo calificaría su necesidad de amistades significativas y compañerismo con pastores fuera de su propia congregación?", "How would you rate your need for meaningful friendships and fellowship with pastors beyond your own congregation?"], type: "scale", sc: NEED },
-        { k: "regional", tag: ["Actividades regionales", "Regional activities"], l: ["¿Le interesaría participar en conferencias o actividades regionales donde usted y su iglesia puedan confraternizar y participar?", "Would you like to take part in regional conferences or activities where you and your church can fellowship and participate?"], type: "radio", o: [["y", "Sí", "Yes"], ["n", "No", "No"]] },
-        { k: "regional_topics", l: ["¿Sobre qué temas?", "Which topics?"], type: "checks", other: 1, when: "regional=y", o: [["lead", "Liderazgo", "Leadership"], ["family", "Matrimonio y familia", "Marriage and family"], ["health", "Salud emocional del pastor", "Pastor's emotional health"], ["finance", "Finanzas de la iglesia", "Church finances"], ["evang", "Evangelismo y misiones", "Evangelism and missions"], ["legal", "Asuntos legales", "Legal matters"]] },
-        { k: "resources", tag: ["Recursos", "Resources"], l: ["¿En qué áreas necesita materiales o herramientas?", "In which areas do you need materials or tools?"], type: "checks", other: 1, o: [["disc", "Discipulado", "Discipleship"], ["admin", "Administración", "Administration"], ["couns", "Consejería", "Counseling"], ["youth", "Jóvenes", "Youth"], ["kids", "Niños", "Children"]] },
-        { k: "team_creds", tag: ["Credenciales", "Credentials"], l: ["¿Otros ministros de su iglesia necesitan credencial? (para bodas, capellanía, hospitales o cárceles)", "Do other ministers in your church need a credential? (for weddings, chaplaincy, hospitals or prisons)"], type: "radio", o: [["0", "Ninguno", "None"], ["1", "1 a 2", "1 to 2"], ["3", "3 a 5", "3 to 5"], ["6", "Más de 5", "More than 5"]] },
-        { k: "conf_help", tag: ["Conferencia", "Conference"], l: ["¿Qué le ayudaría a asistir a la conferencia anual?", "What would help you attend the annual conference?"], type: "checks", o: [["date", "Fecha con anticipación", "Date announced early"], ["cost", "Costo accesible", "Affordable cost"]] },
-        { k: "season", tag: ["Cuidado pastoral", "Pastoral care"], l: ["¿Cómo describiría la temporada que vive hoy?", "How would you describe the season you are in today?"], type: "radio", o: [["thriving", "Floreciendo", "Thriving"], ["stable", "Estable", "Stable"], ["tired", "En necesidad de renovación", "In need of renewal"], ["crisis", "Tiempos difíciles", "Challenging times"]] }
+        { k: "season", l: ["¿Cómo describiría la temporada que vive hoy?", "How would you describe the season you are in today?"], type: "radio", cards: 1, o: [["thriving", "Floreciendo", "Thriving"], ["stable", "Estable", "Stable"], ["tired", "En necesidad de renovación", "In need of renewal"], ["crisis", "Tiempos difíciles", "Challenging times"]] }
+      ] },
+    { id: "b2", t: ["Qué necesita", "What you need"], h: ["Lo que le urge y lo que anda buscando.", "What is most urgent and what you are looking for."],
+      f: [
+        { k: "priorities", type: "pick", l: ["¿Qué le urge más hoy?", "What is most urgent for you today?"], s: ["Elija hasta 3, en orden de importancia.", "Choose up to 3, in order of importance."] },
+        { k: "also", l: ["¿Qué más le serviría?", "What else would help you?"], s2: ["marque todas las que quiera", "check all that apply"], type: "checks", opt: 1, o: NEEDS.map(function (n) { return [n[0], n[1], n[2]]; }) },
+        { k: "resources", l: ["¿Qué recursos o herramientas anda buscando?", "What resources or tools are you looking for?"], type: "checks", other: 1, o: [["disc", "Discipulado", "Discipleship"], ["admin", "Administración", "Administration"], ["couns", "Consejería", "Counseling"], ["youth", "Jóvenes", "Youth"], ["kids", "Niños", "Children"]] },
+        { k: "orient", l: ["¿En qué le gustaría que KAI ayude a su iglesia?", "How would you like KAI to help your church?"], s2: ["marque los que apliquen", "check all that apply"], type: "checks", other: 1, o: [["incorp", "Incorporar la iglesia", "Incorporating the church"], ["501", "Obtener el 501(c)(3)", "Obtaining 501(c)(3) status"], ["bylaws", "Estatutos y junta directiva", "Bylaws and board"], ["structure", "Estructurar ministerios y liderazgo", "Structuring ministries and leadership"], ["done", "Mi iglesia ya está incorporada y tiene 501(c)(3)", "My church is already incorporated and has 501(c)(3)"]] }
       ] },
     { id: "b3", t: ["Formación de líderes", "Leader development"],
       f: [
@@ -102,24 +108,14 @@ window.KAIAPP_SCHEMA = (function () {
         { k: "lt_self", l: ["¿Le interesa recibir formación formal para usted?", "Are you interested in formal training for yourself?"], w: 3, type: "radio", o: [["y", "Sí", "Yes"], ["n", "No por ahora", "Not now"]] },
         { k: "morphe", type: "morphe", o: [["contact", "Sí, que me contacten", "Yes, please contact me"], ["no", "No por ahora", "Not now"]] }
       ] },
-    { id: "b4", t: ["Su iglesia local", "Your local church"], h: ["KAI ofrece, donde aplique, los siguientes ministerios:", "KAI offers, where applicable, the following ministries:"],
+    { id: "b4", t: ["Su iglesia", "Your church"], h: ["El detalle solo aparece si contesta que sí.", "The details only appear if you answer yes."],
       f: [
-        { type: "sub", l: ["Talleres ministeriales para la iglesia", "Church Ministry Workshops"] },
+        { k: "youth_int", l: ["¿Le interesa que sus jóvenes convivan con otras iglesias?", "Would you like your youth to fellowship with other churches?"], type: "radio", o: Y },
+        { k: "youth_acts", l: ["¿Qué actividades les interesarían?", "Which activities would interest them?"], type: "checks", when: "youth_int=y", other: 1, o: [["retreats", "Retiros y campamentos", "Retreats and camps"], ["sports", "Deportes", "Sports"], ["worship", "Noches de alabanza", "Worship nights"], ["service", "Misiones y servicio", "Missions and service"], ["conf", "Conferencias", "Conferences"]] },
         { k: "ws", l: ["¿Puede ser anfitrión de un taller ministerial en su iglesia local?", "Are you able to host a ministry workshop at your local church?"], type: "radio", o: [["y", "Sí", "Yes"], ["n", "No", "No"]] },
-        { k: "ws_topics", l: ["¿Sobre qué temas?", "Which topics?"], type: "checks", other: 1, when: "ws=y", o: [["couples", "Matrimonios", "Marriage"], ["parent", "Crianza", "Parenting"], ["fin", "Finanzas", "Finances"], ["lead", "Liderazgo", "Leadership"], ["evang", "Evangelismo", "Evangelism"], ["couns", "Consejería", "Counseling"], ["worship", "Alabanza", "Worship"], ["admin", "Administración", "Administration"]] },
-        { k: "ws_host", l: ["¿Su iglesia podría ser sede de un taller regional?", "Could your church host a regional workshop?"], type: "radio", when: "ws=y", o: YMN },
-        { type: "sub", l: ["Incorporación y estructura ministerial", "Incorporation and ministry structure"] },
-        { k: "incorporated", l: ["¿Iglesia incorporada legalmente?", "Is the church legally incorporated?"], w: 3, type: "radio", o: [["y", "Sí", "Yes"], ["p", "En proceso", "In progress"], ["n", "No", "No"]] },
-        { k: "c501", l: ["¿Estatus 501(c)(3)?", "501(c)(3) status?"], w: 3, type: "radio", o: [["y", "Sí", "Yes"], ["p", "En proceso", "In progress"], ["n", "No", "No"], ["u", "No sé", "Not sure"]] },
-        { k: "orient", l: ["¿En qué le gustaría que KAI le ayude?", "Where would you like KAI's assistance?"], s2: ["marque los que apliquen", "check all that apply"], type: "checks", other: 1, o: [["incorp", "Incorporar la iglesia", "Incorporating the church"], ["501", "Obtener el 501(c)(3)", "Obtaining 501(c)(3) status"], ["bylaws", "Estatutos y junta directiva", "Bylaws and board"], ["structure", "Estructurar ministerios y liderazgo", "Structuring ministries and leadership"]] },
-        { type: "sub", l: ["Convivencia entre iglesias", "Fellowship between churches"] },
-        { k: "conv_church", l: ["¿Qué tan importante es que su iglesia conviva con otras iglesias?", "How important is it for your church to fellowship with other churches?"], type: "scale", sc: IMP },
-        { k: "conv_youth", l: ["¿Y especialmente sus jóvenes?", "And especially your youth?"], type: "scale", sc: IMP },
-        { k: "youth_acts", l: ["¿Qué actividades les interesarían?", "Which activities would interest them?"], type: "checks", other: 1, o: [["retreats", "Retiros y campamentos", "Retreats and camps"], ["sports", "Deportes", "Sports"], ["worship", "Noches de alabanza", "Worship nights"], ["service", "Misiones y servicio", "Missions and service"], ["conf", "Conferencias", "Conferences"]] },
-        { k: "youth_count", l: ["¿Cuántos jóvenes tiene su iglesia?", "How many youth does your church have?"], w: 3, type: "radio", o: [["0", "0–10", "0–10"], ["11", "11–30", "11–30"], ["31", "Más de 30", "More than 30"]] },
-        { k: "youth_leader", l: ["¿Tiene un líder de jóvenes que pueda coordinar con otras iglesias?", "Do you have a youth leader who could coordinate with other churches?"], w: 3, type: "radio", o: Y }
+        { k: "ws_topics", l: ["¿Sobre qué temas?", "Which topics?"], type: "checks", other: 1, when: "ws=y", o: [["couples", "Matrimonios", "Marriage"], ["parent", "Crianza", "Parenting"], ["fin", "Finanzas", "Finances"], ["lead", "Liderazgo", "Leadership"], ["evang", "Evangelismo", "Evangelism"], ["couns", "Consejería", "Counseling"], ["worship", "Alabanza", "Worship"], ["admin", "Administración", "Administration"]] }
       ] },
-    { id: "b5", t: ["Una sola cosa", "One thing"],
+    { id: "b5", t: ["Para cerrar", "To finish"],
       f: [{ k: "one_thing", l: ["Si KAI pudiera ayudarle con una sola cosa este año, ¿cuál sería?", "If KAI could help you with just one thing this year, what would it be?"], type: "area" }] }
   ];
 
@@ -226,5 +222,5 @@ window.KAIAPP_SCHEMA = (function () {
       ] }
   };
 
-  return { A: A, B: B, C: C, BENEFITS: BENEFITS, TITLES: TITLES, DOCS: DOCS };
+  return { A: A, B: B, C: C, NEEDS: NEEDS, BENEFITS: BENEFITS, TITLES: TITLES, DOCS: DOCS };
 })();

@@ -97,6 +97,7 @@
     return '<aside class="ap-side"><h4>' + title + "</h4><ol>" + links.map(function (l) { return '<li><a href="#' + l[0] + '" data-jump="' + l[0] + '"><b>' + l[1] + "</b>" + l[2] + "</a></li>"; }).join("") + '</ol><div class="pg"><span class="pgt">' + prog + '</span><div class="bar"><i class="pgb"></i></div></div></aside>';
   }
   // Descripción de cada beneficio: la misma del sitio (página "Hazte miembro")
+  function needDef(c) { return (SC.NEEDS || []).filter(function (z) { return z[0] === c; })[0] || (SC.BENEFITS || []).filter(function (z) { return z[0] === c; })[0] || [c, c, c]; }
   function benDesc(b) { try { return (window.D && window.D[lang()] && window.D[lang()]["bd" + (b[3] + 1)]) || ""; } catch (e) { return ""; } }
   function sortedOpts(f) {
     if (!f.sort) return f.o;
@@ -104,9 +105,10 @@
     var mid = f.o.slice(1, hasOther ? -1 : undefined).sort(function (a, b) { return a[i].localeCompare(b[i], lang()); });
     return [first].concat(mid, hasOther ? [last] : []);
   }
+  var CARD_IC = { thriving: "🌱", stable: "⚓", tired: "🔄", crisis: "⛈️" };
   function opts(f, multi) {
-    var h = '<div class="ap-opts">' + f.o.map(function (o) {
-      return '<label><input type="' + (multi ? "checkbox" : "radio") + '" name="' + f.k + '" value="' + o[0] + '"' + (multi ? " data-multi" : "") + ">" + (lang() === "es" ? o[1] : o[2]) + "</label>";
+    var h = '<div class="ap-opts' + (f.cards ? " cards" : "") + '">' + f.o.map(function (o) {
+      return '<label><input type="' + (multi ? "checkbox" : "radio") + '" name="' + f.k + '" value="' + o[0] + '"' + (multi ? " data-multi" : "") + ">" + (f.cards && CARD_IC[o[0]] ? '<span class="ic">' + CARD_IC[o[0]] + "</span>" : "") + (lang() === "es" ? o[1] : o[2]) + "</label>";
     }).join("");
     if (f.other) h += '<label><input type="checkbox" name="' + f.k + '" value="other" data-multi>' + xx("Otro", "Other") + "</label>";
     h += "</div>";
@@ -164,8 +166,8 @@
       return '<div class="ap-file w6" data-k="' + k + '"><p>' + x(f.l) + (f.s ? "<small>" + x(f.s) + "</small>" : "") + fn + '</p><label class="ap-up">' + xx("Subir archivo", "Upload file") + '<input type="file" accept="image/*,.pdf" data-file="' + k + '"></label></div>';
     }
     if (t === "pick") {
-      return '<div class="fld w6" data-k="priorities"><div class="ap-pick">' + SC.BENEFITS.map(function (b) {
-        return '<button type="button" data-b="' + b[0] + '"><em></em><span class="ic"><svg viewBox="0 0 24 24">' + ICONS[b[3]] + "</svg></span><b>" + (lang() === "es" ? b[1] : b[2]) + "</b>" + (benDesc(b) ? "<small>" + benDesc(b) + "</small>" : "") + "</button>";
+      return '<div class="fld w6" data-k="priorities">' + (f.l ? lab(f) : "") + (f.s ? '<small class="ap-pick-h">' + x(f.s) + "</small>" : "") + '<div class="ap-pick chips">' + SC.NEEDS.map(function (b) {
+        return '<button type="button" data-b="' + b[0] + '"><em></em><b>' + (lang() === "es" ? b[1] : b[2]) + "</b></button>";
       }).join("") + '</div><div class="ap-pick-st"><i>1</i><i>2</i><i>3</i><span></span></div></div>';
     }
     if (t === "morphe") {
@@ -211,7 +213,7 @@
   function intro() {
     var parts = [
       ["A", xx("PARTE A", "PART A"), xx("Solicitud de membresía", "Membership application"), xx("Quién es usted, su familia y su ministerio.", "Who you are, your family and your ministry."), [xx("Datos personales y familia", "Personal information and family"), xx("Declaración de Fe", "Statement of Faith"), xx("Ministerio actual y trabajo", "Current ministry and work"), xx("Historial y formación", "Background and training"), xx("Foto para su credencial", "Photo for your credential")], "", xx("La revisa el Comité de Membresía", "Reviewed by the Membership Committee"), ""],
-      ["B", xx("PARTE B", "PART B"), xx("Diagnóstico de necesidades", "Needs assessment"), xx("Qué beneficios de KAI le serían más útiles hoy.", "Which KAI benefits would help you most today."), [xx("Beneficios que más necesita", "Benefits you need most"), xx("Formación de líderes", "Leader development"), xx("Apoyo a su iglesia local", "Support for your local church")], "", xx("La revisa el liderazgo de KAI", "Reviewed by KAI's leadership"), ""]
+      ["B", xx("PARTE B", "PART B"), xx("¿En qué podemos servirle?", "How can we serve you?"), xx("Dónde está hoy y qué necesita.", "Where you are today and what you need."), [xx("Lo que más le urge", "What is most urgent"), xx("Formación de líderes", "Leader development"), xx("Su iglesia", "Your church")], "", xx("La revisa el liderazgo de KAI", "Reviewed by KAI's leadership"), ""]
     ];
     var has = Object.keys(S).some(function (k) { return k !== "agree" && S[k] && (!Array.isArray(S[k]) || S[k].length); });
     return '<div class="hero sm"><div class="wrap"><div class="eyebrow">' + xx("Membresía · Kingdom Alliance International", "Membership · Kingdom Alliance International") + "</div><h1>" + xx("Aplicación de Membresía", "Membership Application") + '</h1><p class="lead ap">' + xx("El paquete de membresía tiene dos metas: conocer al pastor y descubrir qué necesita, para que KAI pueda servirle desde el primer día.", "The membership application has two goals: to get to know you and to discover what you need, so KAI can serve you from day one.") + '</p><p class="ap-meta">' + xx("Dos partes y una revisión final", "Two parts and a final review") + "</p></div></div>" +
@@ -227,7 +229,7 @@
 
   var PMETA = {
     a: { n: "A", eb: ["Parte A de 2", "Part A of 2"], t: ["Solicitud de membresía", "Membership application"], p: ["Cuéntenos quién es usted y cuál es su ministerio. Los campos marcados como opcionales pueden quedar en blanco.", "Tell us who you are and about your ministry. Fields marked optional may be left blank."], ch: [["7 secciones", "7 sections"], ["Se guarda automáticamente", "Saved automatically"]], prev: null, next: "b", nextT: ["Siguiente: Parte B", "Next: Part B"], end: ["Final de la Parte A", "End of Part A"] },
-    b: { n: "B", eb: ["Parte B de 2", "Part B of 2"], t: ["Diagnóstico de necesidades", "Needs assessment"], p: ["Ayúdenos a entender qué necesita usted y su iglesia, para que KAI pueda servirle donde más importa.", "Help us understand what you and your church need, so KAI can serve you where it matters most."], ch: [["5 secciones", "5 sections"], ["Se guarda automáticamente", "Saved automatically"]], prev: "a", next: "r", nextT: ["Siguiente: Revisión final", "Next: Final review"], end: ["Final de la Parte B", "End of Part B"] },
+    b: { n: "B", eb: ["Parte B de 2", "Part B of 2"], t: ["¿En qué podemos servirle?", "How can we serve you?"], p: ["Queremos saber dónde está hoy y qué necesita, para que KAI le sea útil desde el primer día. Toque las opciones; casi no tendrá que escribir.", "We want to know where you are today and what you need, so KAI can be useful to you from day one. Tap the options; you will hardly need to type."], ch: [["5 secciones · ≈ 5 minutos", "5 sections · ≈ 5 minutes"], ["Se guarda automáticamente", "Saved automatically"]], prev: "a", next: "r", nextT: ["Siguiente: Revisión final", "Next: Final review"], end: ["Final de la Parte B", "End of Part B"] },
     c: { n: "C", eb: ["Parte C de 3 · Confidencial", "Part C of 3 · Confidential"], t: ["Cuidado pastoral", "Pastoral care"], p: ["Queremos saber cómo está usted, su familia y su ministerio en esta temporada, para acompañarle de verdad.", "We want to know how you, your family and your ministry are doing in this season, so we can truly walk with you."], ch: [["Todas las preguntas son opcionales", "All questions are optional"], ["Confidencial", "Confidential"]], prev: "b", next: "r", nextT: ["Siguiente: Revisión final", "Next: Final review"], end: ["Final de la Parte C", "End of Part C"] }
   };
   function partScreen(p) {
@@ -267,7 +269,7 @@
     }
     var body = "";
     if (sec.f.some(function (f) { return f.type === "pick"; })) {
-      var pr = (S.priorities || []).map(function (c, i) { var b = SC.BENEFITS.filter(function (z) { return z[0] === c; })[0]; return "<div><em>" + (i + 1) + "</em>" + (b ? (lang() === "es" ? b[1] : b[2]) : c) + "</div>"; }).join("");
+      var pr = (S.priorities || []).map(function (c, i) { var b = needDef(c); return "<div><em>" + (i + 1) + "</em>" + (b ? (lang() === "es" ? b[1] : b[2]) : c) + "</div>"; }).join("");
       body += pr ? '<div class="rv-rank">' + pr + "</div>" : "";
     }
     if (cells.length || quotes.length) body += '<dl class="rv-dl">' + cells.join("") + quotes.join("") + "</dl>";
@@ -295,7 +297,7 @@
       '<div class="rv-stat"><h4>' + xx("Estado de su aplicación", "Application status") + "</h4><ul>" +
       stat(xx("Parte A · Solicitud", "Part A · Application"), a[0] + " / " + a[1], a[0] === a[1]) + stat(xx("Parte B · Necesidades", "Part B · Needs"), b[0] + " / " + b[1], b[0] > 0) + "</ul></div></div>" +
       card("rv-s1", "A", xx("Solicitud de membresía", "Membership application"), xx("La revisa el Comité de Membresía", "Reviewed by the Membership Committee"), "a", PARTS.a.map(reviewSection).join("")) +
-      card("rv-s2", "B", xx("Diagnóstico de necesidades", "Needs assessment"), xx("La revisa el liderazgo de KAI", "Reviewed by KAI's leadership"), "b", PARTS.b.map(reviewSection).join("")) +
+      card("rv-s2", "B", xx("¿En qué podemos servirle?", "How can we serve you?"), xx("La revisa el liderazgo de KAI", "Reviewed by KAI's leadership"), "b", PARTS.b.map(reviewSection).join("")) +
       '<div class="rv-card rv-sign" id="rv-s4"><div class="rv-top"><span class="lt">✎</span><div><h3>' + xx("Acuerdos y firma", "Agreements and signature") + "</h3><p>" + xx("Lea, acepte y firme con su dedo o con el mouse", "Read, accept and sign with your finger or mouse") + '</p></div></div><div class="rv-body"><div class="rv-agree">' +
       ag.map(function (g) { var read = g[0] !== "refs"; return '<label data-ag="' + g[0] + '"' + (g[0] === "refs" ? ' class="rv-agb"' : "") + '><input type="checkbox" name="agree_' + g[0] + '"' + (read && !S.agree[g[0] + "_read"] ? " disabled" : "") + ">" + g[1] + (read ? '<button type="button" class="rv-read' + (S.agree[g[0] + "_read"] ? " done" : "") + '" data-doc="' + g[0] + '">' + (S.agree[g[0] + "_read"] ? xx("Leído", "Read") : xx("Leer", "Read")) + "</button>" : "") + "</label>"; }).join("") +
       '</div><p class="rv-hintr">' + xx("Abra cada documento con “Leer” para poder aceptarlo.", "Open each document with “Read” to be able to accept it.") + '</p><div class="ap-errm" data-errfor="agree"></div>' +
@@ -573,7 +575,7 @@
     }
     out.push({ columns: [{ canvas: [{ type: "rect", x: 0, y: 3, w: 6, h: 6, color: GOLD }], width: 12 }, { text: x(sec.t).toUpperCase(), style: "grp" }], margin: [0, 10, 0, 5], headlineLevel: 1 });
     if (sec.f.some(function (f) { return f.type === "pick"; }) && (S.priorities || []).length) {
-      out.push({ table: { widths: ["*", "*", "*"], body: [[0, 1, 2].map(function (i) { var c = (S.priorities || [])[i]; var b = SC.BENEFITS.filter(function (z) { return z[0] === c; })[0]; return c ? { text: (i + 1) + ".  " + (lang() === "es" ? b[1] : b[2]), color: "#fff", bold: true, fillColor: NAVY, margin: [8, 7, 8, 7] } : { text: "" }; })] }, layout: { hLineWidth: function () { return 0; }, vLineWidth: function () { return 3; }, vLineColor: function () { return "#fff"; } }, margin: [0, 0, 0, 6] });
+      out.push({ table: { widths: ["*", "*", "*"], body: [[0, 1, 2].map(function (i) { var c = (S.priorities || [])[i]; var b = needDef(c); return c ? { text: (i + 1) + ".  " + (lang() === "es" ? b[1] : b[2]), color: "#fff", bold: true, fillColor: NAVY, margin: [8, 7, 8, 7] } : { text: "" }; })] }, layout: { hLineWidth: function () { return 0; }, vLineWidth: function () { return 3; }, vLineColor: function () { return "#fff"; } }, margin: [0, 0, 0, 6] });
     }
     var rows = [];
     for (var i = 0; i < cells.length; i += 3) rows.push([cells[i], cells[i + 1] || "", cells[i + 2] || ""]);
@@ -622,7 +624,7 @@
       partHead("A", xx("Solicitud de membresía", "Membership application"), xx("La revisa el Comité de Membresía", "Reviewed by the Membership Committee"))
     ];
     PARTS.a.forEach(function (s) { content = content.concat(pdfSection(s)); });
-    content.push(partHead("B", xx("Diagnóstico de necesidades", "Needs assessment"), xx("La revisa el liderazgo de KAI", "Reviewed by KAI's leadership")));
+    content.push(partHead("B", xx("¿En qué podemos servirle? · Necesidades", "How can we serve you? · Needs"), xx("La revisa el liderazgo de KAI", "Reviewed by KAI's leadership")));
     PARTS.b.forEach(function (s) { content = content.concat(pdfSection(s)); });
     content.push(partHead("§", xx("Acuerdos y firma", "Agreements and signature"), xx("Aceptados y firmados electrónicamente en kaie44.org", "Accepted and signed electronically at kaie44.org")));
     var agl = [xx("Declaración de Fe de KAI", "KAI Statement of Faith"), xx("Pacto de Membresía", "Membership Covenant"), xx("Código de Ética Ministerial", "Ministerial Code of Ethics"), xx("Uso y Protección de Datos", "Data Use and Protection")];

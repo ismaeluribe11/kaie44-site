@@ -20,7 +20,7 @@
   function xx(es, en) { return lang() === "es" ? es : en; }
   function li() { return lang() === "en" ? 1 : 0; }
   /* Textos que guarda la base de datos en español (tareas y pendientes): se muestran en inglés si el panel está en inglés. */
-  var DBT = { "Mentoría pastoral": "Pastoral mentoring", "Formación de liderazgo": "Leadership training", "Compañerismo y conexión": "Fellowship & connection",
+  var DBT = { "Entrevista registrada": "Interview recorded", "Entrevista actualizada": "Interview updated", "Instituto Morphe: contactarlo": "Instituto Morphe: contact them", "Incorporación o asuntos legales": "Incorporation or legal matters", "Finanzas de la iglesia": "Church finances", "Finanzas personales y retiro": "Personal finances and retirement", "Ministerio de jóvenes": "Youth ministry", "Matrimonio y familia": "Marriage and family", "Cuidado pastoral o consejería": "Pastoral care or counseling", "Mentoría pastoral": "Pastoral mentoring", "Formación de liderazgo": "Leadership training", "Compañerismo y conexión": "Fellowship & connection",
     "Conferencias y actividades regionales": "Regional conferences and activities", "Recursos ministeriales": "Ministry resources", "Licencias y credenciales": "Licenses & credentials",
     "Conferencia anual": "Annual conference", "Cuidado pastoral": "Pastoral care", "Credenciales para su equipo": "Credentials for their team",
     "Instituto Morphe: contactarlo": "Instituto Morphe: contact them", "Taller local en su iglesia": "Local workshop at their church",
@@ -112,7 +112,7 @@
     if (!items.length) return "";
     return '<div class="st-sec"><h4>' + esc(sec.t[li()]) + '</h4><div class="st-kv">' + items.map(function (i) { return '<div class="' + (i[2] ? "w" : "") + '"><small>' + esc(i[0]) + "</small><p>" + esc(i[1]).replace(/\n/g, "<br>") + "</p></div>"; }).join("") + "</div></div>";
   }
-  function ben(k) { var b = (SC.BENEFITS || []).filter(function (z) { return z[0] === k; })[0]; return b ? b[1 + li()] : k; }
+  function ben(k) { var b = (SC.NEEDS || []).filter(function (z) { return z[0] === k; })[0] || (SC.BENEFITS || []).filter(function (z) { return z[0] === k; })[0]; return b ? b[1 + li()] : k; }
   function findF(part, k) { var out = null; (SC[part] || []).forEach(function (s) { s.f.forEach(function (f) { if (f.k === k) out = f; }); }); return out; }
 
   /* ---------- encabezado y pestañas ---------- */
@@ -230,11 +230,12 @@
       return Promise.all([rpc("staff_overview"), ST.team ? ST.team : rpc("staff_team")]).then(function (r) {
         ST.ov = r[0]; ST.team = r[1]; if (seq !== ST.seq) return;
         var v = p[0] || (has("president") ? "inbox" : has("admin", "membership", "care") ? "apps" : "members");
-        var need = { inbox: ["president"], apps: ["admin", "membership", "president", "care"], app: ["admin", "membership", "president", "care", "treasury"], needs: ["admin", "membership", "president", "care"], care: ["care"] }[v];
+        var need = { interview: ["admin", "membership", "president", "care"], inbox: ["president"], apps: ["admin", "membership", "president", "care"], app: ["admin", "membership", "president", "care", "treasury"], needs: ["admin", "membership", "president", "care"], care: ["care"] }[v];
         if (need && !has.apply(null, need)) { put(denied()); return; }
         if (v === "inbox") return inbox();
         if (v === "apps") return appList(p[1] || "", decodeURIComponent(p[2] || ""));
         if (v === "app") return appDetail(p[1]);
+        if (v === "interview") return interviewPage(p[1]);
         if (v === "members") return memList(p[1] || "all", decodeURIComponent(p[2] || ""));
         if (v === "member") return memDetail(p[1]);
         if (v === "needs") return needs();
@@ -244,6 +245,78 @@
         put(denied());
       });
     }).catch(function (e) { put(hero0(xx("No pudimos cargar el panel", "We couldn't load the panel"), esc(errMsg(e)))); });
+  }
+
+  /* ---------- Entrevista (referencias, ordenación y cuidado pastoral · todo opcional) ---------- */
+  function ivCard(a) {
+    var box = $("#st-ivw", ROOT); if (!box || !has("admin", "membership", "president", "care")) return;
+    rpc("staff_interview_get", { p_id: a.id }).then(function (x) {
+      var iv = x.interview, done = !!(iv && iv.saved_at);
+      box.innerHTML = '<div class="st-card st-ivc' + (done ? " done" : "") + '"><div class="st-cb"><div><b>' + (done ? xx("✓ Entrevista registrada", "✓ Interview recorded") : xx("Entrevista pendiente", "Interview pending")) + "</b><span>" +
+        (done ? esc([iv.date ? fd(iv.date) : fd(iv.saved_at), (iv.who || []).join(", ") || iv.saved_by].filter(Boolean).join(" · ")) : xx("Referencias, ordenación y cuidado pastoral · todo opcional", "References, ordination and pastoral care · all optional")) + '</span></div><a class="btn ' + (done ? "navy" : "gold") + ' sm" href="#/staff/interview/' + a.id + '">' + (done ? xx("Ver / editar", "View / edit") : xx("Hacer entrevista", "Start interview")) + "</a></div></div>";
+    }).catch(function () { box.innerHTML = ""; });
+  }
+  function interviewPage(id) {
+    loading("apps", xx("Entrevista", "Interview"));
+    return rpc("staff_interview_get", { p_id: id }).then(function (x) {
+      var M = JSON.parse(JSON.stringify(x.interview || {})), R = JSON.parse(JSON.stringify(x.refs || {})), C = JSON.parse(JSON.stringify(x.care || {}));
+      var careEdit = !!(x.care_role || !x.care_saved);
+      if (!M.date) M.date = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+      M.who = M.who || (ST.me && ST.me.name ? [ST.me.name] : []);
+      function v(o, k) { return o[k] == null ? "" : o[k]; }
+      function inp(src, k, ph, type) { return '<input class="st-in" data-src="' + src + '" data-k="' + k + '" type="' + (type || "text") + '" value="' + esc(v(src === "R" ? R : src === "M" ? M : C, k)) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : "") + ">"; }
+      function area(src, k, ph) { return '<textarea class="st-in" data-src="' + src + '" data-k="' + k + '" rows="3"' + (ph ? ' placeholder="' + esc(ph) + '"' : "") + ">" + esc(v(src === "R" ? R : src === "M" ? M : C, k)) + "</textarea>"; }
+      function btns(src, k, o, multi) { var cur = (src === "M" ? M : C)[k]; return '<div class="iv-bt" data-src="' + src + '" data-k="' + k + '"' + (multi ? ' data-multi="1"' : "") + ">" + o.map(function (q) { var on = multi ? (cur || []).indexOf(q[0]) >= 0 : String(cur) === String(q[0]); return '<button type="button" data-v="' + esc(q[0]) + '"' + (on ? ' class="on"' : "") + ">" + esc(lang() === "en" ? (q[2] || q[1]) : q[1]) + "</button>"; }).join("") + "</div>"; }
+      function q(label, inner, when, note) { return '<div class="iv-q"' + (when ? ' data-when="' + when + '"' : "") + "><label>" + label + "</label>" + inner + (note ? "<small>" + note + "</small>" : "") + "</div>"; }
+      function cField(f) {
+        var t = f.type || "text", L = f.l ? esc(lang() === "en" ? f.l[1] : f.l[0]) : "";
+        if (t === "sub" || t === "finbox" || t === "offer" || t === "care") return "";
+        if (t === "scale") return q(L, btns("C", f.k, [1, 2, 3, 4, 5].map(function (n) { return [String(n), String(n)]; })), f.when, f.sc ? esc((lang() === "en" ? f.sc[0][1] : f.sc[0][0]) + " → " + (lang() === "en" ? f.sc[1][1] : f.sc[1][0])) : "");
+        if (t === "radio") return q(L, btns("C", f.k, f.o), f.when);
+        if (t === "checks") return q(L, btns("C", f.k, f.o.concat(f.other ? [["other", "Otro", "Other"]] : []), true) + (f.other ? '<div class="iv-sub" data-when="' + f.k + '=other">' + inp("C", f.k + "_other", xx("¿Cuál?", "Which?")) + "</div>" : ""), f.when);
+        if (t === "consent") return q("", '<label class="iv-chk"><input type="checkbox" data-src="C" data-k="fin_consent"' + (C.fin_consent ? " checked" : "") + "> " + xx("Autoriza a KAI a compartir solo su nombre y contacto con el equipo de planeación financiera.", "Authorizes KAI to share only their name and contact with the financial planning team.") + "</label>", f.when);
+        if (t === "area") return q(L, area("C", f.k), f.when);
+        return q(L, inp("C", f.k), f.when);
+      }
+      var team = (ST.team || []).map(function (t) { return [t.name || t.email, t.name || t.email]; });
+      var info = [[xx("Teléfono", "Phone"), x.phone], [xx("Correo", "Email"), x.email], [xx("Iglesia", "Church"), [x.church, [x.city, x.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ")],
+        [xx("Cónyuge", "Spouse"), x.spouse_name], [xx("Ordenación (según su aplicación)", "Ordination (per application)"), [x.ordained_by, x.ordained_year].filter(Boolean).join(" · ")]].filter(function (r) { return r[1]; });
+      var careH = careEdit ? SC.C.map(function (s) { return '<div class="iv-grp"><h4>' + esc(lang() === "en" ? s.t[1] : s.t[0]) + "</h4>" + s.f.map(cField).join("") + "</div>"; }).join("")
+        : '<div class="iv-lock">🔒 ' + xx("Las respuestas de cuidado pastoral ya se guardaron. Por confidencialidad, solo las ve el equipo de Cuidado pastoral.", "The pastoral care answers were already saved. For confidentiality, only the Pastoral care team can see them.") + "</div>";
+      var html = '<div class="iv-tip">💬 ' + xx("<b>Todo es opcional.</b> Platique con naturalidad y pregunte solo lo que fluya; no tiene que llenar todo. Puede guardar y volver después.", "<b>Everything is optional.</b> Have a natural conversation and ask only what flows; you don't have to fill everything. You can save and come back later.") + "</div>" +
+        '<div class="st-card"><h3>' + esc(x.name) + " <small>" + esc(x.app_no) + '</small></h3><div class="st-cb iv-info">' + info.map(function (r) { return "<div><small>" + r[0] + "</small><p>" + esc(r[1]) + "</p></div>"; }).join("") + "</div></div>" +
+        '<div class="st-card"><h3>' + xx("1 · La entrevista", "1 · The interview") + '</h3><div class="st-cb">' +
+          q(xx("Fecha", "Date"), inp("M", "date", "", "date")) +
+          q(xx("¿Quién la hizo?", "Who conducted it?"), btns("M", "who", team, true)) +
+          q(xx("¿Mostró su certificado de ordenación?", "Did they show their ordination certificate?"), btns("M", "ord_seen", [["y", "Sí", "Yes"], ["n", "No", "No"], ["none", "No lo tiene", "Doesn't have it"], ["na", "No se preguntó", "Not asked"]])) +
+          q(xx("Notas sobre su ordenación", "Notes about their ordination"), area("M", "ord_note", xx("Ej.: se ordenó en 1995 en…, el concilio ya no existe…", "E.g. ordained in 1995 at…, the council no longer exists…"))) + "</div></div>" +
+        '<div class="st-card"><h3>' + xx("2 · Referencias pastorales", "2 · Pastoral references") + '</h3><div class="st-cb">' + ["ref1", "ref2"].map(function (r, i) {
+          return '<div class="iv-ref"><h4>' + xx("Referencia ", "Reference ") + (i + 1) + '</h4><div class="iv-g2">' + inp("R", r + "_name", xx("Nombre", "Name")) + inp("R", r + "_rel", xx("Iglesia o relación", "Church or relationship")) + inp("R", r + "_phone", xx("Teléfono", "Phone"), "tel") + inp("R", r + "_email", xx("Correo", "Email"), "email") + "</div></div>";
+        }).join("") + "</div></div>" +
+        '<div class="st-card iv-care"><h3>' + xx("3 · Cuidado pastoral <small>Confidencial</small>", "3 · Pastoral care <small>Confidential</small>") + '</h3><div class="st-cb"><p class="iv-note">' + xx("Solo el equipo de Cuidado pastoral podrá ver estas respuestas después de guardarlas. Pregunte con tacto; el pastor puede no contestar.", "Only the Pastoral care team will be able to see these answers after saving. Ask gently; the pastor may choose not to answer.") + "</p>" + careH + "</div></div>" +
+        '<div class="st-card"><h3>' + xx("4 · Notas de la entrevista", "4 · Interview notes") + '</h3><div class="st-cb">' + area("M", "notes", xx("Impresiones generales, próximos pasos… (las ve el equipo de membresía)", "General impressions, next steps… (seen by the membership team)")) + "</div></div>" +
+        '<div class="iv-save"><a class="btn navy" href="#/staff/app/' + x.id + '">' + xx("Cancelar", "Cancel") + '</a><p class="st-msg" id="iv-m"></p><button class="btn gold" id="iv-go">' + xx("Guardar entrevista", "Save interview") + "</button></div>";
+      put(hero("apps", xx("Entrevista de membresía", "Membership interview"), x.name, null, ["#/staff/app/" + x.id, xx("Aplicación", "Application")]) + body('<div class="iv-wrap">' + html + "</div>"));
+      var W = $(".iv-wrap", ROOT);
+      function obj(src) { return src === "R" ? R : src === "M" ? M : C; }
+      function when() { $$("[data-when]", W).forEach(function (el) { var p = el.dataset.when.split("="), cur = C[p[0]], vals = p[1].split(","); var ok = Array.isArray(cur) ? cur.some(function (z) { return vals.indexOf(z) >= 0; }) : vals.indexOf(String(cur)) >= 0; el.hidden = !ok; }); }
+      W.addEventListener("input", function (e) { var t = e.target; if (!t.dataset.k) return; obj(t.dataset.src)[t.dataset.k] = t.type === "checkbox" ? t.checked : t.value; });
+      W.addEventListener("change", function (e) { var t = e.target; if (t.type === "checkbox" && t.dataset.k) obj(t.dataset.src)[t.dataset.k] = t.checked; });
+      W.addEventListener("click", function (e) {
+        var b = e.target.closest(".iv-bt button"); if (!b) return;
+        var g = b.parentNode, o = obj(g.dataset.src), k = g.dataset.k, val = b.dataset.v;
+        if (g.dataset.multi) { var arr = Array.isArray(o[k]) ? o[k] : (o[k] = []), i = arr.indexOf(val); if (i >= 0) arr.splice(i, 1); else arr.push(val); b.classList.toggle("on", i < 0); }
+        else { if (String(o[k]) === val) { delete o[k]; b.classList.remove("on"); } else { o[k] = /^\d$/.test(val) && g.dataset.src === "C" ? +val : val; $$("button", g).forEach(function (z) { z.classList.toggle("on", z === b); }); } }
+        when();
+      });
+      when();
+      $("#iv-go", W).onclick = function () {
+        var btn = this, m = $("#iv-m", W); btn.disabled = true; m.textContent = xx("Guardando…", "Saving…");
+        var p = { meta: M, refs: R }; if (careEdit) p.care = C;
+        rpc("staff_interview_save", { p_id: x.id, p: p }).then(function () { toast(xx("Entrevista guardada.", "Interview saved.")); location.hash = "#/staff/app/" + x.id; })
+          .catch(function (er) { btn.disabled = false; m.textContent = errMsg(er); });
+      };
+    }).catch(function (e) { put(hero0(xx("No pudimos cargar la entrevista", "We couldn't load the interview"), esc(errMsg(e)))); });
   }
 
   /* ---------- 1) Aplicaciones ---------- */
@@ -287,7 +360,7 @@
   var REASONS = ["Referencias no confirmadas", "No afirma la Declaración de Fe", "Información incompleta", "Otro"];
   var REASONS_EN = { "Referencias no confirmadas": "References not confirmed", "No afirma la Declaración de Fe": "Does not affirm the Statement of Faith", "Información incompleta": "Incomplete information", "Otro": "Other" };
   function reasonName(r) { return lang() === "en" ? (REASONS_EN[r] || r) : r; }
-  var EV = { submitted: LZ("envió su aplicación", "submitted the application"), start: LZ("comenzó la revisión", "started the review"), ref: LZ("marcó contactada una referencia", "marked a reference as contacted"), note: "nota", recommend: LZ("envió su recomendación al presidente", "sent the recommendation to the president"), decide: LZ("decisión del presidente", "president's decision"), pay_claim: LZ("indicó que envió su pago por Zelle", "said they sent the payment by Zelle"), pay: LZ("confirmó el pago", "confirmed the payment"), photo: LZ("cambió la foto de la credencial", "changed the credential photo"), print: LZ("actualizó la credencial impresa", "updated the printed credential") };
+  var EV = { submitted: LZ("envió su aplicación", "submitted the application"), start: LZ("comenzó la revisión", "started the review"), ref: LZ("marcó contactada una referencia", "marked a reference as contacted"), interview: LZ("registró la entrevista", "recorded the interview"), note: "nota", recommend: LZ("envió su recomendación al presidente", "sent the recommendation to the president"), decide: LZ("decisión del presidente", "president's decision"), pay_claim: LZ("indicó que envió su pago por Zelle", "said they sent the payment by Zelle"), pay: LZ("confirmó el pago", "confirmed the payment"), photo: LZ("cambió la foto de la credencial", "changed the credential photo"), print: LZ("actualizó la credencial impresa", "updated the printed credential") };
   function evLine(e, applicant) {
     var who = e.actor || applicant, txt = EV[e.kind] || e.kind, cls = e.kind === "note" ? "note" : "sys";
     if (e.kind === "recommend") txt = xx("recomendó ", "recommended ") + (e.meta && e.meta.rec === "approve" ? "aprobar" : xx("no aprobar", "not approving")) + (e.meta && e.meta.reason ? " · " + e.meta.reason : "");
@@ -324,9 +397,10 @@
       var side = actionBox(a, name);
       var log = xx("<div class=\"st-card\"><h3>Historial y notas <small>Registro interno</small></h3><ul class=\"st-log\">", "<div class=\"st-card\"><h3>History and notes <small>Internal record</small></h3><ul class=\"st-log\">") + (a.events || []).map(function (e) { return evLine(e, name); }).join("") + xx("</ul><div class=\"st-add\"><textarea id=\"st-note\" placeholder=\"Agregar una nota interna…\"></textarea><div><span>Las notas no se pueden editar ni borrar.</span><button class=\"st-mini\" data-act=\"note\">Agregar nota</button></div></div></div>", "</ul><div class=\"st-add\"><textarea id=\"st-note\" placeholder=\"Add an internal note…\"></textarea><div><span>Notes cannot be edited or deleted.</span><button class=\"st-mini\" data-act=\"note\">Add note</button></div></div></div>");
       put('<div class="hero sm st-hero"><div class="wrap"><a class="st-back" href="#/staff/' + (has("president") && a.status === "recommended" ? "inbox" : "apps") + '">‹ ' + (has("president") && a.status === "recommended" ? xx("Para su aprobación", "For your approval") : xx("Aplicaciones", "Applications")) + xx("</a><div class=\"st-dhead\"><div><div class=\"eyebrow\">Aplicación ", "</a><div class=\"st-dhead\"><div><div class=\"eyebrow\">Application ") + esc(a.app_no) + "</div><h1>" + esc(name) + '</h1><div class="st-who"><span>' + esc([a.title, a.church, [a.city, a.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ")) + '</span></div></div><div class="st-dmeta">' + pill(a.status, a.president_app) + (a.reviewer ? xx("<span class=\"st-taken\">Revisa: <b>", "<span class=\"st-taken\">Reviewer: <b>") + esc(a.reviewer) + "</b></span>" : "") + "</div></div></div></div>" +
-        body(flowH + '<div class="st-dgrid"><div>' + idcard + (a.limited ? "" : tabsH + refsH) + "</div><div>" + side + log + "</div></div>"));
+        body(flowH + '<div class="st-dgrid"><div>' + idcard + (a.limited ? "" : '<div id="st-ivw"></div>' + tabsH + refsH) + "</div><div>" + side + log + "</div></div>"));
       if (files.photo) signed(files.photo).then(function (u) { if (u) { var p = $("#st-photo", ROOT); if (p) p.innerHTML = '<img src="' + esc(u) + '" alt="">'; } });
       bindApp(a, name);
+      if (!a.limited) ivCard(a);
     });
   }
   function kv(l, v) { return v ? "<div><small>" + esc(l) + "</small><p>" + esc(v) + "</p></div>" : ""; }
@@ -733,7 +807,7 @@
       var fo = findF("B", "orient"), fw = findF("B", "ws_topics"), fs = findF("B", "season");
       put(hero("needs", xx("Panel del equipo", "Team panel"), xx("Necesidades de los pastores", "Pastors' needs")) + body(
         xx("<div class=\"st-stats\"><div class=\"st-stat hl\"><small>Aplicaciones</small><b>", "<div class=\"st-stats\"><div class=\"st-stat hl\"><small>Applications</small><b>") + n.total + xx("</b><span>Respondieron la Parte B</span></div><div class=\"st-stat\"><small>Quieren un taller</small><b>", "</b><span>Answered Part B</span></div><div class=\"st-stat\"><small>Want a workshop</small><b>") + n.ws_yes + xx("</b><span>En su iglesia o región</span></div><div class=\"st-stat\"><small>Instituto Morphe</small><b>", "</b><span>At their church or region</span></div><div class=\"st-stat\"><small>Instituto Morphe</small><b>") + n.morphe + xx("</b><span>Pidieron que los contacten</span></div><div class=\"st-stat\"><small>Orientación legal</small><b>", "</b><span>Asked to be contacted</span></div><div class=\"st-stat\"><small>Legal guidance</small><b>") + Object.keys(n.orient || {}).reduce(function (s, k) { return s + n.orient[k]; }, 0) + xx("</b><span>Solicitudes de orientación</span></div></div>", "</b><span>Guidance requests</span></div></div>") +
-        '<div class="st-ngrid">' + bars(xx("Prioridades elegidas (top 3)", "Priorities chosen (top 3)"), n.priorities, ben, n.total) + bars(xx("Orientación que piden", "Guidance requested"), n.orient, function (x) { return fo ? opt(fo, x) : x; }) + bars(xx("Temas para talleres", "Workshop topics"), n.ws_topics, function (x) { return fw ? opt(fw, x) : x; }) + bars(xx("¿Cómo describen su temporada?", "How do they describe their season?"), n.season, function (x) { return fs ? opt(fs, x) : x; }) + "</div>"));
+        '<div class="st-ngrid">' + bars(xx("Lo que más les urge (top 3)", "What is most urgent (top 3)"), n.priorities, ben, n.total) + bars(xx("Qué más les serviría", "What else would help them"), n.also, ben, n.total) + bars(xx("Recursos que buscan", "Resources they are looking for"), n.resources, function (x) { var fr = findF("B", "resources"); return fr ? opt(fr, x) : x; }) + bars(xx("Orientación que piden", "Guidance requested"), n.orient, function (x) { return fo ? opt(fo, x) : x; }) + bars(xx("Temas para talleres", "Workshop topics"), n.ws_topics, function (x) { return fw ? opt(fw, x) : x; }) + bars(xx("¿Cómo describen su temporada?", "How do they describe their season?"), n.season, function (x) { return fs ? opt(fs, x) : x; }) + "</div>"));
     });
   }
 
