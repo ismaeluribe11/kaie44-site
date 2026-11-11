@@ -123,7 +123,7 @@
   function guestCard(i) {
     var g = FORM.guests[i] || {};
     if (couple(EV)) return '<div class="gst" data-g="' + i + '"><div class="gh"><b>' + T("Hijo(a)", "Child") + " " + (i + 1) + '</b><span class="mn">' + T("Menor de edad", "Under 18") + '</span></div><div class="r2"><input data-gf="first_name" placeholder="' + T("Nombre", "First name") + '" value="' + esc(g.first_name || "") + '"><input data-gf="last_name" placeholder="' + T("Apellido", "Last name") + '" value="' + esc(g.last_name || "") + '"></div></div>';
-    return '<div class="gst" data-g="' + i + '"><div class="gh"><b>' + T("Invitado", "Guest") + " " + (i + 1) + '</b><label class="mn"><input type="checkbox" data-gf="minor"' + (g.minor ? " checked" : "") + "> " + T("Menor de edad", "Under 18") + "</label></div>" +
+    return '<div class="gst" data-g="' + i + '"><div class="gh"><b>' + T("Invitado", "Guest") + " " + (i + 1) + "</b></div>" +
       '<div class="r2"><input data-gf="first_name" placeholder="' + T("Nombre", "First name") + '" value="' + esc(g.first_name || "") + '"><input data-gf="last_name" placeholder="' + T("Apellido", "Last name") + '" value="' + esc(g.last_name || "") + '"></div>' +
       (g.minor ? "" : '<input data-gf="email" type="email" class="gm" placeholder="' + T("Correo (opcional) · le enviaremos su QR", "Email (optional) · we will send their QR") + '" value="' + esc(g.email || "") + '">') + "</div>";
   }
@@ -159,7 +159,7 @@
     else if (!e.open) form = '<div class="rsvp"><h3>' + T("Registro cerrado", "Registration closed") + '</h3><p class="s2">' + (e.full ? T("Ya no hay lugares disponibles.", "This event is full.") : T("El registro para este evento ya está cerrado.", "Registration for this event is closed.")) + "</p></div>";
     else if (e.audience === "members" && !ME) form = '<div class="rsvp"><h3>' + T("Solo miembros", "Members only") + '</h3><p class="s2">' + T("Inicia sesión en el Área de Miembros para registrarte.", "Sign in to the Members Area to register.") + '</p><a class="btn gold" href="#/membership">' + T("Iniciar sesión", "Sign in") + "</a></div>";
     else {
-      var cp = couple(e), opts = "", mg = cp ? Math.max((e.max_guests || 0) - 1, 0) : (e.max_guests || 0);
+      var cp = couple(e), opts = "", mg = cp ? 0 : (e.max_guests || 0);   // por ahora sin opción de menores
       for (var i = 0; i <= mg; i++) opts += '<option value="' + i + '">' + (cp ? (i === 0 ? T("Sin hijos", "No children") : i + " " + T(i === 1 ? "hijo(a)" : "hijos", i === 1 ? "child" : "children")) : (i === 0 ? T("Solo yo", "Just me") : i + " " + T(i === 1 ? "invitado" : "invitados", i === 1 ? "guest" : "guests"))) + "</option>";
       var sp = FORM.spouse || {};
       var spouse = cp ? '<div class="gst sp"><div class="gh"><b>' + T("Tu esposo(a)", "Your spouse") + '</b><span class="mn">' + T("Incluido en el precio", "Included in the price") + '</span></div><div class="r2"><input id="sp-fn" placeholder="' + T("Nombre", "First name") + '" value="' + esc(sp.first_name || "") + '"><input id="sp-ln" placeholder="' + T("Apellido", "Last name") + '" value="' + esc(sp.last_name || "") + '"></div><input id="sp-em" type="email" class="gm" placeholder="' + T("Correo (opcional) · le enviaremos su QR", "Email (optional) · we will send their QR") + '" value="' + esc(sp.email || "") + '"></div>' : "";
