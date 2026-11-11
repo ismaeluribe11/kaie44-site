@@ -130,8 +130,9 @@
   function totals() {
     var e = EV, cp = couple(e), n = 1 + FORM.guests.length + (cp ? 1 : 0), kids = cp ? FORM.guests.length : FORM.guests.filter(function (g) { return g.minor; }).length, ad = n - kids;
     var free = !!(e.courtesy && !e.courtesy.invalid);
-    var tot = free ? 0 : (cp ? (+e.price_adult || 0) : ad * (+e.price_adult || 0)) + kids * (+e.price_child || 0);
-    return { n: n, ad: ad, kids: kids, tot: tot, free: free, cp: cp };
+    var bd = cp ? 0 : formEmails().filter(function (v, i, a) { return a.indexOf(v) === i && isBd(v); }).length;
+    var tot = free ? 0 : (cp ? (+e.price_adult || 0) : Math.max(ad - bd, 0) * (+e.price_adult || 0)) + kids * (+e.price_child || 0);
+    return { n: n, ad: ad, kids: kids, tot: tot, free: free, cp: cp, bd: bd };
   }
   /* ---- Registro por matrimonio: varias parejas, cada persona con teléfono y correo ---- */
   var EMRX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -183,24 +184,43 @@
     if (ok && msg) msg.textContent = "";
     return ok;
   }
+  /* Reconoce en vivo los correos del Board (no pagan) */
+  var BOARD = {}, bdT = null, bdLast = "";
+  function isBd(em) { return !!BOARD[String(em || "").trim().toLowerCase()]; }
+  function formEmails() {
+    var f = $("#rsvp"); if (!f) return [];
+    return $$("input[type=email]", f).map(function (i) { return (i.value || "").trim().toLowerCase(); }).filter(function (v) { return EMRX.test(v); });
+  }
+  function boardCheck() {
+    clearTimeout(bdT);
+    bdT = setTimeout(function () {
+      var ems = formEmails().filter(function (v, i, a) { return a.indexOf(v) === i; }).slice(0, 40), key = ems.join(",");
+      if (key === bdLast) return;
+      bdLast = key;
+      if (!ems.length) { BOARD = {}; renderTotals(); return; }
+      rpc("ev_board_check", { p_emails: ems }).then(function (r) { BOARD = {}; (r || []).forEach(function (x) { BOARD[x] = 1; }); renderTotals(); }).catch(function () {});
+    }, 450);
+  }
   function renderTotals() {
     var b = $("#ev-tot"); if (!b) return; var t = totals(), e = EV;
     if (couple(e)) {
-      var me = cpMe(), list = [{ n: cpName(me.h, me.w) || T("Tu matrimonio", "Your couple"), you: true }].concat((FORM.cps || []).map(function (c) { return { n: cpName(c.h, c.w) || T("Nueva pareja", "New couple") }; }));
-      var pr = t.free ? 0 : (+e.price_adult || 0), tot = pr * list.length, pd = paid(e);
+      var me = cpMe(), list = [{ n: cpName(me.h, me.w) || T("Tu matrimonio", "Your couple"), you: true, bd: isBd(me.h.email) || isBd(me.w.email) }].concat((FORM.cps || []).map(function (c) { return { n: cpName(c.h, c.w) || T("Nueva pareja", "New couple"), bd: isBd(c.h.email) || isBd(c.w.email) }; }));
+      var pr = t.free ? 0 : (+e.price_adult || 0), pd = paid(e), tot = list.reduce(function (a, x) { return a + (x.bd ? 0 : pr); }, 0);
       var h = '<div class="paybox sm cpsum"><h4>' + T("Tu registro · ", "Your registration · ") + list.length + " " + T(list.length === 1 ? "matrimonio" : "matrimonios", list.length === 1 ? "couple" : "couples") + "</h4>" +
-        list.map(function (x) { return '<div class="ln"><span>' + esc(x.n) + (x.you ? " <i>· " + T("ustedes", "you") + "</i>" : "") + "</span><span>" + (pd ? money(pr) : "") + "</span></div>"; }).join("") +
+        list.map(function (x) { return '<div class="ln"><span>' + esc(x.n) + (x.you ? " <i>· " + T("ustedes", "you") + "</i>" : "") + (x.bd ? ' <em class="bdg">Board KAI</em>' : "") + "</span><span>" + (pd ? money(x.bd ? 0 : pr) : "") + "</span></div>"; }).join("") +
         (pd ? '<div class="ln t"><span>Total</span><span>' + money(tot) + "</span></div>" : "") +
         (t.free ? '<p class="fine" style="text-align:left;margin:6px 0 0">' + T("Cortesía de ", "Courtesy of ") + esc(e.courtesy.by) + "</p>" : pd ? '<p class="fine" style="text-align:left;margin:6px 0 0">' + T("Los matrimonios del Board de KAI no pagan; el sistema los reconoce por su correo.", "KAI Board couples do not pay; they are recognized by email.") + "</p>" : "") + "</div>";
       b.innerHTML = h;
-      var bar = $("#cp-bar"); if (bar) bar.innerHTML = "<div><small>" + list.length + " " + T(list.length === 1 ? "matrimonio" : "matrimonios", list.length === 1 ? "couple" : "couples") + "</small><b>" + (pd ? money(tot) : T("Sin costo", "Free")) + '</b></div><button type="button" id="cp-go">' + (pd && !t.free ? T("Registrarnos", "Register") : T("Confirmar", "Confirm")) + " →</button>";
+      var bar = $("#cp-bar"); if (bar) bar.innerHTML = "<div><small>" + list.length + " " + T(list.length === 1 ? "matrimonio" : "matrimonios", list.length === 1 ? "couple" : "couples") + "</small><b>" + (pd ? money(tot) : T("Sin costo", "Free")) + '</b></div><button type="button" id="cp-go">' + (pd && tot > 0 ? T("Registrarnos", "Register") : T("Confirmar", "Confirm")) + " →</button>";
       var gb = $("#cp-go"); if (gb) gb.onclick = function () { var f = $("#rsvp"); if (f.requestSubmit) f.requestSubmit(); else f.onsubmit({ preventDefault: function () {} }); };
-      var btn0 = $("#ev-go"); if (btn0) btn0.textContent = pd && !t.free ? T("Registrarnos y ver cómo pagar", "Register and see how to pay") : T("Confirmar asistencia", "Confirm attendance");
+      var btn0 = $("#ev-go"); if (btn0) btn0.textContent = pd && tot > 0 ? T("Registrarnos y ver cómo pagar", "Register and see how to pay") : T("Confirmar asistencia", "Confirm attendance");
       return;
     }
     var s = '<p class="tot">' + T("Total registrado", "Total") + ": <b>" + t.n + " " + T(t.n === 1 ? "persona" : "personas", t.n === 1 ? "person" : "people") + "</b> (" + t.ad + " " + T(t.ad === 1 ? "adulto" : "adultos", t.ad === 1 ? "adult" : "adults") + (t.kids ? " · " + t.kids + " " + T(t.kids === 1 ? "menor" : "menores", t.kids === 1 ? "minor" : "minors") : "") + ")</p>";
     if (paid(e)) {
       if (t.free) s += '<div class="paybox sm"><div class="ln t"><span>' + T("Cortesía de ", "Courtesy of ") + esc(e.courtesy.by) + '</span><span>$0</span></div></div>';
+      else if (t.bd) s += '<div class="paybox sm">' + (t.ad - t.bd > 0 ? '<div class="ln"><span>' + (t.ad - t.bd) + " " + T("adulto(s)", "adult(s)") + " × " + money(e.price_adult) + "</span><span>" + money((t.ad - t.bd) * e.price_adult) + "</span></div>" : "") +
+        '<div class="ln"><span>' + t.bd + ' <em class="bdg">Board KAI</em></span><span>$0</span></div><div class="ln t"><span>Total</span><span>' + money(t.tot) + "</span></div></div>";
       else s += '<div class="paybox sm">' + (t.cp ? '<div class="ln"><span>' + T("1 matrimonio", "1 married couple") + " × " + money(e.price_adult) + "</span><span>" + money(e.price_adult) + "</span></div>" :
         t.ad ? '<div class="ln"><span>' + t.ad + " " + T("adulto(s)", "adult(s)") + " × " + money(e.price_adult) + "</span><span>" + money(t.ad * e.price_adult) + "</span></div>" : "") +
         (t.kids ? '<div class="ln"><span>' + t.kids + " " + T("menor(es)", "minor(s)") + " × " + money(e.price_child) + "</span><span>" + money(t.kids * e.price_child) + "</span></div>" : "") +
@@ -208,7 +228,7 @@
         T("Los miembros del Board de KAI no pagan; el sistema los reconoce por su correo.", "KAI Board members do not pay; they are recognized by email.") + "</p></div>";
     }
     b.innerHTML = s;
-    var btn = $("#ev-go"); if (btn) btn.textContent = paid(e) && !t.free ? T("Registrarme y ver cómo pagar", "Register and see how to pay") : T("Confirmar asistencia", "Confirm attendance");
+    var btn = $("#ev-go"); if (btn) btn.textContent = paid(e) && t.tot > 0 ? T("Registrarme y ver cómo pagar", "Register and see how to pay") : T("Confirmar asistencia", "Confirm attendance");
   }
   function renderEvent() {
     var e = EV, m = ME && ME.m, other = (e.other || [])[0], cty = e.courtesy;
@@ -273,7 +293,9 @@
       });
       drawCouples();
     }
-    renderTotals();
+    f.addEventListener("input", function (ev) { if (ev.target.type === "email") boardCheck(); });
+    f.addEventListener("change", function (ev) { if (ev.target.type === "email") boardCheck(); });
+    renderTotals(); boardCheck();
     if (hashParts().q.get("go") === "rsvp") setTimeout(function () { f.scrollIntoView({ behavior: "smooth", block: "start" }); }, 200);
     f.onsubmit = function (ev) {
       ev.preventDefault();

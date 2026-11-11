@@ -302,3 +302,4 @@ table.pe .ck{color:#1a7f4b;font-weight:600;white-space:nowrap}table.pe .nn{color
 .rsvp .cpl,.rsvp .cpd{text-align:left}.rsvp .cph b{white-space:nowrap}
 @media (max-width:760px){.rsvp .cph>span{font-size:11px;max-width:55%}}
 .rsvp .cpd>div:first-child{flex:1;min-width:0}.rsvp .cpd b{justify-content:flex-start}
+.paybox .bdg{font-style:normal;font:700 10.5px var(--sans);letter-spacing:.06em;background:#0b1f4b;color:#e3bf63;padding:2px 7px;border-radius:99px;margin-left:4px;vertical-align:1px}
