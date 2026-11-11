@@ -35,6 +35,8 @@
     if ((m = /^Imprimir y enviar la credencial (.+)$/.exec(s))) return "Print and mail credential " + m[1];
     if ((m = /^(Pago confirmado|Exento de cuota \(board\)) · credencial (\S+)( \(ya existente\) vinculada| activada)$/.exec(s))) return (m[1] === "Pago confirmado" ? "Payment confirmed" : "Fee exempt (board)") + " · credential " + m[2] + (m[3] === " activada" ? " activated" : " (existing) linked");
     if ((m = /^Credencial enviada(.*)$/.exec(s))) return "Credential mailed" + m[1];
+    if ((m = /^Foto de credencial cambiada · (.+)$/.exec(s))) return "Credential photo changed · " + ({ "sin reimprimir": "no reprint", "reimpresión $25 por cobrar": "reprint, $25 to collect", "reimpresión sin costo": "reprint at no cost" }[m[1]] || m[1]);
+    if ((m = /^Cobrar \$25 de reimpresión · credencial (.*)$/.exec(s))) return "Collect $25 for reprint · credential " + m[1];
     if ((m = /^Orientación: (.+)$/.exec(s))) return "Guidance: " + m[1].split(", ").map(function (x) { return DBT[x] || x; }).join(", ");
     return s;
   }
@@ -285,7 +287,7 @@
   var REASONS = ["Referencias no confirmadas", "No afirma la Declaración de Fe", "Información incompleta", "Otro"];
   var REASONS_EN = { "Referencias no confirmadas": "References not confirmed", "No afirma la Declaración de Fe": "Does not affirm the Statement of Faith", "Información incompleta": "Incomplete information", "Otro": "Other" };
   function reasonName(r) { return lang() === "en" ? (REASONS_EN[r] || r) : r; }
-  var EV = { submitted: LZ("envió su aplicación", "submitted the application"), start: LZ("comenzó la revisión", "started the review"), ref: LZ("marcó contactada una referencia", "marked a reference as contacted"), note: "nota", recommend: LZ("envió su recomendación al presidente", "sent the recommendation to the president"), decide: LZ("decisión del presidente", "president's decision"), pay_claim: LZ("indicó que envió su pago por Zelle", "said they sent the payment by Zelle"), pay: LZ("confirmó el pago", "confirmed the payment"), print: LZ("actualizó la credencial impresa", "updated the printed credential") };
+  var EV = { submitted: LZ("envió su aplicación", "submitted the application"), start: LZ("comenzó la revisión", "started the review"), ref: LZ("marcó contactada una referencia", "marked a reference as contacted"), note: "nota", recommend: LZ("envió su recomendación al presidente", "sent the recommendation to the president"), decide: LZ("decisión del presidente", "president's decision"), pay_claim: LZ("indicó que envió su pago por Zelle", "said they sent the payment by Zelle"), pay: LZ("confirmó el pago", "confirmed the payment"), photo: LZ("cambió la foto de la credencial", "changed the credential photo"), print: LZ("actualizó la credencial impresa", "updated the printed credential") };
   function evLine(e, applicant) {
     var who = e.actor || applicant, txt = EV[e.kind] || e.kind, cls = e.kind === "note" ? "note" : "sys";
     if (e.kind === "recommend") txt = xx("recomendó ", "recommended ") + (e.meta && e.meta.rec === "approve" ? "aprobar" : xx("no aprobar", "not approving")) + (e.meta && e.meta.reason ? " · " + e.meta.reason : "");
@@ -301,7 +303,7 @@
       var cur = { "new": 0, in_review: 1, recommended: 3, approved: 4, declined: 4, withdrawn: 4 }[a.status];
       var flowH = '<div class="st-flow">' + flow.map(function (f, i) { var c = i < cur ? "dn" : i === cur ? "cur" : ""; return '<div class="' + c + '"><small>' + (i < cur ? "✓ " : "") + xx("Paso ", "Step ") + (i + 1) + (i === cur ? xx(" · Ahora", " · Now") : "") + "</small><b>" + f[0] + "</b><span>" + esc(f[1]) + "</span></div>"; }).join("") + "</div>";
       var spouse = (a.spouse || []).map(function (s) { return '<a class="st-cp" href="#/staff/app/' + s.id + xx("\">⇄ Cónyuge · ", "\">⇄ Spouse · ") + esc(s.name) + " · " + esc(s.app_no) + "</a>"; }).join(" ");
-      var idcard = '<div class="st-card"><div class="st-cb st-id"><div><div class="st-ph" id="st-photo">' + esc(ini(name)) + '</div></div><div><div class="st-kv">' +
+      var idcard = '<div class="st-card"><div class="st-cb st-id"><div><div class="st-ph" id="st-photo">' + esc(ini(name)) + '</div>' + (canAppPhoto(a) ? xx("<button class=\"st-phbtn\" data-act=\"photo\">📷 Cambiar foto</button>", "<button class=\"st-phbtn\" data-act=\"photo\">📷 Change photo</button>") : "") + '</div><div><div class="st-kv">' +
         kv(xx("Título en credencial", "Title on credential"), a.title) + kv(xx("Nombre en credencial", "Name on credential"), a.cred_name) + kv(xx("Membresía", "Membership"), a.tier === "ministro" ? xx("Ministro · $75 / año", "Minister · $75 / year") : xx("Pastor · $100 / año", "Pastor · $100 / year")) +
         kv(xx("Correo", "Email"), a.email) + kv(xx("Teléfono", "Phone"), a.phone) + kv(xx("Ciudad", "City"), [a.city, a.state].filter(Boolean).join(", ")) + kv(xx("Iglesia", "Church"), a.church) + kv(xx("Dirección postal", "Mailing address"), [d.address, d.zip].filter(Boolean).join(" · ")) + kv(xx("Firmó", "Signed"), (a.signed_name || "") + " · " + fd(a.signed_at)) +
         "</div>" + (spouse ? '<div style="margin-top:12px">' + spouse + "</div>" : "") + "</div></div></div>";
@@ -367,6 +369,7 @@
     return xx("<span class=\"lbl\">Al confirmar</span><ol><li><span>La aplicación regresa a <b>En revisión</b> con su nota para que el equipo revise lo que pidió.</span></li></ol>", "<span class=\"lbl\">When you confirm</span><ol><li><span>The application goes back to <b>In review</b> with your note so the team can look at what you asked.</span></li></ol>");
   }
   function bindPick(box, cb) { $$("label", box).forEach(function (l) { l.onclick = function () { $$("label", box).forEach(function (z) { z.classList.toggle("on", z === l); }); box.dataset.val = l.dataset.v; if (cb) cb(l.dataset.v); }; }); }
+  function canAppPhoto(a) { return has("admin", "membership", "treasury") && !a.member_kid && ["declined", "withdrawn"].indexOf(a.status) < 0; }
   function bindApp(a, name) {
     $$(".st-sub a", ROOT).forEach(function (t) { t.onclick = function (e) { e.preventDefault(); $$(".st-sub a", ROOT).forEach(function (z) { z.classList.toggle("on", z === t); }); $$("[data-pane]", ROOT).forEach(function (p) { p.hidden = p.dataset.pane !== t.dataset.tab; }); }; });
     $$("[data-file]", ROOT).forEach(function (l) { l.onclick = function (e) { e.preventDefault(); var w = window.open("", "_blank"); signed(l.dataset.file).then(function (u) { if (u && w) w.location = u; else { if (w) w.close(); toast(xx("No se pudo abrir el archivo.", "Could not open the file."), true); } }); }; });
@@ -377,6 +380,7 @@
       return rpc("staff_app_act", p).then(function () { ST.busy = false; toast(xx("Guardado.", "Saved.")); route(); }).catch(function (e) { ST.busy = false; if (btn) btn.disabled = false; if (msgEl) msgEl.textContent = errMsg(e); else toast(errMsg(e), true); });
     }
     on("start", function (b) { act({ p_id: a.id, p_act: "start" }, b); });
+    on("photo", function () { var p = $("#st-photo img", ROOT); photoModal({ name: name, old: p ? p.src : null, save: appPhotoSave(a) }); });
     on("note", function (b) { var n = $("#st-note", ROOT).value.trim(); if (!n) return toast(xx("Escriba la nota.", "Write the note."), true); act({ p_id: a.id, p_act: "note", p_note: n }, b); });
     on("ref", function (b) {
       var row = b.parentNode; if ($(".st-refform", row)) return;
@@ -526,7 +530,7 @@
       var vs = M_ST[m.state_k === "print" ? "active" : m.state_k] || s;
       var cardM = xx("<div class=\"st-mc\"><div class=\"hd\"><span>Credencial</span><span class=\"st-mcst ", "<div class=\"st-mc\"><div class=\"hd\"><span>Credential</span><span class=\"st-mcst ") + vs[0] + '">' + vs[1] + '</span></div><div class="bd"><div class="mph">' + (m.photo_url ? '<img src="' + esc(m.photo_url) + '" alt="">' : esc(ini(m.name))) + "</div><div><small>" + esc(m.title || "") + "</small><b>" + esc(m.name) + "</b><span>" + esc([m.church, [m.city, m.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ")) + "</span></div></div>" +
         xx("<dl><div><dt>Credencial</dt><dd>", "<dl><div><dt>Credential</dt><dd>") + esc(m.credential_no || "—") + xx("</dd></div><div><dt>Cuenta</dt><dd>", "</dd></div><div><dt>Account</dt><dd>") + esc(m.account_no || "—") + xx("</dd></div><div><dt>Miembro desde</dt><dd>", "</dd></div><div><dt>Member since</dt><dd>") + fd(m.member_since) + xx("</dd></div><div><dt>Vigente hasta</dt><dd>", "</dd></div><div><dt>Valid until</dt><dd>") + fd(m.valid_through) + (dt != null && dt <= 30 ? ' <em class="st-warn-t">' + (dt < 0 ? "vencida" : xx("vence en ", "expires in ") + dt + " d") + "</em>" : "") + "</dd></div></dl>" +
-        xx("<div class=\"acts\"><a href=\"#\" data-act=\"cred\">Ver credencial</a>", "<div class=\"acts\"><a href=\"#\" data-act=\"cred\">View credential</a>") + (canPay ? xx("<a href=\"#\" data-act=\"renew\">Registrar pago</a>", "<a href=\"#\" data-act=\"renew\">Record payment</a>") : "") + "</div>" + (m.renew_claimed_at ? xx("<p class=\"st-claimed\">Indicó que envió su renovación por Zelle · ", "<p class=\"st-claimed\">Said they sent their renewal by Zelle · ") + fd(m.renew_claimed_at) + "</p>" : "") + "</div>";
+        xx("<div class=\"acts\"><a href=\"#\" data-act=\"cred\">Ver credencial</a>", "<div class=\"acts\"><a href=\"#\" data-act=\"cred\">View credential</a>") + (canPay ? xx("<a href=\"#\" data-act=\"renew\">Registrar pago</a>", "<a href=\"#\" data-act=\"renew\">Record payment</a>") : "") + "</div>" + (has("admin", "membership", "treasury") ? xx("<a href=\"#\" class=\"st-phchg\" data-act=\"photo\">📷 Cambiar foto</a>", "<a href=\"#\" class=\"st-phchg\" data-act=\"photo\">📷 Change photo</a>") : "") + (m.renew_claimed_at ? xx("<p class=\"st-claimed\">Indicó que envió su renovación por Zelle · ", "<p class=\"st-claimed\">Said they sent their renewal by Zelle · ") + fd(m.renew_claimed_at) + "</p>" : "") + "</div>";
       var PS = { none: "—", to_print: xx("Por imprimir", "To print"), printed: xx("Impresa", "Printed"), shipped: xx("Enviada", "Mailed") };
       var printBox = xx("<div class=\"st-card\"><h3>Credencial impresa <small>", "<div class=\"st-card\"><h3>Printed credential <small>") + PS[m.print_status] + "</small></h3><div class=\"st-cb\">" + (m.mail_address ? xx("<p class=\"st-addr\"><small>Enviar a</small>", "<p class=\"st-addr\"><small>Mail to</small>") + esc(m.mail_address) + "</p>" : "") +
         (canPay ? '<div class="st-print">' + ["to_print", "printed", "shipped"].map(function (k) { return '<button class="' + (m.print_status === k ? "on" : "") + '" data-print="' + k + '">' + PS[k] + "</button>"; }).join("") + xx("</div><input class=\"st-in\" id=\"st-track\" placeholder=\"Número de rastreo (opcional)\" value=\"", "</div><input class=\"st-in\" id=\"st-track\" placeholder=\"Tracking number (optional)\" value=\"") + esc(m.tracking || "") + '" style="margin-top:10px">' : "<p>" + (m.print_updated_at ? xx("Actualizado ", "Updated ") + fd(m.print_updated_at) : "") + "</p>") + "</div></div>";
@@ -571,6 +575,7 @@
     });
     on("nextdone", function (b) { rpc("staff_log_next_done", { p_id: +b.dataset.id }).then(route).catch(function (e) { toast(errMsg(e), true); }); });
     on("renew", function () { payModal({ member: m, name: m.name }); });
+    on("photo", function () { photoModal({ name: m.name, old: m.photo_url, member: true, save: memberPhotoSave(m) }); });
     on("cred", function () {
       var x = { full_name: m.name, title: m.title, credential_no: m.credential_no, valid_through: m.valid_through, member_since: m.member_since, church: m.church, city: m.city, state: m.state, photo_url: m.photo_url, verify_code: m.verify_code, status: m.state_k === "inactive" ? "inactive" : "active" };
       var c = window.KAI && window.KAI.cred ? window.KAI.cred(x) : null;
@@ -589,6 +594,88 @@
     var ov = document.createElement("div"); ov.className = "st-ov"; ov.innerHTML = '<div class="st-modal" role="dialog" aria-modal="true">' + html + "</div>";
     document.body.appendChild(ov); ov.addEventListener("click", function (e) { if (e.target === ov || e.target.closest("[data-close]")) ov.remove(); });
     return ov;
+  }
+  /* ---------- Cambiar foto de credencial (aplicación o miembro) ---------- */
+  function cropTo(img, pos) {
+    var W = 800, H = 1000, base = Math.max(W / img.naturalWidth, H / img.naturalHeight), sc = base * pos.z;
+    var dw = img.naturalWidth * sc, dh = img.naturalHeight * sc, ox = (dw - W) / 2, oy = (dh - H) / 2;
+    var c = document.createElement("canvas"); c.width = W; c.height = H;
+    var g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, W, H); g.drawImage(img, -ox - pos.x * ox, -oy - pos.y * oy, dw, dh);
+    return new Promise(function (res) { c.toBlob(function (b) { res(b); }, "image/jpeg", 0.88); });
+  }
+  function photoModal(o) {
+    var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/jpeg,image/png,image/webp"; inp.style.display = "none"; document.body.appendChild(inp);
+    inp.onchange = function () { var f = inp.files && inp.files[0]; inp.remove(); if (f) open(f); };
+    inp.click();
+    function open(file) {
+      if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return toast(xx("Use una foto JPG o PNG (las fotos HEIC del iPhone no se pueden ajustar aquí).", "Use a JPG or PNG photo (iPhone HEIC photos can't be adjusted here)."), true);
+      var url = URL.createObjectURL(file), pos = { x: 0, y: 0, z: 1 }, nat = { w: 1, h: 1 }, reprint = "none";
+      var opts = o.member ? xx("<small class=\"ph-lb\">Credencial impresa</small>", "<small class=\"ph-lb\">Printed credential</small>") + '<div class="ph-opt" data-pick="rp">' +
+        [["none", xx("No reimprimir", "Don't reprint"), xx("Se queda con la credencial impresa actual.", "They keep their current printed credential.")],
+         ["paid", xx("Reimprimir · $25", "Reprint · $25"), xx("El miembro paga la reimpresión. Tesorería recibe el pendiente de cobro.", "The member pays for the reprint. Treasury gets a task to collect it.")],
+         ["free", xx("Reimprimir gratis", "Reprint for free"), xx("Error de KAI o miembro del Board.", "KAI error or Board member.")]].map(function (r, i) {
+          return '<label class="' + (i ? "" : "on") + '" data-v="' + r[0] + '"><input type="radio" name="ph-rp"' + (i ? "" : " checked") + "><div><b>" + r[1] + "</b><span>" + r[2] + "</span></div></label>";
+        }).join("") + "</div>" : "";
+      var ov = modal(xx("<h3>Cambiar foto · ", "<h3>Change photo · ") + esc(o.name) + '</h3><div class="bd"><div class="ph-crop"><div><div class="ph-frame"><img alt=""></div>' +
+        '<label class="ph-zoom"><span>−</span><input type="range" min="1" max="3" step="0.01" value="1"><span>+</span></label>' +
+        xx("<p class=\"ph-help\">Arrastre la foto para centrar el rostro · use la barra para acercar o alejar.</p>", "<p class=\"ph-help\">Drag the photo to center the face · use the slider to zoom in or out.</p>") +
+        '</div><div><div class="ph-cmp"><div class="old">' + (o.old ? '<img src="' + esc(o.old) + '" alt="">' : '<i>' + esc(ini(o.name)) + "</i>") + xx("Antes</div><b>→</b><div class=\"new\"><canvas width=\"160\" height=\"200\"></canvas>Nueva</div></div>", "Before</div><b>→</b><div class=\"new\"><canvas width=\"160\" height=\"200\"></canvas>New</div></div>") +
+        '<p class="ph-note">' + (o.member ? xx("La credencial digital y la página de verificación del QR se actualizan al guardar. El cambio queda en el historial.", "The digital credential and the QR verification page update when you save. The change is logged in the history.")
+          : xx("Esta foto se usará en su credencial cuando se active la membresía. El cambio queda en el historial.", "This photo will be used on their credential when the membership is activated. The change is logged in the history.")) + "</p>" + opts +
+        xx("</div></div><div class=\"ft\"><span class=\"st-msg\" id=\"ph-msg\"></span><button class=\"btn navy\" data-close>Cancelar</button><button class=\"btn gold\" id=\"ph-go\">Guardar foto nueva</button></div></div>", "</div></div><div class=\"ft\"><span class=\"st-msg\" id=\"ph-msg\"></span><button class=\"btn navy\" data-close>Cancel</button><button class=\"btn gold\" id=\"ph-go\">Save new photo</button></div></div>"));
+      var md = ov.querySelector(".st-modal"); md.classList.add("ph-m");
+      var box = $(".ph-frame", ov), im = $("img", box), rg = $(".ph-zoom input", ov), pv = $(".ph-cmp canvas", ov), off = { ox: 0, oy: 0 };
+      function draw() {
+        var W = box.clientWidth, H = box.clientHeight, base = Math.max(W / nat.w, H / nat.h), sc = base * pos.z;
+        var dw = nat.w * sc, dh = nat.h * sc; off = { ox: (dw - W) / 2, oy: (dh - H) / 2 };
+        im.style.width = dw + "px"; im.style.height = dh + "px"; im.style.left = (-off.ox - pos.x * off.ox) + "px"; im.style.top = (-off.oy - pos.y * off.oy) + "px";
+        var g = pv.getContext("2d"), k = pv.width / W; g.fillStyle = "#fff"; g.fillRect(0, 0, pv.width, pv.height);
+        g.drawImage(im, (-off.ox - pos.x * off.ox) * k, (-off.oy - pos.y * off.oy) * k, dw * k, dh * k);
+      }
+      im.onload = function () { nat = { w: im.naturalWidth, h: im.naturalHeight }; draw(); };
+      im.onerror = function () { ov.remove(); toast(xx("No se pudo leer esa foto. Pruebe con otra.", "Could not read that photo. Try another one."), true); };
+      im.src = url;
+      window.addEventListener("resize", draw);
+      var drag = null;
+      box.addEventListener("pointerdown", function (e) { drag = { x: e.clientX, y: e.clientY, px: pos.x, py: pos.y }; try { box.setPointerCapture(e.pointerId); } catch (er) {} box.classList.add("dg"); });
+      box.addEventListener("pointermove", function (e) {
+        if (!drag) return;
+        pos.x = off.ox > 0 ? Math.max(-1, Math.min(1, drag.px - (e.clientX - drag.x) / off.ox)) : 0;
+        pos.y = off.oy > 0 ? Math.max(-1, Math.min(1, drag.py - (e.clientY - drag.y) / off.oy)) : 0;
+        draw();
+      });
+      function up() { drag = null; box.classList.remove("dg"); }
+      box.addEventListener("pointerup", up); box.addEventListener("pointercancel", up);
+      rg.addEventListener("input", function () { pos.z = +rg.value; draw(); });
+      var rp = $('[data-pick="rp"]', ov);
+      if (rp) $$("label", rp).forEach(function (l) { l.onclick = function () { $$("label", rp).forEach(function (z) { z.classList.toggle("on", z === l); $("input", z).checked = z === l; }); reprint = l.dataset.v; }; });
+      var obs = new MutationObserver(function () { if (!ov.isConnected) { URL.revokeObjectURL(url); window.removeEventListener("resize", draw); obs.disconnect(); } });
+      obs.observe(document.body, { childList: true });
+      var go = $("#ph-go", ov), msg = $("#ph-msg", ov);
+      go.onclick = function () {
+        go.disabled = true; msg.textContent = xx("Guardando…", "Saving…");
+        cropTo(im, pos).then(function (b) { if (!b) throw new Error("crop"); return o.save(b, reprint); })
+          .then(function () { ov.remove(); toast(xx("Foto actualizada.", "Photo updated.")); route(); })
+          .catch(function (e) { go.disabled = false; msg.textContent = errMsg(e); });
+      };
+    }
+  }
+  function appPhotoSave(a) {
+    return function (b) {
+      var c = sb(), path = "staff/" + a.id + "/photo-" + Date.now() + ".jpg";
+      return c.storage.from(BUCKET).upload(path, b, { contentType: "image/jpeg", upsert: false }).then(function (u) {
+        if (u.error) throw u.error; return rpc("staff_app_photo", { p_app: a.id, p_path: path });
+      });
+    };
+  }
+  function memberPhotoSave(m) {
+    return function (b, reprint) {
+      var c = sb(), name = (m.credential_no || m.kid) + "-" + Date.now() + ".jpg";
+      return c.storage.from(PHOTOS).upload(name, b, { contentType: "image/jpeg", upsert: false }).then(function (u) {
+        if (u.error) throw u.error;
+        return rpc("staff_member_photo_change", { p_member: m.kid, p_url: c.storage.from(PHOTOS).getPublicUrl(name).data.publicUrl, p_reprint: reprint });
+      });
+    };
   }
   function payModal(o) {
     var isNew = !!o.app, a = o.app || {}, m = o.member || {}, fee = isNew ? a.fee : (m.tier === "ministro" ? 75 : 100);
