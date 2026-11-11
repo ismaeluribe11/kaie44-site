@@ -315,3 +315,4 @@ table.pe .ck{color:#1a7f4b;font-weight:600;white-space:nowrap}table.pe .nn{color
 .zp .zv{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #ecd9ae;border-radius:6px;padding:8px 10px;margin-top:6px}
 .zp .zv b{font:600 15px var(--sans);color:var(--navy);word-break:break-all}
 .zp .cpy{margin-left:auto;border:1px solid var(--navy);background:#fff;color:var(--navy);font:600 12px var(--sans);border-radius:4px;padding:5px 10px;cursor:pointer}
+.st-modal #zp-mt{display:flex;gap:8px;flex-wrap:wrap}.st-modal #zp-mt button{border:1.5px solid #cfd7e6;background:#fff;padding:9px 14px;font:13.5px var(--sans);border-radius:6px;cursor:pointer}.st-modal #zp-mt button.on{border-color:var(--gold);background:#fdf8ec;font-weight:600}

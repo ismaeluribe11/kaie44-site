@@ -211,9 +211,9 @@
         (pd ? '<div class="ln t"><span>Total</span><span>' + money(tot) + "</span></div>" : "") +
         (t.free ? '<p class="fine" style="text-align:left;margin:6px 0 0">' + T("Cortesía de ", "Courtesy of ") + esc(e.courtesy.by) + "</p>" : pd ? '<p class="fine" style="text-align:left;margin:6px 0 0">' + T("Los matrimonios del Board de KAI no pagan; el sistema los reconoce por su correo.", "KAI Board couples do not pay; they are recognized by email.") + "</p>" : "") + "</div>";
       b.innerHTML = h;
-      var bar = $("#cp-bar"); if (bar) bar.innerHTML = "<div><small>" + list.length + " " + T(list.length === 1 ? "matrimonio" : "matrimonios", list.length === 1 ? "couple" : "couples") + "</small><b>" + (pd ? money(tot) : T("Sin costo", "Free")) + '</b></div><button type="button" id="cp-go">' + (pd && tot > 0 ? T("Registrarnos", "Register") : T("Confirmar", "Confirm")) + " →</button>";
+      var bar = $("#cp-bar"); if (bar) bar.innerHTML = "<div><small>" + list.length + " " + T(list.length === 1 ? "matrimonio" : "matrimonios", list.length === 1 ? "couple" : "couples") + "</small><b>" + (pd ? money(tot) : T("Sin costo", "Free")) + '</b></div><button type="button" id="cp-go">' + (pd && tot > 0 ? (e.pay_later ? T("Reservar", "Reserve") : T("Registrarnos", "Register")) : T("Confirmar", "Confirm")) + " →</button>";
       var gb = $("#cp-go"); if (gb) gb.onclick = function () { var f = $("#rsvp"); if (f.requestSubmit) f.requestSubmit(); else f.onsubmit({ preventDefault: function () {} }); };
-      var btn0 = $("#ev-go"); if (btn0) btn0.textContent = pd && tot > 0 ? T("Registrarnos y ver cómo pagar", "Register and see how to pay") : T("Confirmar asistencia", "Confirm attendance");
+      var btn0 = $("#ev-go"); if (btn0) btn0.textContent = pd && tot > 0 ? (e.pay_later ? T("Hacer mi reservación", "Make my reservation") : T("Registrarnos y ver cómo pagar", "Register and see how to pay")) : T("Confirmar asistencia", "Confirm attendance");
       return;
     }
     var s = '<p class="tot">' + T("Total registrado", "Total") + ": <b>" + t.n + " " + T(t.n === 1 ? "persona" : "personas", t.n === 1 ? "person" : "people") + "</b> (" + t.ad + " " + T(t.ad === 1 ? "adulto" : "adultos", t.ad === 1 ? "adult" : "adults") + (t.kids ? " · " + t.kids + " " + T(t.kids === 1 ? "menor" : "menores", t.kids === 1 ? "minor" : "minors") : "") + ")</p>";
@@ -228,13 +228,13 @@
         T("Los miembros del Board de KAI no pagan; el sistema los reconoce por su correo.", "KAI Board members do not pay; they are recognized by email.") + "</p></div>";
     }
     b.innerHTML = s;
-    var btn = $("#ev-go"); if (btn) btn.textContent = paid(e) && t.tot > 0 ? T("Registrarme y ver cómo pagar", "Register and see how to pay") : T("Confirmar asistencia", "Confirm attendance");
+    var btn = $("#ev-go"); if (btn) btn.textContent = paid(e) && t.tot > 0 ? (e.pay_later ? T("Hacer mi reservación", "Make my reservation") : T("Registrarme y ver cómo pagar", "Register and see how to pay")) : T("Confirmar asistencia", "Confirm attendance");
   }
   function renderEvent() {
     var e = EV, m = ME && ME.m, other = (e.other || [])[0], cty = e.courtesy;
     var info = '<div class="evd-in"><div>' + IC.cal + '<p><b>' + esc(cap(fdate(e.starts_at))) + "</b><span>" + esc(ftime(e.starts_at)) + (e.ends_at ? " – " + esc(ftime(e.ends_at)) : "") + (arrive(e) ? " · " + esc(arrive(e)) : "") + "</span></p></div>" +
       (e.venue || e.address ? "<div>" + IC.pin + "<p><b>" + esc(e.venue || "") + "</b><span>" + esc(e.address || "") + "</span></p></div>" : "") +
-      (paid(e) ? "<div>" + IC.tag + "<p><b>" + money(e.price_adult) + " " + (couple(e) ? T("por matrimonio", "per married couple") : T("por adulto", "per adult")) + (+e.price_child ? " · " + money(e.price_child) + " " + T("por menor", "per minor") : "") + "</b><span>" + T("Pago por Zelle al registrarte", "Pay by Zelle after registering") + "</span></p></div>" : "") +
+      (paid(e) ? "<div>" + IC.tag + "<p><b>" + money(e.price_adult) + " " + (couple(e) ? T("por matrimonio", "per married couple") : T("por adulto", "per adult")) + (+e.price_child ? " · " + money(e.price_child) + " " + T("por menor", "per minor") : "") + "</b><span>" + (e.pay_later ? T("El equipo de KAI se comunicará contigo para el pago", "The KAI team will contact you about payment") : T("Pago por Zelle al registrarte", "Pay by Zelle after registering")) + "</span></p></div>" : "") +
       "<div>" + IC.ppl + "<p><b>" + (couple(e) ? T("Para matrimonios", "For married couples") + (e.audience === "members" ? " · " + T("solo miembros de KAI", "KAI members only") : "") : e.audience === "members" ? T("Solo miembros de KAI", "KAI members only") : T("Pastores, cónyuges, familias e invitados", "Pastors, spouses, families and guests")) + "</b><span>" + (e.left != null ? e.left + " " + T("lugares disponibles", "spots left") : T("Confirma cuántas personas vienen contigo", "Tell us who is coming with you")) + "</span></p></div></div>";
     var map = e.address ? '<div class="evd-map"><iframe title="Mapa" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://maps.google.com/maps?q=' + encodeURIComponent(e.address) + '&output=embed"></iframe><div class="tx"><a href="' + mapsUrl(e.address) + '" target="_blank" rel="noopener">Google Maps ↗</a><a href="https://maps.apple.com/?q=' + encodeURIComponent(e.address) + '" target="_blank" rel="noopener">Apple Maps ↗</a><a href="https://waze.com/ul?q=' + encodeURIComponent(e.address) + '" target="_blank" rel="noopener">Waze ↗</a></div></div>' : "";
     var form;
@@ -362,7 +362,8 @@
   }
   function renderMy() {
     var x = MY, e = x.event, g = x.group, ppl = (x.people || []), act = ppl.filter(function (p) { return p.status === "active"; });
-    var ok = g.pay_status === "free" || g.pay_status === "paid";
+    var later = !!e.pay_later && !(g.pay_status === "free" || g.pay_status === "paid");   // confirmado; el pago se coordina después
+    var ok = g.pay_status === "free" || g.pay_status === "paid" || later;
     var head, body = "";
     if (e.status === "cancelled") {
       put(hero("Kingdom Alliance International · E4:4", T("Eventos", "Events")) + '<section class="s"><div class="wrap"><div class="ok"><div class="ck c">✕</div><h2>' + T("Este evento fue cancelado", "This event was cancelled") + "</h2>" + tkHTML() +
@@ -371,6 +372,7 @@
       return;
     }
     if (!act.length) head = '<div class="ck c">✕</div><h2>' + T("Registro cancelado", "Registration cancelled") + "</h2><p>" + T("Gracias por avisarnos. Si cambias de planes, puedes registrarte de nuevo.", "Thanks for letting us know. If your plans change, you can register again.") + ' <a class="evx-lnk" href="#/ev/' + esc(e.slug) + '">' + T("Ver el evento", "See the event") + "</a></p>";
+    else if (later && x.mine) head = '<div class="ck">✓</div><h2>' + T("¡Tu reservación está hecha!", "Your reservation is made!") + "</h2><p>" + T("Tu lugar ya está apartado y te esperamos. Te enviamos la confirmación con los códigos QR a ", "Your spot is reserved and we look forward to seeing you. We emailed the confirmation with the QR codes to ") + "<b>" + esc(g.email) + "</b>.</p>";
     else if (ok) head = '<div class="ck">✓</div><h2>' + (x.mine ? T("¡Te esperamos!", "See you there!") : T("¡Estás registrado(a)!", "You are registered!")) + "</h2><p>" +
       (x.mine ? T("Tu asistencia quedó confirmada. Te enviamos los detalles a ", "Your attendance is confirmed. We emailed the details to ") + "<b>" + esc(g.email) + "</b>." : esc(g.by) + T(" te registró a este evento.", " registered you for this event.")) + "</p>";
     else head = '<div class="ck">✓</div><h2>' + (x.mine ? T("¡Tu reservación está hecha!", "Your reservation is made!") : T("Registro recibido · falta el pago", "Registration received · payment pending")) + "</h2><p>" +
@@ -395,6 +397,9 @@
         (g.pay_claimed ? '<p class="okmsg">✓ ' + T("Gracias, nos avisaste que ya enviaste tu pago. Tesorería lo confirmará y te enviaremos tus códigos QR por correo.", "Thanks, you told us you sent your payment. Treasury will confirm it and we will email your QR codes.") + "</p>"
           : '<button class="btn navy sm" id="ev-claim">' + T("Ya envié mi pago", "I sent my payment") + '</button><p class="fine" style="text-align:left;margin-top:10px">' + T("Cuando Tesorería confirme tu pago, te enviaremos por correo la confirmación con los códigos QR de cada persona. También te mandamos estas instrucciones a ", "Once Treasury confirms your payment, we will email the confirmation with each person's QR code. We also emailed these instructions to ") + "<b>" + esc(g.email) + "</b>.</p>") +
         "</div>" + (e.pay_card ? '<span class="soon">💳 ' + T("Pago con tarjeta · disponible pronto", "Card payment · coming soon") + "</span>" : "");
+    }
+    if (later && x.mine && act.length) {
+      body += '<div class="paybox zp"><div class="zh"><div><small>' + T("Pago pendiente", "Payment pending") + "</small><b>" + money(g.total) + "</b></div><span>" + T("Se coordina después", "Arranged later") + '</span></div><p style="margin:12px 0 0;font-size:14.5px">' + T("No tienes que hacer nada por ahora: <b>el equipo de KAI se comunicará contigo</b> para coordinar tu pago. También puedes pagar el día del evento en la mesa de registro.", "You don't need to do anything for now: <b>the KAI team will contact you</b> to arrange your payment. You can also pay on the day of the event at the registration table.") + "</p></div>";
     }
     if (ok && act.length) {
       body += '<div class="qrs">' + act.map(function (p) {
