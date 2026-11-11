@@ -303,3 +303,15 @@ table.pe .ck{color:#1a7f4b;font-weight:600;white-space:nowrap}table.pe .nn{color
 @media (max-width:760px){.rsvp .cph>span{font-size:11px;max-width:55%}}
 .rsvp .cpd>div:first-child{flex:1;min-width:0}.rsvp .cpd b{justify-content:flex-start}
 .paybox .bdg{font-style:normal;font:700 10.5px var(--sans);letter-spacing:.06em;background:#0b1f4b;color:#e3bf63;padding:2px 7px;border-radius:99px;margin-left:4px;vertical-align:1px}
+/* Instrucciones de pago por Zelle */
+.paybox.zp{padding:20px 22px}
+.zp .zh{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;border-bottom:1px solid #ecd9ae;padding-bottom:12px}
+.zp .zh small{display:block;font:600 11px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:#a4741a}
+.zp .zh b{font:700 34px var(--serif);color:var(--navy);line-height:1.1}.zp .zh>span{font-size:13px;color:var(--mut)}
+.zp .zw{list-style:none;margin:10px 0 14px;padding:0;font-size:14px;color:var(--ink)}.zp .zw li{padding:3px 0}.zp .zw li:before{content:"• ";color:var(--gold)}
+.zp h4{margin:6px 0 8px!important}
+.zp .zs{margin:0 0 14px;padding-left:22px;font-size:14.5px;line-height:1.5}.zp .zs li{margin:0 0 10px;padding-left:4px}.zp .zs li::marker{font-weight:700;color:var(--gold)}
+.zp .zs small{display:block;color:var(--mut);font-size:12.5px;margin-top:4px}
+.zp .zv{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid #ecd9ae;border-radius:6px;padding:8px 10px;margin-top:6px}
+.zp .zv b{font:600 15px var(--sans);color:var(--navy);word-break:break-all}
+.zp .cpy{margin-left:auto;border:1px solid var(--navy);background:#fff;color:var(--navy);font:600 12px var(--sans);border-radius:4px;padding:5px 10px;cursor:pointer}

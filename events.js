@@ -373,15 +373,27 @@
     if (!act.length) head = '<div class="ck c">✕</div><h2>' + T("Registro cancelado", "Registration cancelled") + "</h2><p>" + T("Gracias por avisarnos. Si cambias de planes, puedes registrarte de nuevo.", "Thanks for letting us know. If your plans change, you can register again.") + ' <a class="evx-lnk" href="#/ev/' + esc(e.slug) + '">' + T("Ver el evento", "See the event") + "</a></p>";
     else if (ok) head = '<div class="ck">✓</div><h2>' + (x.mine ? T("¡Te esperamos!", "See you there!") : T("¡Estás registrado(a)!", "You are registered!")) + "</h2><p>" +
       (x.mine ? T("Tu asistencia quedó confirmada. Te enviamos los detalles a ", "Your attendance is confirmed. We emailed the details to ") + "<b>" + esc(g.email) + "</b>." : esc(g.by) + T(" te registró a este evento.", " registered you for this event.")) + "</p>";
-    else head = '<div class="ck p">!</div><h2>' + T("Registro recibido · falta tu pago", "Registration received · payment pending") + "</h2><p>" + T("Tu lugar está apartado. Completa tu pago para confirmar tu asistencia.", "Your spot is reserved. Complete your payment to confirm.") + "</p>";
+    else head = '<div class="ck">✓</div><h2>' + (x.mine ? T("¡Tu reservación está hecha!", "Your reservation is made!") : T("Registro recibido · falta el pago", "Registration received · payment pending")) + "</h2><p>" +
+      (x.mine ? T("Tu lugar ya está apartado. Solo falta tu pago por Zelle; aquí abajo están las instrucciones.", "Your spot is already reserved. Only your Zelle payment is left; the instructions are below.") : T("Tu lugar está apartado. Cuando se confirme el pago te llegará tu código QR.", "Your spot is reserved. Once the payment is confirmed you will receive your QR code.")) + "</p>";
     function tkHTML() { return '<div class="tk"><dl><dt>' + T("Evento", "Event") + "</dt><dd><b>" + esc(title(e)) + "</b></dd><dt>" + T("Fecha", "Date") + "</dt><dd>" + esc(cap(fdate(e.starts_at))) + " · " + esc(ftime(e.starts_at)) + "</dd><dt>" + T("Registro", "Registration") + "</dt><dd>" + esc(g.reg_no) + "</dd></dl></div>"; }
     var tk = '<div class="tk"><dl><dt>' + T("Evento", "Event") + "</dt><dd><b>" + esc(title(e)) + "</b></dd><dt>" + T("Fecha", "Date") + "</dt><dd>" + esc(cap(fdate(e.starts_at))) + " · " + esc(ftime(e.starts_at)) + "</dd>" +
       (e.venue || e.address ? "<dt>" + T("Lugar", "Place") + "</dt><dd>" + esc([e.venue, e.address].filter(Boolean).join(" · ")) + "</dd>" : "") +
       "<dt>" + T("Registro", "Registration") + "</dt><dd>" + esc(g.reg_no) + (g.courtesy_by ? " · " + T("Cortesía de ", "Courtesy of ") + esc(g.courtesy_by) : "") + "</dd></dl></div>";
     if (x.mine && !ok && act.length) {
-      body += '<div class="paybox"><h4>' + T("Pagar por Zelle", "Pay by Zelle") + " · " + money(g.total) + '</h4><div class="zl"><span>' + T("Enviar a", "Send to") + "</span><b>" + esc(e.zelle_to || T("(lo confirmaremos por correo)", "(we will confirm by email)")) + "</b><span>" + T("A nombre de", "Name") + "</span><b>" + esc(e.zelle_name || "Kingdom Alliance International") + "</b><span>" + T("En la nota", "Memo") + "</span><b>" + esc(g.reg_no + " · " + g.first_name + " " + g.last_name) + "</b></div>" +
-        (g.pay_claimed ? '<p class="okmsg">✓ ' + T("Gracias, nos avisaste que ya enviaste tu pago. Te confirmaremos pronto por correo con tus códigos QR.", "Thanks, you told us you sent your payment. We will confirm by email with your QR codes soon.") + "</p>"
-          : '<p class="fine" style="text-align:left">' + T("Cuando Tesorería confirme tu pago, te enviaremos tu confirmación con tus códigos QR.", "Once Treasury confirms your payment, we will email your confirmation with your QR codes.") + '</p><button class="btn navy sm" id="ev-claim">' + T("Ya envié mi pago", "I sent my payment") + "</button>") +
+      var memo = g.reg_no + " · " + g.first_name + " " + g.last_name, zto = e.zelle_to || "";
+      function cpb(v) { return v ? '<button class="cpy" type="button" data-copy="' + esc(v) + '">' + T("Copiar", "Copy") + "</button>" : ""; }
+      var who = "";
+      if (couple(e)) { var pp = []; for (var k2 = 0; k2 < act.length; k2 += 2) pp.push(act[k2].name + (act[k2 + 1] ? " " + T("y", "&") + " " + act[k2 + 1].name : "")); who = pp; }
+      else who = act.map(function (p) { return p.name; });
+      body += '<div class="paybox zp"><div class="zh"><div><small>' + T("Total a pagar por Zelle", "Total to pay by Zelle") + "</small><b>" + money(g.total) + "</b></div><span>" + who.length + " " + (couple(e) ? T(who.length === 1 ? "matrimonio" : "matrimonios", who.length === 1 ? "couple" : "couples") : T(who.length === 1 ? "persona" : "personas", who.length === 1 ? "person" : "people")) + "</span></div>" +
+        '<ul class="zw">' + who.map(function (n) { return "<li>" + esc(n) + "</li>"; }).join("") + "</ul>" +
+        '<h4>' + T("Cómo hacer tu pago", "How to pay") + '</h4><ol class="zs">' +
+        "<li>" + T("Abre la app de tu banco y entra a <b>Zelle</b>.", "Open your bank's app and go to <b>Zelle</b>.") + "</li>" +
+        "<li>" + T("Envía ", "Send ") + "<b>" + money(g.total) + "</b> " + T("a:", "to:") + '<div class="zv"><b>' + esc(zto || T("(te lo enviaremos por correo)", "(we will email it to you)")) + "</b>" + cpb(zto) + '</div><small>' + T("A nombre de ", "Name: ") + esc(e.zelle_name || "Kingdom Alliance International") + "</small></li>" +
+        "<li>" + T("En la nota (memo) escribe:", "In the memo, write:") + '<div class="zv"><b>' + esc(memo) + "</b>" + cpb(memo) + "</div></li>" +
+        "<li>" + T("Regresa a esta página y oprime <b>“Ya envié mi pago”</b>.", "Come back to this page and tap <b>“I sent my payment”</b>.") + "</li></ol>" +
+        (g.pay_claimed ? '<p class="okmsg">✓ ' + T("Gracias, nos avisaste que ya enviaste tu pago. Tesorería lo confirmará y te enviaremos tus códigos QR por correo.", "Thanks, you told us you sent your payment. Treasury will confirm it and we will email your QR codes.") + "</p>"
+          : '<button class="btn navy sm" id="ev-claim">' + T("Ya envié mi pago", "I sent my payment") + '</button><p class="fine" style="text-align:left;margin-top:10px">' + T("Cuando Tesorería confirme tu pago, te enviaremos por correo la confirmación con los códigos QR de cada persona. También te mandamos estas instrucciones a ", "Once Treasury confirms your payment, we will email the confirmation with each person's QR code. We also emailed these instructions to ") + "<b>" + esc(g.email) + "</b>.</p>") +
         "</div>" + (e.pay_card ? '<span class="soon">💳 ' + T("Pago con tarjeta · disponible pronto", "Card payment · coming soon") + "</span>" : "");
     }
     if (ok && act.length) {
@@ -406,6 +418,8 @@
     }
     put(hero("Kingdom Alliance International · E4:4", T("Eventos", "Events")) + '<section class="s"><div class="wrap"><div class="ok">' + head + tk + body +
       '<p class="fine" style="margin-top:22px">' + T("¿Preguntas? Escríbenos a ", "Questions? Write to ") + '<a href="mailto:info@kaie44.org">info@kaie44.org</a></p></div></div></section>');
+    $$(".zp [data-copy]").forEach(function (b) { b.onclick = function () { var v = b.dataset.copy, done = function () { b.textContent = T("✓ Copiado", "✓ Copied"); setTimeout(function () { b.textContent = T("Copiar", "Copy"); }, 1600); };
+      if (navigator.clipboard) navigator.clipboard.writeText(v).then(done, done); else done(); }; });
     var c = $("#ev-claim"); if (c) c.onclick = function () { c.disabled = true; rpc("ev_pay_claim", { p_token: MYTOK }).then(function () { return rpc("ev_my", { p_token: MYTOK }); }).then(function (y) { MY = y; renderMy(); }).catch(function (er) { c.disabled = false; alertBox(errText(er)); }); };
     var i = $("#ev-ics"); if (i) i.onclick = function (ev) { ev.preventDefault(); downloadIcs(e); };
     $$("[data-cancel]").forEach(function (b) {
