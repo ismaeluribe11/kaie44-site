@@ -79,9 +79,18 @@
   }
 
   /* ---------- DETALLE ---------- */
-  var D = null;
+  var D = null, COPYSRC = null;
+  // Duplicar: abre el formulario de evento nuevo con todo lo del evento original (menos la fecha)
+  function dupEvent(x) {
+    var e = JSON.parse(JSON.stringify(x.event));
+    ["id", "slug", "checkin_pin", "created_at", "created_by", "updated_at", "cancel_reason", "cancelled_at", "starts_at", "ends_at", "reg_until"].forEach(function (k) { delete e[k]; });
+    e.status = "draft"; e._from = ttl(x.event);
+    var st = parts(x.event.starts_at), en = parts(x.event.ends_at); e._time = st.time; e._end = en.time;
+    COPYSRC = { copy: true, event: e, staff: x.staff || [], team_options: x.team_options, series_options: x.series_options };
+    location.hash = "#/staff/event/new";
+  }
   function detail(id, tab) {
-    if (id === "new") return edit(null);
+    if (id === "new") { var cs = COPYSRC; COPYSRC = null; return edit(cs); }
     K.loading("events", xx("Evento", "Event"));
     K.rpc("ev_staff_get", { p_id: id }).then(function (x) {
       D = x; tab = tab || "regs";
@@ -90,11 +99,12 @@
       if (x.can_edit) tabs.push(["edit", xx("Editar evento", "Edit event")]);
       var head = K.hero(null, ldate(e.starts_at) + " · " + ltime(e.starts_at), ttl(e), null, ["#/staff/events", xx("Eventos", "Events")]);
       var nav = '<div class="pe-bar"><div class="pe-tabs2">' + tabs.map(function (t) { return '<a href="#/staff/event/' + e.id + "/" + t[0] + '"' + (t[0] === tab ? ' class="on"' : "") + ">" + t[1] + "</a>"; }).join("") + "</div>" +
-        '<div class="pe-acts">' + pill(e) + (x.can_edit ? (x.regs ? (e.status !== "cancelled" ? xx(" <button class=\"btn sm danger\" id=\"pe-cancel-ev\">Cancelar evento</button>", " <button class=\"btn sm danger\" id=\"pe-cancel-ev\">Cancel event</button>") : "") : xx(" <button class=\"btn sm danger\" id=\"pe-del-ev\">Eliminar</button>", " <button class=\"btn sm danger\" id=\"pe-del-ev\">Delete</button>")) : "") + ' <a class="btn sm ol" target="_blank" rel="noopener" href="' + SITE + "/#/ev/" + esc(e.slug) + (e.status === "published" ? "" : "?preview=1") + '">' + (e.status === "published" ? xx("Ver página ↗", "View page ↗") : xx("Vista previa ↗", "Preview ↗")) + "</a></div></div>";
+        '<div class="pe-acts">' + pill(e) + (x.can_edit ? xx(" <button class=\"btn sm ol\" id=\"pe-dup-ev\">⧉ Duplicar</button>", " <button class=\"btn sm ol\" id=\"pe-dup-ev\">⧉ Duplicate</button>") : "") + (x.can_edit ? (x.regs ? (e.status !== "cancelled" ? xx(" <button class=\"btn sm danger\" id=\"pe-cancel-ev\">Cancelar evento</button>", " <button class=\"btn sm danger\" id=\"pe-cancel-ev\">Cancel event</button>") : "") : xx(" <button class=\"btn sm danger\" id=\"pe-del-ev\">Eliminar</button>", " <button class=\"btn sm danger\" id=\"pe-del-ev\">Delete</button>")) : "") + ' <a class="btn sm ol" target="_blank" rel="noopener" href="' + SITE + "/#/ev/" + esc(e.slug) + (e.status === "published" ? "" : "?preview=1") + '">' + (e.status === "published" ? xx("Ver página ↗", "View page ↗") : xx("Vista previa ↗", "Preview ↗")) + "</a></div></div>";
       K.put(head + K.body(nav + xx("<div id=\"pe-tab\"><p class=\"st-wait\">Cargando…</p></div>", "<div id=\"pe-tab\"><p class=\"st-wait\">Loading…</p></div>")));
       if (e.status === "cancelled") $(".pe-bar").insertAdjacentHTML("afterend", xx("<div class=\"pe-cx\"><b>Evento cancelado</b>", "<div class=\"pe-cx\"><b>Event cancelled</b>") + (e.cancelled_at ? xx(" el ", " on ") + esc(la(e.cancelled_at, { day: "numeric", month: "long" })) : "") + (e.cancel_reason ? " · " + esc(e.cancel_reason) : "") + "</div>");
       if (e.status === "draft" && x.can_edit) draftBox(x);
       var dl = $("#pe-del-ev"); if (dl) dl.onclick = function () { delEvent(x); };
+      var dp = $("#pe-dup-ev"); if (dp) dp.onclick = function () { dupEvent(x); };
       var cx = $("#pe-cancel-ev"); if (cx) cx.onclick = function () { cancelEvent(x); };
       ({ regs: regs, team: team, report: report, "eval": evalTab })[tab](x);
     }).catch(function (e) { K.put(K.hero0(xx("No pudimos cargar el evento", "We couldn't load the event"), esc(K.errMsg(e)))); });
@@ -268,18 +278,21 @@
   function taskName(t) { return lang() === "en" ? (TASK_EN[t] || t) : t; }
   function edit(x) {
     if (!K.has("admin", "president")) { K.put(K.denied()); return; }
+    var CP = !!(x && x.copy), ED = !!(x && !CP);   // CP = copia de otro evento (se guarda como nuevo)
     var load = x ? Promise.resolve(x) : K.rpc("ev_staff_options").catch(function () { return null; });
     load.then(function (y) {
       var e = (x && x.event) || { status: "draft", audience: "open", max_guests: 10, pay_zelle: true, courtesy_per_board: 4, arrive_note: "Por favor llega 15 minutos antes.", arrive_note_en: "Please arrive 15 minutes early.", eval_enabled: true, price_adult: 0, price_child: 0 };
       var opts = (x && x.team_options) || (y && y.team_options) || [], series = (x && x.series_options) || (y && y.series_options) || [];
       var S = {}; TASKS.forEach(function (t) { S[t] = []; }); ((x && x.staff) || []).forEach(function (s) { (S[s.task] = S[s.task] || []).push(s.email); });
-      var st = parts(e.starts_at), en = parts(e.ends_at), paidEv = (+e.price_adult || 0) > 0 || (+e.price_child || 0) > 0;
+      var st = parts(e.starts_at), en = parts(e.ends_at); if (CP) { st = { date: "", time: e._time || "17:00" }; en = { time: e._end || "" }; }
+      var paidEv = (+e.price_adult || 0) > 0 || (+e.price_child || 0) > 0;
       function f(l, inner, cls) { return '<div class="pe-f' + (cls ? " " + cls : "") + '"><small>' + l + "</small>" + inner + "</div>"; }
       function inp(n, v, t, ph) { return '<input class="st-in" name="' + n + '" type="' + (t || "text") + '" value="' + esc(v == null ? "" : v) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : "") + ">"; }
       function pair(l, a, b) { return '<div class="pe-pair"><div class="pe-pl">' + l + '</div><div class="g2">' + f(xx("<span class=\"pe-lg\">EN</span> Inglés", "<span class=\"pe-lg\">EN</span> English"), a) + f(xx("<span class=\"pe-lg\">ES</span> Español", "<span class=\"pe-lg\">ES</span> Spanish"), b) + '</div></div>'; }
       function ta(n, v) { return '<textarea class="st-in" name="' + n + '" rows="3">' + esc(v || "") + "</textarea>"; }
       function rad(n, v, o) { return '<div class="rad" data-r="' + n + '">' + o.map(function (q) { return '<button type="button" data-v="' + q[0] + '"' + (String(v) === String(q[0]) ? ' class="on"' : "") + ">" + q[1] + "</button>"; }).join("") + "</div>"; }
       var html = '<form id="pe-form" class="pe-form" novalidate><div>' +
+        (CP ? '<div class="pe-copy">⧉ ' + xx("Copia de <b>", "Copy of <b>") + esc(e._from || "") + xx("</b>. Todo quedó igual: cambie solo lo que necesite (título, <b>fecha</b>, lugar, foto…) y oprima <b>Crear evento</b>. Se guarda como borrador nuevo; el evento original no cambia.", "</b>. Everything was copied: change only what you need (title, <b>date</b>, place, photo…) and press <b>Create event</b>. It is saved as a new draft; the original event does not change.") + "</div>" : "") +
         xx("<div class=\"pe-note-lang\">La página pública tiene el botón <b>English / Español</b>. Llene los dos idiomas para que todo cambie cuando los visitantes cambien de idioma. Si una caja en español o en inglés queda vacía, se muestra el otro idioma.</div>", "<div class=\"pe-note-lang\">The public page has an <b>English / Español</b> switch. Fill in both languages so everything changes when visitors switch. If a Spanish or English box is left empty, the other language is shown instead.</div>") +
         xx("<div class=\"pe-sec\"><h3>Datos del evento</h3><div class=\"in\">", "<div class=\"pe-sec\"><h3>Event details</h3><div class=\"in\">") +
         pair(xx("Título del evento *", "Event title *"), inp("title_en", e.title_en, "text", "KAI Christmas Gathering · San Diego"), inp("title", e.title, "text", "Convivio Navideño KAI · Zona San Diego")) +
@@ -306,8 +319,8 @@
         xx("<div class=\"pe-sec\"><h3>Equipo asignado</h3><div class=\"in\" id=\"pe-team\"></div></div>", "<div class=\"pe-sec\"><h3>Assigned team</h3><div class=\"in\" id=\"pe-team\"></div></div>") +
         xx("<div class=\"pe-sec\"><h3>Después del evento</h3><div class=\"in\"><label class=\"pe-chk\"><input type=\"checkbox\" name=\"eval_enabled\"", "<div class=\"pe-sec\"><h3>After the event</h3><div class=\"in\"><label class=\"pe-chk\"><input type=\"checkbox\" name=\"eval_enabled\"") + (e.eval_enabled !== false ? " checked" : "") + xx("> Enviar la evaluación anónima a los 10 del Board al día siguiente (10:00 a.m.)</label>", "> Send the anonymous evaluation to the 10 Board members the next day (10:00 a.m.)</label>") + '<label class="pe-chk"><input type="checkbox" name="eval_attendees"' + (e.eval_attendees !== false ? " checked" : "") + xx("> Enviar también la evaluación a los asistentes que hicieron check-in (al día siguiente, 10:00 a.m.)</label></div></div>", "> Also send the evaluation to attendees who checked in (the next day, 10:00 a.m.)</label></div></div>") +
         xx("<div class=\"pe-sec\"><h3>Correos automáticos</h3><div class=\"in\"><div class=\"rem\"><span>Confirmación al registrarse</span><span class=\"pe-pill g\">Activo</span></div><div class=\"rem\"><span>Recordatorio · 4 días antes</span><span class=\"pe-pill g\">Activo</span></div><div class=\"rem\"><span>Recordatorio · 2 días antes</span><span class=\"pe-pill g\">Activo</span></div><div class=\"rem\"><span>Recordatorio · el mismo día, 9:00 a.m.</span><span class=\"pe-pill g\">Activo</span></div><p class=\"st-muted\" style=\"margin:8px 0 0\">Cada persona recibe los correos en el idioma en que se registró.</p></div></div>", "<div class=\"pe-sec\"><h3>Automatic emails</h3><div class=\"in\"><div class=\"rem\"><span>Confirmation at registration</span><span class=\"pe-pill g\">Active</span></div><div class=\"rem\"><span>Reminder · 4 days before</span><span class=\"pe-pill g\">Active</span></div><div class=\"rem\"><span>Reminder · 2 days before</span><span class=\"pe-pill g\">Active</span></div><div class=\"rem\"><span>Reminder · same day, 9:00 a.m.</span><span class=\"pe-pill g\">Active</span></div><p class=\"st-muted\" style=\"margin:8px 0 0\">Each person receives the emails in the language they registered in.</p></div></div>") +
-        '<p class="st-msg" id="pe-m"></p><div class="pe-save"><a class="btn navy" href="' + (x ? "#/staff/event/" + e.id : "#/staff/events") + xx("\">Cancelar</a><button class=\"btn ol\" type=\"button\" id=\"pe-prev\">Guardar y ver vista previa</button><button class=\"btn gold\" type=\"submit\">", "\">Cancel</a><button class=\"btn ol\" type=\"button\" id=\"pe-prev\">Save and preview</button><button class=\"btn gold\" type=\"submit\">") + (x ? xx("Guardar cambios", "Save changes") : xx("Crear evento", "Create event")) + "</button></div></div></form>";
-      K.put(K.hero(null, x ? xx("Editar evento", "Edit event") : xx("Eventos", "Events"), x ? ttl(e) : xx("Nuevo evento", "New event"), null, [x ? "#/staff/event/" + e.id : "#/staff/events", x ? xx("Evento", "Event") : xx("Eventos", "Events")]) + K.body(html));
+        '<p class="st-msg" id="pe-m"></p><div class="pe-save"><a class="btn navy" href="' + (ED ? "#/staff/event/" + e.id : "#/staff/events") + xx("\">Cancelar</a><button class=\"btn ol\" type=\"button\" id=\"pe-prev\">Guardar y ver vista previa</button><button class=\"btn gold\" type=\"submit\">", "\">Cancel</a><button class=\"btn ol\" type=\"button\" id=\"pe-prev\">Save and preview</button><button class=\"btn gold\" type=\"submit\">") + (ED ? xx("Guardar cambios", "Save changes") : xx("Crear evento", "Create event")) + "</button></div></div></form>";
+      K.put(K.hero(null, ED ? xx("Editar evento", "Edit event") : xx("Eventos", "Events"), ED ? ttl(e) : CP ? xx("Nuevo evento (copia)", "New event (copy)") : xx("Nuevo evento", "New event"), null, [ED ? "#/staff/event/" + e.id : "#/staff/events", ED ? xx("Evento", "Event") : xx("Eventos", "Events")]) + K.body(html));
       var F = $("#pe-form"), R = { audience: e.audience, status: e.status, paid: paidEv ? "1" : "0", price_mode: e.price_mode === "couple" ? "couple" : "person" };
       $$("[data-r]", F).forEach(function (g) { $$("button", g).forEach(function (b) { b.onclick = function () { R[g.dataset.r] = b.dataset.v; $$("button", g).forEach(function (z) { z.classList.toggle("on", z === b); }); if (g.dataset.r === "paid") $("#pe-cost").hidden = b.dataset.v !== "1";
         if (g.dataset.r === "price_mode" || g.dataset.r === "paid") mgSync(); }; }); });
@@ -349,13 +362,13 @@
         if (!v("date") || !v("time")) return (m.textContent = xx("Escriba la fecha y la hora de inicio.", "Enter the date and start time."));
         if (R.paid === "1" && !(+v("price_adult") > 0)) return (m.textContent = R.price_mode === "couple" ? xx("Escriba el precio por matrimonio o elija Gratis.", "Enter the price per couple, or choose Free.") : xx("Escriba el precio por adulto o elija Gratis.", "Enter the price per adult, or choose Free."));
         var staff = []; Object.keys(S).forEach(function (t) { S[t].forEach(function (em) { staff.push({ task: t, email: em }); }); });
-        var p = { id: x ? e.id : "", title: v("title"), title_en: v("title_en"), series: v("series"), starts_at: toIso(v("date"), v("time")), ends_at: v("end") ? toIso(v("date"), v("end")) : "",
+        var p = { id: ED ? e.id : "", title: v("title"), title_en: v("title_en"), series: v("series"), starts_at: toIso(v("date"), v("time")), ends_at: v("end") ? toIso(v("date"), v("end")) : "",
           venue: v("venue"), address: v("address"), description: v("description"), description_en: v("description_en"), photo_url: v("photo_url"), photo_orig: v("photo_orig"), photo_pos: v("photo_pos"), arrive_note: v("arrive_note"), arrive_note_en: v("arrive_note_en"),
           audience: R.audience, status: R.status, reg_until: v("reg_until"), capacity: v("capacity"), max_guests: v("max_guests"),
           price_adult: R.paid === "1" ? v("price_adult") : "0", price_child: "0", price_mode: R.paid === "1" ? R.price_mode : "person", max_couples: F.elements.max_couples.value,
           pay_zelle: F.elements.pay_zelle.checked, pay_card: false, courtesy_per_board: v("courtesy_per_board") || "4", eval_enabled: F.elements.eval_enabled.checked, eval_attendees: F.elements.eval_attendees.checked, staff: staff };
         var prev = F._prev; F._prev = false;
-        var changed = x && (e.status === "published" || e.status === "closed") && (x.people_active || 0) > 0 &&
+        var changed = ED && (e.status === "published" || e.status === "closed") && (x.people_active || 0) > 0 &&
           (new Date(e.starts_at).getTime() !== new Date(p.starts_at).getTime() || String(e.ends_at ? new Date(e.ends_at).getTime() : "") !== String(p.ends_at ? new Date(p.ends_at).getTime() : "") ||
            (e.venue || "") !== p.venue || (e.address || "") !== p.address);
         if (changed && F._notify == null) {
@@ -374,7 +387,7 @@
               var u = SITE + "/#/ev/" + y.event.slug + "?preview=1";
               if (win && !win.closed) win.location.href = u; else window.open(u, "_blank");
               K.toast(xx("Guardado. La vista previa se abrió en otra pestaña.", "Saved. The preview opened in another tab."));
-              if (!x) location.hash = "#/staff/event/" + id + "/edit"; else { b.disabled = false; m.textContent = ""; }
+              if (!ED) location.hash = "#/staff/event/" + id + "/edit"; else { b.disabled = false; m.textContent = ""; }
             });
           } if (window.KAIEV_KICK) KAIEV_KICK(); K.toast(R.status === "published" ? xx("Evento guardado y publicado", "Event saved and published") : xx("Evento guardado", "Event saved")); location.hash = "#/staff/event/" + id; })
           .catch(function (er) { b.disabled = false; m.textContent = err(er); if (win && !win.closed) win.close(); });

@@ -339,3 +339,4 @@ table.pe .ck{color:#1a7f4b;font-weight:600;white-space:nowrap}table.pe .nn{color
 .pe-evwho{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
 .pe-evwho button{border:1.5px solid #cfd7e6;background:#fff;border-radius:99px;padding:6px 13px;font:600 13px var(--sans);color:var(--mut);cursor:pointer}
 .pe-evwho button.on{border-color:var(--gold);background:#fdf8ec;color:var(--navy)}
+.pe-copy{background:#eef4ff;border:1px solid #c9d8f5;border-left:4px solid #2d5bff;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.5;color:#10233f;margin:0 0 14px}
