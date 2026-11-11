@@ -77,24 +77,6 @@ window.KAIAPP_SCHEMA = (function () {
         { k: "revoked", l: ["¿Alguna credencial le fue retirada?", "Has a credential ever been revoked?"], type: "radio", o: [["n", "No", "No"], ["y", "Sí", "Yes"]] },
         { k: "revoked_why", l: ["Explique brevemente", "Please explain briefly"], type: "area", when: "revoked=y" },
         { k: "studies", l: ["Estudios bíblicos o teológicos", "Biblical or theological studies"], opt: 1, ph: ["Institución y programa", "Institution and program"] }
-      ] },
-    { id: "a8", t: ["Referencias pastorales", "Pastoral references"], h: ["Un pastor que le conozca. Puede agregar una segunda referencia si lo desea.", "A pastor who knows you. You may add a second reference if you wish."],
-      f: [
-        { type: "sub", l: ["Referencia 1", "Reference 1"] },
-        { k: "ref1_name", l: ["Nombre", "Name"], w: 3, req: 1 },
-        { k: "ref1_rel", l: ["Iglesia o relación con usted", "Church or relationship to you"], w: 3 },
-        { k: "ref1_phone", l: ["Teléfono", "Phone"], w: 3, in: "tel", req: 1 },
-        { k: "ref1_email", l: ["Correo", "Email"], w: 3, in: "email" },
-        { type: "sub", l: ["Referencia 2", "Reference 2"], opt: 1 },
-        { k: "ref2_name", l: ["Nombre", "Name"], w: 3 },
-        { k: "ref2_rel", l: ["Iglesia o relación con usted", "Church or relationship to you"], w: 3 },
-        { k: "ref2_phone", l: ["Teléfono", "Phone"], w: 3, in: "tel" },
-        { k: "ref2_email", l: ["Correo", "Email"], w: 3, in: "email" }
-      ] },
-    { id: "a9", t: ["Documentos", "Documents"], h: ["PDF o foto clara del documento (máximo 10 MB).", "PDF or a clear photo of the document (10 MB max)."],
-      f: [
-        { k: "doc_ord", type: "file", l: ["Certificado de ordenación", "Ordination certificate"] },
-        { k: "doc_letter", type: "file", l: ["Carta de recomendación", "Letter of recommendation"], s: ["De un pastor que le conozca", "From a pastor who knows you"] }
       ] }
   ];
 
@@ -235,7 +217,7 @@ window.KAIAPP_SCHEMA = (function () {
     datos: { t: ["Uso y Protección de Datos", "Data Use and Protection"],
       i: ["KAI cuida la información que usted comparte en esta aplicación. Así la usamos y la protegemos:", "KAI cares for the information you share in this application. This is how we use and protect it:"],
       x: [
-        [["Qué recopilamos", "Los datos que usted escribe en la aplicación, su foto, los documentos que sube y su firma."], ["What we collect", "The information you enter in the application, your photo, the documents you upload and your signature."]],
+        [["Qué recopilamos", "Los datos que usted escribe en la aplicación, su foto y su firma."], ["What we collect", "The information you enter in the application, your photo and your signature."]],
         [["Para qué la usamos", "Para evaluar su membresía, emitir su credencial, servirle con los beneficios de la alianza y brindarle cuidado pastoral."], ["How we use it", "To evaluate your membership, issue your credential, serve you with the alliance's benefits and provide pastoral care."]],
         [["Quién la ve", "La Parte A la revisa el Comité de Membresía; la Parte B, el liderazgo de KAI; la Parte C es confidencial y solo la ve el equipo de cuidado pastoral."], ["Who sees it", "Part A is reviewed by the Membership Committee; Part B by KAI's leadership; Part C is confidential and seen only by the pastoral care team."]],
         [["Qué no hacemos", "No vendemos ni compartimos su información con terceros. Solo la compartimos con su autorización expresa (por ejemplo, su nombre y contacto con el equipo de planeación financiera) o cuando la ley lo exija."], ["What we don't do", "We do not sell or share your information with third parties. We share it only with your express permission (for example, your name and contact with the financial planning team) or when required by law."]],
