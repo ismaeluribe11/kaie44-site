@@ -316,3 +316,26 @@ table.pe .ck{color:#1a7f4b;font-weight:600;white-space:nowrap}table.pe .nn{color
 .zp .zv b{font:600 15px var(--sans);color:var(--navy);word-break:break-all}
 .zp .cpy{margin-left:auto;border:1px solid var(--navy);background:#fff;color:var(--navy);font:600 12px var(--sans);border-radius:4px;padding:5px 10px;cursor:pointer}
 .st-modal #zp-mt{display:flex;gap:8px;flex-wrap:wrap}.st-modal #zp-mt button{border:1.5px solid #cfd7e6;background:#fff;padding:9px 14px;font:13.5px var(--sans);border-radius:6px;cursor:pointer}.st-modal #zp-mt button.on{border-color:var(--gold);background:#fdf8ec;font-weight:600}
+/* Evaluación de asistentes */
+.ea .hd small{display:block;margin-top:12px;font:700 11px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--gold2)}
+.ea .hd h1{margin-top:6px}.ea .hd p{font-size:14px;line-height:1.5}.ea .hd p b{color:#fff}
+.ea .q{border-bottom:1px solid #eef1f6;padding:18px 20px 16px}
+.ea .q h5{font:700 15px/1.35 var(--sans);color:var(--navy);margin:0 0 12px}.ea .q h5 .n{color:var(--gold);margin-right:7px}
+.ea .st5{display:flex;gap:4px}.ea .st5 button{border:0;background:none;padding:0 2px;font-size:24px;line-height:1;color:#d5dbe6;cursor:pointer}
+.ea .st5.big button{font-size:34px;padding:0 3px}.ea .st5 button.on{color:#e3a72f}
+.ea .prow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #eef1f6}.ea .prow:first-of-type{border-top:0;padding-top:0}
+.ea .prow b{font:600 14px var(--sans)}.ea .prow b small{display:block;font-weight:400;color:#8a94a8;font-size:11.5px}
+.ea .pr{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.ea .na{border:1px solid #d5dbe6;background:#fff;border-radius:99px;font:11px var(--sans);color:#8a94a8;padding:2px 8px;cursor:pointer}.ea .na.on{background:#eef1f6;color:var(--navy);font-weight:600}
+.ea .chips2 button.neg{color:#8a94a8}
+.ea .yn{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ea .yn button{border:1.5px solid #cfd7e6;background:#fff;border-radius:8px;padding:12px 6px;font:600 14.5px var(--sans);color:var(--ink);cursor:pointer}.ea .yn button.on{border-color:var(--gold);background:#fdf8ec}
+.ea .gq{background:#fdf8ec}.ea .gq .tag{display:inline-block;font:700 10.5px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:#8a6417;background:#fff;border:1px solid #ecd9ae;border-radius:99px;padding:3px 9px;margin-bottom:10px}
+.ea #ea-lead input{display:block;width:100%;box-sizing:border-box;border:1px solid #cfd7e6;border-radius:6px;padding:10px;font:14px var(--sans);margin-top:8px}
+.ea #ea-lead[hidden]{display:none}
+/* Panel · Evaluación: Board / Asistentes */
+.pe-evsub{display:inline-flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:4px;margin:0 0 16px}
+.pe-evsub button{border:0;background:none;padding:9px 16px;border-radius:7px;font:600 14px var(--sans);color:var(--mut);cursor:pointer}
+.pe-evsub button.on{background:var(--navy);color:#fff}.pe-evsub i{font-style:normal;font-size:12px;opacity:.75;margin-left:4px}
+.pe-evwho{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.pe-evwho button{border:1.5px solid #cfd7e6;background:#fff;border-radius:99px;padding:6px 13px;font:600 13px var(--sans);color:var(--mut);cursor:pointer}
+.pe-evwho button.on{border-color:var(--gold);background:#fdf8ec;color:var(--navy)}

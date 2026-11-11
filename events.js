@@ -596,6 +596,7 @@
     rpc("ev_eval_get", { p_token: tok }).then(function (x) {
       if (!x) return put('<section class="s"><div class="wrap"><p>' + T("Enlace no válido.", "Invalid link.") + "</p></div></section>");
       if (x.used || x.closed) return put('<div class="ef"><div class="hd"><img src="images/logo.png" alt=""><h1>' + T("¡Gracias!", "Thank you!") + "</h1><p>" + esc(x.title) + '</p></div><p class="ef-done">' + (x.used ? T("Tu evaluación ya fue recibida.", "Your evaluation was received.") : T("La evaluación ya cerró.", "The evaluation is closed.")) + "</p></div>");
+      if (x.kind === "attendee") return evalAttendee(tok, x);
       var A = { mood: [] };
       function stars(k) { return '<div class="stars" data-k="' + k + '">' + [1, 2, 3, 4, 5].map(function (n) { return '<button type="button" data-v="' + n + '">' + n + "</button>"; }).join("") + "</div>"; }
       function chips(k, opts, multi) { return '<div class="chips2" data-k="' + k + '"' + (multi ? ' data-multi="1"' : "") + ">" + opts.map(function (o) { return '<button type="button" data-v="' + o[0] + '">' + (lang() === "es" ? o[1] : o[2]) + "</button>"; }).join("") + "</div>"; }
@@ -619,6 +620,47 @@
           .catch(function (er) { b.disabled = false; $("#ef-m").textContent = errText(er); });
       };
     }).catch(function (er) { put('<section class="s"><div class="wrap"><p class="evx-err">' + esc(errText(er)) + "</p></div></section>"); });
+  }
+
+  /* ---- Evaluación de asistentes ---- */
+  var VIBES = [["calido", "Cálido", "Warm"], ["alegre", "Alegre", "Joyful"], ["espiritual", "Espiritual", "Spiritual"], ["familiar", "Familiar", "Like family"], ["inspirador", "Inspirador", "Inspiring"], ["relajado", "Relajado", "Relaxed"], ["frio", "Frío", "Cold"], ["aburrido", "Aburrido", "Boring"], ["desorganizado", "Desorganizado", "Disorganized"]];
+  var PARTS = [["r_atmos", "El ambiente", "The atmosphere", ""], ["r_venue", "El lugar", "The venue", ""], ["r_food", "La comida", "The food", ""], ["r_program", "El programa", "The program", ["Mensaje, alabanza, actividades", "Message, worship, activities"]], ["r_checkin", "El registro a la llegada", "Check-in on arrival", ""]];
+  function evalAttendee(tok, x) {
+    try { if (x.lang && x.lang !== lang() && !localStorage.getItem("kai-lang")) { var lb = document.querySelector('.lang button[data-l="' + x.lang + '"]'); if (lb) { lb.click(); return; } } } catch (er) {}
+    var A = { vibe: [] }, guest = x.who === "guest", ttl = pick(x.title, x.title_en);
+    function stars(k, big) { return '<div class="st5' + (big ? " big" : "") + '" data-k="' + k + '">' + [1, 2, 3, 4, 5].map(function (n) { return '<button type="button" data-v="' + n + '" aria-label="' + n + '">★</button>'; }).join("") + "</div>"; }
+    function qh(n, t, sm) { return "<h5><span class=\"n\">" + n + "</span>" + t + (sm ? ' <span class="sm">' + sm + "</span>" : "") + "</h5>"; }
+    var html = '<div class="ef ea"><div class="hd"><img src="images/logo.png" alt=""><small>' + T("Tu opinión · 2 minutos", "Your feedback · 2 minutes") + "</small><h1>" + T("¿Cómo te fue en ", "How was ") + esc(ttl) + "?</h1><p>" + (x.name ? T("Gracias por acompañarnos, ", "Thank you for joining us, ") + esc(x.name) + ". " : "") + T("Tus respuestas son <b>anónimas</b> y nos ayudan a preparar mejores eventos.", "Your answers are <b>anonymous</b> and help us plan better events.") + "</p></div>" +
+      '<div class="q">' + qh(1, T("¿Cómo calificas el evento en general?", "How would you rate the event overall?")) + stars("overall", 1) + '<div class="scale"><span>' + T("Malo", "Poor") + "</span><span>" + T("Excelente", "Excellent") + "</span></div></div>" +
+      '<div class="q">' + qh(2, T("¿Te sentiste bienvenido(a)?", "Did you feel welcome?")) + stars("welcome", 1) + '<div class="scale"><span>' + T("Nada", "Not at all") + "</span><span>" + T("Totalmente", "Completely") + "</span></div></div>" +
+      '<div class="q">' + qh(3, T("Califica cada parte del evento", "Rate each part of the event")) + PARTS.map(function (p) {
+        return '<div class="prow"><b>' + T(p[1], p[2]) + (p[3] ? "<small>" + T(p[3][0], p[3][1]) + "</small>" : "") + '</b><div class="pr">' + stars(p[0]) + '<button type="button" class="na" data-na="' + p[0] + '">' + T("No aplica", "N/A") + "</button></div></div>";
+      }).join("") + "</div>" +
+      '<div class="q">' + qh(4, T("¿Cómo describirías el ambiente?", "How would you describe the atmosphere?"), T("(marca varias)", "(choose several)")) + '<div class="chips2" data-k="vibe" data-multi="1">' + VIBES.map(function (o, i) { return '<button type="button" data-v="' + o[0] + '"' + (i >= 6 ? ' class="neg"' : "") + ">" + T(o[1], o[2]) + "</button>"; }).join("") + "</div></div>" +
+      '<div class="q">' + qh(5, T("¿Qué fue lo que más te gustó?", "What did you like the most?")) + '<textarea data-t="liked" placeholder="' + T("Escribe aquí… (opcional)", "Write here… (optional)") + '"></textarea></div>' +
+      '<div class="q">' + qh(6, T("¿Qué podríamos mejorar?", "What could we improve?"), T("(opcional)", "(optional)")) + '<textarea data-t="improve" placeholder="' + T("Escribe aquí… (opcional)", "Write here… (optional)") + '"></textarea></div>' +
+      '<div class="q">' + qh(7, T("¿Asistirías a otro evento de KAI?", "Would you attend another KAI event?")) + '<div class="yn" data-k="again"><button type="button" data-v="yes">' + T("Sí", "Yes") + '</button><button type="button" data-v="no">No</button></div></div>' +
+      (guest ? '<div class="q gq"><span class="tag">' + T("Solo para invitados", "For guests only") + "</span>" + qh(8, T("¿Te gustaría recibir información para ser parte de KAI?", "Would you like information about joining KAI?")) +
+        '<div class="yn" data-k="join"><button type="button" data-v="yes">' + T("Sí, me interesa", "Yes, I'm interested") + '</button><button type="button" data-v="no">' + T("Por ahora no", "Not right now") + '</button></div><div id="ea-lead" hidden><input id="ea-ln" placeholder="' + T("Tu nombre", "Your name") + '"><input id="ea-lc" placeholder="' + T("Tu correo o teléfono", "Your email or phone") + '"><p class="fine">' + T("Solo si respondes que sí, tus datos llegan al equipo de KAI.", "Only if you answer yes, your details are sent to the KAI team.") + "</p></div></div>" : "") +
+      '<div class="q"><p class="evx-err" id="ef-m"></p><button class="btn gold" id="ef-go" style="width:100%">' + T("Enviar mis respuestas", "Send my answers") + '</button><p class="fine" style="text-align:center">Kingdom Alliance International · E4:4</p></div></div>';
+    put(html);
+    $$(".ea .st5").forEach(function (s) { $$("button", s).forEach(function (b) { b.onclick = function () { var v = +b.dataset.v; A[s.dataset.k] = v; $$("button", s).forEach(function (z) { z.classList.toggle("on", +z.dataset.v <= v); }); var na = s.parentNode.querySelector(".na"); if (na) na.classList.remove("on"); }; }); });
+    $$(".ea .na").forEach(function (b) { b.onclick = function () { var k = b.dataset.na, on = !b.classList.contains("on"); b.classList.toggle("on", on); if (on) { A[k] = "na"; $$("button", b.parentNode.querySelector(".st5")).forEach(function (z) { z.classList.remove("on"); }); } else delete A[k]; }; });
+    $$(".ea .chips2 button").forEach(function (b) { b.onclick = function () { var i = A.vibe.indexOf(b.dataset.v); if (i >= 0) A.vibe.splice(i, 1); else A.vibe.push(b.dataset.v); b.classList.toggle("on"); }; });
+    $$(".ea .yn").forEach(function (s) { $$("button", s).forEach(function (b) { b.onclick = function () { A[s.dataset.k] = b.dataset.v; $$("button", s).forEach(function (z) { z.classList.toggle("on", z === b); }); if (s.dataset.k === "join") $("#ea-lead").hidden = b.dataset.v !== "yes"; }; }); });
+    $("#ef-go").onclick = function () {
+      var m = $("#ef-m");
+      if (!A.overall) { m.textContent = T("Califica por lo menos el evento en general (pregunta 1).", "Please rate at least the event overall (question 1)."); return; }
+      $$(".ea [data-t]").forEach(function (t) { var v = t.value.trim(); if (v) A[t.dataset.t] = v.slice(0, 1500); });
+      if (A.join === "yes") {
+        A.lead_name = ($("#ea-ln").value || "").trim(); A.lead_contact = ($("#ea-lc").value || "").trim();
+        if (!A.lead_name || !A.lead_contact) { m.textContent = T("Escribe tu nombre y tu correo o teléfono para enviarte la información.", "Enter your name and your email or phone so we can send you the information."); return; }
+      }
+      var b = this; b.disabled = true;
+      rpc("ev_eval_submit", { p_token: tok, p: A }).then(function () {
+        put('<div class="ef ea"><div class="hd"><img src="images/logo.png" alt=""><h1>' + T("¡Gracias!", "Thank you!") + "</h1><p>" + esc(ttl) + '</p></div><p class="ef-done">' + T("Recibimos tus respuestas. Nos ayudan mucho para el próximo evento.", "We received your answers. They really help us plan the next event.") + (A.join === "yes" ? "<br><br>" + T("Pronto alguien del equipo de KAI se comunicará contigo.", "Someone from the KAI team will contact you soon.") : "") + "</p></div>"); window.scrollTo(0, 0);
+      }).catch(function (er) { b.disabled = false; m.textContent = errText(er); });
+    };
   }
 
   /* ================= ROUTER ================= */
