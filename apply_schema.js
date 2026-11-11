@@ -34,9 +34,8 @@ window.KAIAPP_SCHEMA = (function () {
         { k: "children", l: ["Hijos", "Children"], opt: 1, ph: ["Nombres y edades. Ej.: Ana 12, David 9", "Names and ages. E.g. Ana 12, David 9"] },
         { k: "dependents", l: ["Otros dependientes a su cargo", "Other dependents in your care"], opt: 1 }
       ] },
-    { id: "a4", t: ["Llamado y fe", "Calling and faith"],
+    { id: "a4", t: ["Declaración de Fe", "Statement of Faith"],
       f: [
-        { k: "testimony", l: ["Su testimonio y su llamado al ministerio", "Your testimony and calling to ministry"], type: "area", req: 1, ph: ["Unas líneas sobre su conversión y cómo Dios le llamó al ministerio", "A few lines about your conversion and how God called you to ministry"] },
         { k: "faith_ok", type: "faith", req: 1 },
         { k: "faith_diff", l: ["¿Hay algún punto en el que difiera?", "Is there any point on which you differ?"], opt: 1 }
       ] },
