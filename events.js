@@ -106,7 +106,7 @@
     (pv ? rpc("ev_staff_preview", { p_slug: slug }).catch(function () { return rpc("ev_public_get", { p_slug: slug, p_code: null }); }) : rpc("ev_public_get", { p_slug: slug, p_code: code || null })).then(function (e) {
       if (!e) { put(hero("Kingdom Alliance International · E4:4", T("Eventos", "Events")) + '<section class="s"><div class="wrap"><p>' + T("No encontramos este evento.", "We could not find this event.") + ' <a class="evx-lnk" href="#/events">' + T("Ver eventos", "See events") + "</a></p></div></section>"); return; }
       if (pv && !e.preview) { put(hero("Kingdom Alliance International · E4:4", T("Eventos", "Events")) + '<section class="s"><div class="wrap"><p>' + T("La vista previa es solo para el equipo. Inicia sesión en el Área de Miembros (con tu código de dos pasos) y abre el enlace otra vez.", "Preview is for the team only. Sign in to the Members Area (with your two-step code) and open the link again.") + "</p></div></section>"); return; }
-      EV = e; EV.code = code || ""; FORM = { guests: [] };
+      EV = e; EV.code = code || ""; FORM = { guests: [], cps: [] };
       return memberPrefill().then(renderEvent);
     }).catch(function (er) { put('<section class="s"><div class="wrap"><p class="evx-err">' + esc(errText(er)) + "</p></div></section>"); });
   }
@@ -133,8 +133,71 @@
     var tot = free ? 0 : (cp ? (+e.price_adult || 0) : ad * (+e.price_adult || 0)) + kids * (+e.price_child || 0);
     return { n: n, ad: ad, kids: kids, tot: tot, free: free, cp: cp };
   }
+  /* ---- Registro por matrimonio: varias parejas, cada persona con teléfono y correo ---- */
+  var EMRX = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+  function cpName(h, w) {
+    var a = (h.first_name || "").trim(), b = (w.first_name || "").trim(), la = (h.last_name || "").trim(), lb = (w.last_name || "").trim();
+    if (!a && !b) return "";
+    if (la && lb && la.toLowerCase() !== lb.toLowerCase()) return (a + " " + la).trim() + " " + T("y", "&") + " " + (b + " " + lb).trim();
+    return [a, b].filter(Boolean).join(" " + T("y", "&") + " ") + (la || lb ? " " + (la || lb) : "");
+  }
+  function cpOk(o) { return !!((o.first_name || "").trim() && (o.last_name || "").trim() && (o.phone || "").replace(/\D/g, "").length >= 7 && EMRX.test((o.email || "").trim())); }
+  function cpEmpty(c) { return !["h", "w"].some(function (q) { return ["first_name", "last_name", "phone", "email"].some(function (k) { return (c[q][k] || "").trim(); }); }); }
+  function cpPerson(i, q, o, lbl) {
+    function x(k, ph, t) { return '<input data-c="' + i + '" data-p="' + q + '" data-k="' + k + '" type="' + (t || "text") + '" placeholder="' + ph + '" value="' + esc(o[k] || "") + '">'; }
+    return '<div class="cpw">' + lbl + '</div><div class="r2">' + x("first_name", T("Nombre", "First name")) + x("last_name", T("Apellido", "Last name")) + '</div><div class="r2">' + x("phone", T("Teléfono", "Phone"), "tel") + x("email", T("Correo", "Email"), "email") + "</div>";
+  }
+  function cpMe() {
+    var f = $("#rsvp"); if (!f) return { h: {}, w: {} };
+    function v(sel) { var el = f.querySelector(sel); return el ? el.value : ""; }
+    return { h: { first_name: v("[name=first_name]"), last_name: v("[name=last_name]"), phone: v("[name=phone]"), email: v("[name=email]") },
+             w: { first_name: v("#sp-fn"), last_name: v("#sp-ln"), phone: v("#sp-ph"), email: v("#sp-em") } };
+  }
+  function cpMax() {
+    var e = EV, m = e.max_couples != null && e.max_couples !== "" ? +e.max_couples : 1e9;
+    if (e.left != null) m = Math.min(m, Math.floor(+e.left / 2));
+    if (e.courtesy && !e.courtesy.invalid && e.courtesy.left != null) m = Math.min(m, Math.floor(+e.courtesy.left / 2));
+    return m;
+  }
+  function drawCouples() {
+    var b = $("#ev-cps"); if (!b) return;
+    b.innerHTML = (FORM.cps || []).map(function (c, i) {
+      var n = i + 2;
+      if (c.open) return '<div class="cpl"><div class="cph"><b><span class="cpn">' + n + "</span>" + T("Pareja", "Couple") + " " + n + "</b><span>" + T("Cada quien recibe su QR por correo", "Each person gets their QR by email") + "</span></div>" +
+        cpPerson(i, "h", c.h, T("Esposo", "Husband")) + cpPerson(i, "w", c.w, T("Esposa", "Wife")) +
+        '<div class="cpb"><button type="button" class="cp-ok" data-ok="' + i + '">✓ ' + T("Listo", "Done") + '</button><button type="button" class="lnkb" data-rm="' + i + '">' + T("Quitar", "Remove") + "</button></div></div>";
+      return '<div class="cpd"><div><b><span class="cpn cpn-ok">' + n + "</span>" + esc(cpName(c.h, c.w)) + "</b><small>" + esc(c.h.email) + " · " + esc(c.w.email) + '</small></div><div><button type="button" class="lnkb" data-ed="' + i + '">' + T("Editar", "Edit") + '</button><button type="button" class="lnkb r" data-rm="' + i + '">' + T("Quitar", "Remove") + "</button></div></div>";
+    }).join("");
+    var add = $("#cp-add"), full = 1 + (FORM.cps || []).length >= cpMax();
+    if (add) { add.hidden = full; var nt = $("#cp-lim"); if (nt) nt.hidden = !full || cpMax() >= 1e9; }
+    renderTotals();
+  }
+  function cpCloseOpen() {   // valida la pareja abierta; devuelve false si le falta algo
+    var msg = $("#ev-msg"), ok = true;
+    (FORM.cps || []).forEach(function (c, i) {
+      if (!c.open || !ok) return;
+      if (cpEmpty(c)) { FORM.cps.splice(i, 1); return; }
+      if (!cpOk(c.h) || !cpOk(c.w)) { ok = false; if (msg) msg.textContent = T("Pareja ", "Couple ") + (i + 2) + T(": escribe nombre, apellido, teléfono y correo de los dos.", ": enter first name, last name, phone and email for both."); return; }
+      c.open = false;
+    });
+    if (ok && msg) msg.textContent = "";
+    return ok;
+  }
   function renderTotals() {
     var b = $("#ev-tot"); if (!b) return; var t = totals(), e = EV;
+    if (couple(e)) {
+      var me = cpMe(), list = [{ n: cpName(me.h, me.w) || T("Tu matrimonio", "Your couple"), you: true }].concat((FORM.cps || []).map(function (c) { return { n: cpName(c.h, c.w) || T("Nueva pareja", "New couple") }; }));
+      var pr = t.free ? 0 : (+e.price_adult || 0), tot = pr * list.length, pd = paid(e);
+      var h = '<div class="paybox sm cpsum"><h4>' + T("Tu registro · ", "Your registration · ") + list.length + " " + T(list.length === 1 ? "matrimonio" : "matrimonios", list.length === 1 ? "couple" : "couples") + "</h4>" +
+        list.map(function (x) { return '<div class="ln"><span>' + esc(x.n) + (x.you ? " <i>· " + T("ustedes", "you") + "</i>" : "") + "</span><span>" + (pd ? money(pr) : "") + "</span></div>"; }).join("") +
+        (pd ? '<div class="ln t"><span>Total</span><span>' + money(tot) + "</span></div>" : "") +
+        (t.free ? '<p class="fine" style="text-align:left;margin:6px 0 0">' + T("Cortesía de ", "Courtesy of ") + esc(e.courtesy.by) + "</p>" : pd ? '<p class="fine" style="text-align:left;margin:6px 0 0">' + T("Los matrimonios del Board de KAI no pagan; el sistema los reconoce por su correo.", "KAI Board couples do not pay; they are recognized by email.") + "</p>" : "") + "</div>";
+      b.innerHTML = h;
+      var bar = $("#cp-bar"); if (bar) bar.innerHTML = "<div><small>" + list.length + " " + T(list.length === 1 ? "matrimonio" : "matrimonios", list.length === 1 ? "couple" : "couples") + "</small><b>" + (pd ? money(tot) : T("Sin costo", "Free")) + '</b></div><button type="button" id="cp-go">' + (pd && !t.free ? T("Registrarnos", "Register") : T("Confirmar", "Confirm")) + " →</button>";
+      var gb = $("#cp-go"); if (gb) gb.onclick = function () { var f = $("#rsvp"); if (f.requestSubmit) f.requestSubmit(); else f.onsubmit({ preventDefault: function () {} }); };
+      var btn0 = $("#ev-go"); if (btn0) btn0.textContent = pd && !t.free ? T("Registrarnos y ver cómo pagar", "Register and see how to pay") : T("Confirmar asistencia", "Confirm attendance");
+      return;
+    }
     var s = '<p class="tot">' + T("Total registrado", "Total") + ": <b>" + t.n + " " + T(t.n === 1 ? "persona" : "personas", t.n === 1 ? "person" : "people") + "</b> (" + t.ad + " " + T(t.ad === 1 ? "adulto" : "adultos", t.ad === 1 ? "adult" : "adults") + (t.kids ? " · " + t.kids + " " + T(t.kids === 1 ? "menor" : "menores", t.kids === 1 ? "minor" : "minors") : "") + ")</p>";
     if (paid(e)) {
       if (t.free) s += '<div class="paybox sm"><div class="ln t"><span>' + T("Cortesía de ", "Courtesy of ") + esc(e.courtesy.by) + '</span><span>$0</span></div></div>';
@@ -161,20 +224,26 @@
     else {
       var cp = couple(e), opts = "", mg = cp ? 0 : (e.max_guests || 0);   // por ahora sin opción de menores
       for (var i = 0; i <= mg; i++) opts += '<option value="' + i + '">' + (cp ? (i === 0 ? T("Sin hijos", "No children") : i + " " + T(i === 1 ? "hijo(a)" : "hijos", i === 1 ? "child" : "children")) : (i === 0 ? T("Solo yo", "Just me") : i + " " + T(i === 1 ? "invitado" : "invitados", i === 1 ? "guest" : "guests"))) + "</option>";
-      var sp = FORM.spouse || {};
-      var spouse = cp ? '<div class="gst sp"><div class="gh"><b>' + T("Tu esposo(a)", "Your spouse") + '</b><span class="mn">' + T("Incluido en el precio", "Included in the price") + '</span></div><div class="r2"><input id="sp-fn" placeholder="' + T("Nombre", "First name") + '" value="' + esc(sp.first_name || "") + '"><input id="sp-ln" placeholder="' + T("Apellido", "Last name") + '" value="' + esc(sp.last_name || "") + '"></div><input id="sp-em" type="email" class="gm" placeholder="' + T("Correo (opcional) · le enviaremos su QR", "Email (optional) · we will send their QR") + '" value="' + esc(sp.email || "") + '"></div>' : "";
       var nm = m && m.full_name ? m.full_name.split(" ") : [];
+      var nmF = nm.slice(0, Math.max(1, nm.length - 1)).join(" "), nmL = nm.length > 1 ? nm[nm.length - 1] : "";
+      var coupleTop = '<div class="cpl me"><div class="cph"><b><span class="cpn">1</span>' + T("Tu matrimonio", "Your couple") + "</b><span>" + T("Quien registra", "Registering") + "</span></div>" +
+        '<div class="cpw">' + T("Tú", "You") + '</div><div class="r2"><input name="first_name" autocomplete="given-name" placeholder="' + T("Nombre", "First name") + '" value="' + esc(nmF) + '"><input name="last_name" autocomplete="family-name" placeholder="' + T("Apellido", "Last name") + '" value="' + esc(nmL) + '"></div>' +
+        '<div class="r2"><input name="phone" type="tel" autocomplete="tel" placeholder="' + T("Teléfono", "Phone") + '" value="' + esc(m && m.phone || "") + '"><input name="email" type="email" autocomplete="email" placeholder="' + T("Correo", "Email") + '" value="' + esc(ME ? ME.email : "") + '"></div>' +
+        '<div class="cpw">' + T("Tu esposo(a)", "Your spouse") + '</div><div class="r2"><input id="sp-fn" placeholder="' + T("Nombre", "First name") + '"><input id="sp-ln" placeholder="' + T("Apellido", "Last name") + '"></div>' +
+        '<div class="r2"><input id="sp-ph" type="tel" placeholder="' + T("Teléfono", "Phone") + '"><input id="sp-em" type="email" placeholder="' + T("Correo", "Email") + '"></div></div>';
+      var coupleMore = '<div id="ev-cps"></div><button type="button" class="cp-add" id="cp-add">＋ ' + T("Agregar otra pareja", "Add another couple") + '</button><p class="fine" id="cp-lim" hidden>' + T("Llegaron al máximo de parejas para este registro.", "You reached the maximum number of couples for this registration.") + "</p>";
       form = '<form class="rsvp" id="rsvp" novalidate><h3>' + T("Confirma tu asistencia", "RSVP") + '</h3><p class="s2">' + (e.reg_until ? T("Registro abierto hasta el ", "Registration open until ") + esc(fdate(e.reg_until + "T12:00:00", { day: "numeric", month: "long" })) + "." : "") + "</p>" +
         (cty && !cty.invalid ? '<div class="evx-cty">🎁 ' + T("Cortesía de <b>", "Courtesy of <b>") + esc(cty.by) + "</b> · " + T("tu registro no tiene costo", "no cost for you") + (cty.left != null ? " (" + cty.left + " " + T("lugares", "spots") + ")" : "") + "</div>" : "") +
         (cty && cty.invalid ? '<div class="evx-err">' + T("El enlace de cortesía no es válido; puedes registrarte normalmente.", "The courtesy link is not valid; you can register normally.") + "</div>" : "") +
         (ME ? '<div class="mem">✓ ' + T("Sesión iniciada; revisa tus datos.", "Signed in; please review your details.") + "</div>" : "") +
-        '<div class="r2"><div><label class="l">' + T("Nombre", "First name") + '</label><input name="first_name" autocomplete="given-name" value="' + esc(nm.slice(0, Math.max(1, nm.length - 1)).join(" ")) + '"></div><div><label class="l">' + T("Apellido", "Last name") + '</label><input name="last_name" autocomplete="family-name" value="' + esc(nm.length > 1 ? nm[nm.length - 1] : "") + '"></div></div>' +
-        '<div class="r2"><div><label class="l">' + T("Teléfono", "Phone") + '</label><input name="phone" type="tel" autocomplete="tel" value="' + esc(m && m.phone || "") + '"></div><div><label class="l">' + T("Correo", "Email") + '</label><input name="email" type="email" autocomplete="email" value="' + esc(ME ? ME.email : "") + '"></div></div>' +
+        (cp ? coupleTop :
+        '<div class="r2"><div><label class="l">' + T("Nombre", "First name") + '</label><input name="first_name" autocomplete="given-name" value="' + esc(nmF) + '"></div><div><label class="l">' + T("Apellido", "Last name") + '</label><input name="last_name" autocomplete="family-name" value="' + esc(nmL) + '"></div></div>' +
+        '<div class="r2"><div><label class="l">' + T("Teléfono", "Phone") + '</label><input name="phone" type="tel" autocomplete="tel" value="' + esc(m && m.phone || "") + '"></div><div><label class="l">' + T("Correo", "Email") + '</label><input name="email" type="email" autocomplete="email" value="' + esc(ME ? ME.email : "") + '"></div></div>') +
         '<label class="l">' + T("Iglesia o ministerio", "Church or ministry") + '</label><input name="church" placeholder="' + T("Opcional", "Optional") + '" value="' + esc(m && m.church || "") + '">' +
         '<div class="r2 c3"><div><label class="l">' + T("Ciudad", "City") + '</label><input name="city" autocomplete="address-level2" value="' + esc(m && m.city || "") + '"></div><div><label class="l">' + T("Estado", "State") + '</label><input name="state" autocomplete="address-level1" value="' + esc(m && m.state || "") + '"></div></div>' +
-        spouse + (mg > 0 ? '<label class="l">' + (cp ? T("¿Traen hijos menores de edad?", "Bringing children under 18?") : T("¿Traes invitados?", "Bringing guests?")) + '</label><select id="ev-ng">' + opts + '</select><div id="ev-gs"></div>' : "") +
+        (cp ? coupleMore : "") + (mg > 0 ? '<label class="l">' + (cp ? T("¿Traen hijos menores de edad?", "Bringing children under 18?") : T("¿Traes invitados?", "Bringing guests?")) + '</label><select id="ev-ng">' + opts + '</select><div id="ev-gs"></div>' : "") +
         '<label class="l">' + T("Comentarios", "Comments") + '</label><textarea name="comments" placeholder="' + T("Alergias, necesidades especiales… (opcional)", "Allergies, special needs… (optional)") + '"></textarea>' +
-        '<div id="ev-tot"></div><p class="evx-err" id="ev-msg" role="alert"></p><button class="btn gold" id="ev-go" type="submit"></button><p class="fine">' + T("Te enviaremos la confirmación por correo y recordatorios antes del evento.", "We will email your confirmation and reminders before the event.") + "</p></form>";
+        '<div id="ev-tot"></div><p class="evx-err" id="ev-msg" role="alert"></p><button class="btn gold" id="ev-go" type="submit"></button><p class="fine">' + T("Te enviaremos la confirmación por correo y recordatorios antes del evento.", "We will email your confirmation and reminders before the event.") + "</p>" + (cp ? '<div class="cp-bar" id="cp-bar"></div>' : "") + "</form>";
     }
     put(hero("Kingdom Alliance International · E4:4", T("Eventos", "Events")) +
       '<section class="s evd-s"><div class="wrap"><a class="evx-lnk" href="#/events">← ' + T("Todos los eventos", "All events") + '</a><div class="evd"><div>' +
@@ -193,6 +262,17 @@
     if (ng) ng.onchange = function () { var n = +ng.value; while (FORM.guests.length < n) FORM.guests.push({}); FORM.guests.length = n; drawGuests(); };
     f.addEventListener("input", function (ev) { var t = ev.target, c = t.closest(".gst"); if (c && t.dataset.gf) { var g = FORM.guests[+c.dataset.g]; if (t.type === "checkbox") { g[t.dataset.gf] = t.checked; drawGuests(); } else g[t.dataset.gf] = t.value; } });
     f.addEventListener("change", function (ev) { var t = ev.target, c = t.closest(".gst"); if (c && t.type === "checkbox") { FORM.guests[+c.dataset.g].minor = t.checked; if (t.checked) delete FORM.guests[+c.dataset.g].email; drawGuests(); } });
+    if (couple(EV)) {
+      f.addEventListener("input", function (ev) { var t = ev.target; if (t.dataset.c != null) { var c = FORM.cps[+t.dataset.c]; if (c) c[t.dataset.p][t.dataset.k] = t.value; } renderTotals(); });
+      f.addEventListener("click", function (ev) {
+        var t = ev.target.closest("button"); if (!t) return;
+        if (t.id === "cp-add") { if (!cpCloseOpen()) return; FORM.cps.push({ h: {}, w: {}, open: true }); drawCouples(); var last = $$("#ev-cps .cpl input"); if (last.length) last[last.length - 8].focus(); }
+        else if (t.dataset.ok != null) { cpCloseOpen(); drawCouples(); }
+        else if (t.dataset.ed != null) { if (!cpCloseOpen()) return; FORM.cps[+t.dataset.ed].open = true; drawCouples(); }
+        else if (t.dataset.rm != null) { FORM.cps.splice(+t.dataset.rm, 1); $("#ev-msg").textContent = ""; drawCouples(); }
+      });
+      drawCouples();
+    }
     renderTotals();
     if (hashParts().q.get("go") === "rsvp") setTimeout(function () { f.scrollIntoView({ behavior: "smooth", block: "start" }); }, 200);
     f.onsubmit = function (ev) {
@@ -201,10 +281,15 @@
       ["first_name", "last_name", "phone", "email", "church", "city", "state", "comments"].forEach(function (k) { p[k] = String(fd.get(k) || "").trim(); });
       p.lang = lang(); p.code = EV.code || ""; p.guests = FORM.guests.map(function (g) { var mn = couple(EV) || !!g.minor; return { first_name: (g.first_name || "").trim(), last_name: (g.last_name || "").trim(), email: mn ? "" : (g.email || "").trim(), minor: mn }; });
       if (couple(EV)) {
-        var spo = { first_name: ($("#sp-fn").value || "").trim(), last_name: ($("#sp-ln").value || "").trim(), email: ($("#sp-em").value || "").trim(), minor: false };
-        if (!spo.first_name || !spo.last_name) return (msg.textContent = errText("couple_spouse"));
-        if (spo.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(spo.email)) return (msg.textContent = errText("invalid_guest_email"));
-        p.guests.unshift(spo);
+        var spo = { first_name: ($("#sp-fn").value || "").trim(), last_name: ($("#sp-ln").value || "").trim(), phone: ($("#sp-ph").value || "").trim(), email: ($("#sp-em").value || "").trim(), minor: false };
+        if (!p.first_name || !p.last_name) return (msg.textContent = errText("missing_name"));
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p.email) || !p.phone) return (msg.textContent = T("Escribe tu teléfono y tu correo.", "Enter your phone and email."));
+        if (!cpOk(spo)) return (msg.textContent = T("Escribe nombre, apellido, teléfono y correo de tu esposo(a).", "Enter your spouse's first name, last name, phone and email."));
+        if (!p.city || !p.state) return (msg.textContent = T("Escribe tu ciudad y estado.", "Enter your city and state."));
+        if (!cpCloseOpen()) { drawCouples(); return; }
+        drawCouples();
+        p.guests = [spo];
+        FORM.cps.forEach(function (c) { ["h", "w"].forEach(function (q) { p.guests.push({ first_name: c[q].first_name.trim(), last_name: c[q].last_name.trim(), phone: c[q].phone.trim(), email: c[q].email.trim(), minor: false }); }); });
       }
       if (!p.first_name || !p.last_name) return (msg.textContent = errText("missing_name"));
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p.email)) return (msg.textContent = errText("invalid_email"));
@@ -285,12 +370,17 @@
         (e.address ? '<a class="btn ol sm" target="_blank" rel="noopener" href="' + mapsUrl(e.address) + '">' + T("Cómo llegar", "Directions") + "</a>" : "") + "</div>";
     }
     if (act.length) {
-      if (x.mine) {
+      if (x.mine && couple(e)) {
+        var prs = []; for (var k = 0; k < ppl.length; k += 2) prs.push([ppl[k], ppl[k + 1] || null]);
+        body += '<div class="evx-mng"><h4>' + T("¿Cambio de planes?", "Change of plans?") + "</h4>" + prs.map(function (pr) {
+          var a = pr[0], bb = pr[1], on = a.status === "active" || (bb && bb.status === "active"), nmx = a.name + (bb ? " " + T("y", "&") + " " + bb.name : "");
+          return '<div class="mrow' + (on ? "" : " off") + '"><span>' + esc(nmx) + (on ? "" : " · " + T("cancelado", "cancelled")) + "</span>" + (on ? '<button class="lnkb" data-cancel="' + esc(a.status === "active" ? a.id : bb.id) + '">' + T("No podrán asistir", "Can't attend") + "</button>" : "") + "</div>";
+        }).join("") + '<button class="lnkb" data-cancel="all">' + T("Cancelar todo el registro", "Cancel the whole registration") + '</button><p class="fine" style="text-align:left;margin:8px 0 0">' + T("Cada pareja se cancela junta: si uno de los dos no puede asistir, se cancela la pareja.", "Each couple is cancelled together: if one of them can't attend, the couple is cancelled.") + "</p></div>";
+      } else if (x.mine) {
         body += '<div class="evx-mng"><h4>' + T("¿Cambio de planes?", "Change of plans?") + "</h4>" + ppl.map(function (p) {
-          return '<div class="mrow' + (p.status !== "active" ? " off" : "") + '"><span>' + esc(p.name) + (p.status !== "active" ? " · " + T("cancelado", "cancelled") : "") + "</span>" + (p.status === "active" && !(couple(e) && !p.minor) ? '<button class="lnkb" data-cancel="' + esc(p.id) + '">' + T("No podrá asistir", "Can't attend") + "</button>" : "") + "</div>";
+          return '<div class="mrow' + (p.status !== "active" ? " off" : "") + '"><span>' + esc(p.name) + (p.status !== "active" ? " · " + T("cancelado", "cancelled") : "") + "</span>" + (p.status === "active" ? '<button class="lnkb" data-cancel="' + esc(p.id) + '">' + T("No podrá asistir", "Can't attend") + "</button>" : "") + "</div>";
         }).join("") + '<button class="lnkb" data-cancel="all">' + T("Cancelar todo el registro", "Cancel the whole registration") + "</button></div>";
-        if (couple(e)) body = body.replace(/<\/div>$/, '<p class="fine" style="text-align:left;margin:8px 0 0">' + T("Es un registro por matrimonio: si uno de los dos no puede asistir, se cancela el registro completo.", "This is a couple registration: if one of you can't attend, the whole registration is cancelled.") + "</p></div>");
-      } else body += '<div class="evx-mng"><button class="btn ol sm" data-cancel="me">' + (couple(e) && !(ppl[0] && ppl[0].minor) ? T("No podremos asistir", "We can't attend") : T("No podré asistir", "I can't attend")) + "</button></div>";
+      } else body += '<div class="evx-mng"><button class="btn ol sm" data-cancel="me">' + (couple(e) ? T("No podremos asistir", "We can't attend") : T("No podré asistir", "I can't attend")) + "</button></div>";
     }
     put(hero("Kingdom Alliance International · E4:4", T("Eventos", "Events")) + '<section class="s"><div class="wrap"><div class="ok">' + head + tk + body +
       '<p class="fine" style="margin-top:22px">' + T("¿Preguntas? Escríbenos a ", "Questions? Write to ") + '<a href="mailto:info@kaie44.org">info@kaie44.org</a></p></div></div></section>');

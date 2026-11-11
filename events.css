@@ -272,3 +272,33 @@ table.pe .ck{color:#1a7f4b;font-weight:600;white-space:nowrap}table.pe .nn{color
 .pw-mfa p{margin:0 0 10px;font-size:14px;line-height:1.55}
 .pw-mfa input{width:100%;box-sizing:border-box;border:1px solid #cfd7e6;padding:12px;font:600 20px var(--sans);letter-spacing:.3em;text-align:center;margin-bottom:10px}
 .pw-mfa .btn{width:100%;border:0;cursor:pointer}
+/* Registro por matrimonio · varias parejas */
+.rsvp .cpl{border:1px solid var(--line);border-left:3px solid var(--gold);background:#f6f8fb;border-radius:6px;padding:14px 16px;margin-top:14px}
+.rsvp .cph{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:2px}
+.rsvp .cph b{font:700 14px var(--sans);color:var(--navy);display:flex;align-items:center}.rsvp .cph>span{font-size:12px;color:var(--mut);text-align:right}
+.rsvp .cpn{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;font:700 11px var(--sans);margin-right:8px;flex:none}
+.rsvp .cpn.cpn-ok{background:#1a7f4b}
+.rsvp .cpw{font:600 11px var(--sans);letter-spacing:.06em;color:#7a879e;text-transform:uppercase;margin:12px 0 6px}
+.rsvp .cpl .r2{margin-top:8px}.rsvp .cpl .cpw+.r2{margin-top:0}
+.rsvp .cpl input{padding:9px 11px;font-size:14px}
+.rsvp .cpb{display:flex;gap:14px;align-items:center;margin-top:12px}
+.rsvp .cp-ok{width:auto;margin:0;background:var(--navy);color:#fff;border:0;border-radius:4px;padding:9px 16px;font:700 13px var(--sans);cursor:pointer}
+.rsvp .cpd{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-left:3px solid #1a7f4b;background:#fff;border-radius:6px;padding:12px 14px;margin-top:10px}
+.rsvp .cpd b{font:600 14px var(--sans);display:flex;align-items:center}.rsvp .cpd small{display:block;color:var(--mut);font-size:12px;margin:3px 0 0 30px;word-break:break-all}
+.rsvp .cpd>div:last-child{display:flex;gap:12px;flex:none}
+.rsvp .lnkb.r{color:#b42318}
+.rsvp .cp-add{display:block;width:100%;margin-top:12px;border:1.5px dashed #c9a24f;border-radius:6px;padding:13px;text-align:center;font:700 14px var(--sans);color:#8a6417;background:#fffcf4;cursor:pointer}
+.rsvp .cp-add:hover{background:#fbf3df}
+.cpsum h4{font:700 12px var(--sans)!important;letter-spacing:.12em;text-transform:uppercase;color:#8a6417!important;margin:0 0 8px!important}
+.cpsum .ln span i{font-style:normal;color:var(--mut);font-size:12.5px}
+.cp-bar{display:none}
+@media (max-width:760px){
+  .cp-bar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;justify-content:space-between;align-items:center;gap:12px;background:var(--navy);color:#fff;padding:12px 18px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -10px 30px rgba(0,0,0,.2)}
+  .cp-bar small{display:block;color:#a7b3cc;font-size:12px}.cp-bar b{font:800 18px var(--sans)}
+  .cp-bar button{width:auto;margin:0;border:0;border-radius:4px;background:linear-gradient(90deg,#e3bf63,#b8892e);color:var(--navy);font:800 12px var(--sans);letter-spacing:.08em;text-transform:uppercase;padding:12px 14px;cursor:pointer}
+  .rsvp:has(.cp-bar){padding-bottom:90px}
+}
+.rsvp .cp-add[hidden],.rsvp .fine[hidden]{display:none}
+.rsvp .cpl,.rsvp .cpd{text-align:left}.rsvp .cph b{white-space:nowrap}
+@media (max-width:760px){.rsvp .cph>span{font-size:11px;max-width:55%}}
+.rsvp .cpd>div:first-child{flex:1;min-width:0}.rsvp .cpd b{justify-content:flex-start}

@@ -639,3 +639,4 @@ a.st-mrow:hover{background:#f8fafd}
 .ph-opt b{display:block;color:var(--navy);font-size:13.5px}.ph-opt span{color:var(--mut);font-size:12.5px;line-height:1.4}
 .ph-m .ft{margin-top:20px;align-items:center;flex-wrap:wrap}.ph-m .ft .st-msg{flex:1;min-width:140px}
 @media (max-width:640px){.ph-crop{grid-template-columns:1fr}.ph-frame{width:min(240px,100%);margin:0 auto}.st-ov{padding:10px}.st-modal.ph-m .bd{padding:6px 16px 18px}.st-modal.ph-m h3{padding:18px 16px 6px}}
+.pe-f[hidden],.pe-hint[hidden]{display:none!important}
