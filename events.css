@@ -340,3 +340,13 @@ table.pe .ck{color:#1a7f4b;font-weight:600;white-space:nowrap}table.pe .nn{color
 .pe-evwho button{border:1.5px solid #cfd7e6;background:#fff;border-radius:99px;padding:6px 13px;font:600 13px var(--sans);color:var(--mut);cursor:pointer}
 .pe-evwho button.on{border-color:var(--gold);background:#fdf8ec;color:var(--navy)}
 .pe-copy{background:#eef4ff;border:1px solid #c9d8f5;border-left:4px solid #2d5bff;border-radius:8px;padding:12px 14px;font-size:14px;line-height:1.5;color:#10233f;margin:0 0 14px}
+
+/* Eventos sin costo: que se note */
+.evc-free{display:flex;align-items:center;gap:10px;margin:-8px 0 20px;font:600 14px var(--sans);color:var(--ink)}
+.evc-free svg,.evd-free svg{width:22px;height:22px;flex:none;stroke:var(--gold);fill:none;stroke-width:1.8}
+.evc-free b{background:var(--gold2);color:var(--navy);font:700 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;padding:5px 9px;border-radius:3px}
+.evd-in>.evd-free{background:rgba(227,191,99,.16);border:1px solid rgba(184,137,46,.45);border-radius:8px;padding:14px 16px}
+.evd-in>.evd-free b{font-size:17px}
+.frz{color:#0f7a3d;font-weight:700}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .frz{color:#5fd38d}}
+:root[data-theme="dark"] .frz{color:#5fd38d}

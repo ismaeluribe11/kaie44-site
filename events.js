@@ -31,6 +31,8 @@
   function desc(e) { return pick(e.description, e.description_en); }
   function arrive(e) { return pick(e.arrive_note, e.arrive_note_en); }
   function paid(e) { return (+e.price_adult || 0) > 0 || (+e.price_child || 0) > 0; }
+  function isDinner(e) { return /dinner|cena/i.test((e.title || "") + " " + (e.title_en || "")); }
+  function freeHead(e) { return isDinner(e) ? T("¡La cena va por nuestra cuenta!", "Dinner is on us!") : T("Evento sin costo", "Free event"); }
   function couple(e) { return e && e.price_mode === "couple"; }
   function mapsUrl(a) { return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(a || ""); }
   function errText(e) {
@@ -68,6 +70,7 @@
     cal: '<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
     pin: '<svg viewBox="0 0 24 24"><path d="M12 21s-7-6.3-7-11.5A7 7 0 0 1 19 9.5C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
     ppl: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2c2.4.1 4.3 1.6 4.9 4.8"/></svg>',
+    gift: '<svg viewBox="0 0 24 24"><rect x="3.5" y="9" width="17" height="11.5" rx="1.5"/><path d="M2.5 9h19v-3h-19zM12 6v14.5M12 6c-1.5-3.5-6-3.5-6-1s4 1 6 1zm0 0c1.5-3.5 6-3.5 6-1s-4 1-6 1z"/></svg>',
     tag: '<svg viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>'
   };
   function root() { return $("#evx"); }
@@ -84,12 +87,13 @@
     if (empty) empty.hidden = true;
     if (!box) { box = document.createElement("div"); box.className = "evl"; v.appendChild(box); }
     box.innerHTML = LIST.map(function (e) {
-      var cx = e.status === "cancelled", tag = cx ? T("Cancelado", "Cancelled") : e.audience === "members" ? T("Solo miembros", "Members only") : T("Abierto a invitados", "Guests welcome");
+      var cx = e.status === "cancelled", tag = cx ? T("Cancelado", "Cancelled") : e.audience === "members" ? T("Solo miembros", "Members only") : couple(e) ? T("Para matrimonios", "For couples") : T("Abierto a invitados", "Guests welcome");
       return '<article class="evc"><a class="evc-ph" href="#/ev/' + esc(e.slug) + '" style="background-image:url(&quot;' + esc(e.photo_url || "images/mission.jpg") + '&quot;)"><span class="evc-tag' + (cx ? " cx" : "") + '">' + tag + "</span></a>" +
         '<div class="evc-bd">' + (e.series ? '<div class="evc-ey">' + esc(e.series) + "</div>" : "") + "<h3>" + esc(title(e)) + "</h3>" +
         (desc(e) ? "<p>" + esc(desc(e)).slice(0, 220) + "</p>" : "") +
         '<div class="evc-dt"><div class="evc-cal"><b>' + esc(fdate(e.starts_at, { month: "short" }).replace(".", "").toUpperCase()) + "</b><i>" + esc(fdate(e.starts_at, { day: "numeric" })) + "</i></div><div><div class=\"z\">" +
         esc(cap(fdate(e.starts_at, { weekday: "long", day: "numeric", month: "long" }))) + " · " + esc(ftime(e.starts_at)) + '</div><div class="h">' + esc([e.venue, (e.address || "").split(",").slice(-2).join(",").trim()].filter(Boolean).join(" · ")) + "</div></div></div>" +
+        (!cx && !paid(e) ? '<div class="evc-free">' + IC.gift + "<b>" + T("Gratis", "Free") + "</b><span>" + freeHead(e) + "</span></div>" : "") +
         '<div class="evc-act">' + (cx ? '<span class="evx-pill">' + T("Este evento fue cancelado", "This event was cancelled") + "</span>" : e.open ? '<a class="btn gold" href="#/ev/' + esc(e.slug) + '?go=rsvp">' + T("Confirmar asistencia", "RSVP") + "</a>" : '<span class="evx-pill">' + (e.full ? T("Cupo lleno", "Full") : T("Registro cerrado", "Registration closed")) + "</span>") +
         '<a class="evx-lnk" href="#/ev/' + esc(e.slug) + '">' + T("Ver detalles", "Details") + " →</a></div></div></article>";
     }).join("");
@@ -221,7 +225,7 @@
       var pr = t.free ? 0 : (+e.price_adult || 0), pd = paid(e), tot = list.reduce(function (a, x) { return a + (x.bd ? 0 : pr); }, 0);
       var h = '<div class="paybox sm cpsum"><h4>' + T("Tu registro · ", "Your registration · ") + list.length + " " + T(list.length === 1 ? "matrimonio" : "matrimonios", list.length === 1 ? "couple" : "couples") + "</h4>" +
         list.map(function (x) { return '<div class="ln"><span>' + esc(x.n) + (x.you ? " <i>· " + T("ustedes", "you") + "</i>" : "") + (x.bd ? ' <em class="bdg">Board KAI</em>' : "") + "</span><span>" + (pd ? money(x.bd ? 0 : pr) : "") + "</span></div>"; }).join("") +
-        (pd ? '<div class="ln t"><span>Total</span><span>' + money(tot) + "</span></div>" : "") +
+        (pd ? '<div class="ln t"><span>Total</span><span>' + money(tot) + "</span></div>" : '<div class="ln t"><span>Total</span><span class="frz">' + T("Gratis", "Free") + "</span></div>") +
         (t.free ? '<p class="fine" style="text-align:left;margin:6px 0 0">' + T("Cortesía de ", "Courtesy of ") + esc(e.courtesy.by) + "</p>" : pd ? '<p class="fine" style="text-align:left;margin:6px 0 0">' + T("Los matrimonios del Board de KAI no pagan; el sistema los reconoce por su correo.", "KAI Board couples do not pay; they are recognized by email.") + "</p>" : "") + "</div>";
       b.innerHTML = h;
       var bar = $("#cp-bar"); if (bar) bar.innerHTML = "<div><small>" + list.length + " " + T(list.length === 1 ? "matrimonio" : "matrimonios", list.length === 1 ? "couple" : "couples") + "</small><b>" + (pd ? money(tot) : T("Sin costo", "Free")) + '</b></div><button type="button" id="cp-go">' + (pd && tot > 0 ? (e.pay_later ? T("Reservar", "Reserve") : T("Registrarnos", "Register")) : T("Confirmar", "Confirm")) + " →</button>";
@@ -230,6 +234,7 @@
       return;
     }
     var s = '<p class="tot">' + T("Total registrado", "Total") + ": <b>" + t.n + " " + T(t.n === 1 ? "persona" : "personas", t.n === 1 ? "person" : "people") + "</b> (" + t.ad + " " + T(t.ad === 1 ? "adulto" : "adultos", t.ad === 1 ? "adult" : "adults") + (t.kids ? " · " + t.kids + " " + T(t.kids === 1 ? "menor" : "menores", t.kids === 1 ? "minor" : "minors") : "") + ")</p>";
+    if (!paid(e)) s += '<div class="paybox sm"><div class="ln t"><span>Total</span><span class="frz">' + T("Gratis", "Free") + '</span></div><p class="fine" style="text-align:left;margin:6px 0 0">' + freeHead(e) + "</p></div>";
     if (paid(e)) {
       if (t.free) s += '<div class="paybox sm"><div class="ln t"><span>' + T("Cortesía de ", "Courtesy of ") + esc(e.courtesy.by) + '</span><span>$0</span></div></div>';
       else if (t.bd) s += '<div class="paybox sm">' + (t.ad - t.bd > 0 ? '<div class="ln"><span>' + (t.ad - t.bd) + " " + T("adulto(s)", "adult(s)") + " × " + money(e.price_adult) + "</span><span>" + money((t.ad - t.bd) * e.price_adult) + "</span></div>" : "") +
@@ -245,7 +250,7 @@
   }
   function renderEvent() {
     var e = EV, m = ME && ME.m, other = (e.other || [])[0], cty = e.courtesy;
-    var info = '<div class="evd-in"><div>' + IC.cal + '<p><b>' + esc(cap(fdate(e.starts_at))) + "</b><span>" + esc(ftime(e.starts_at)) + (e.ends_at ? " – " + esc(ftime(e.ends_at)) : "") + (arrive(e) ? " · " + esc(arrive(e)) : "") + "</span></p></div>" +
+    var info = '<div class="evd-in">' + (!paid(e) && e.status !== "cancelled" ? '<div class="evd-free">' + IC.gift + "<p><b>" + T("Gratis · ", "Free · ") + freeHead(e) + "</b><span>" + T("No tiene costo. Solo regístrate para apartar tu lugar.", "There is no cost. Just register to save your seat.") + "</span></p></div>" : "") + '<div>' + IC.cal + '<p><b>' + esc(cap(fdate(e.starts_at))) + "</b><span>" + esc(ftime(e.starts_at)) + (e.ends_at ? " – " + esc(ftime(e.ends_at)) : "") + (arrive(e) ? " · " + esc(arrive(e)) : "") + "</span></p></div>" +
       (e.venue || e.address ? "<div>" + IC.pin + "<p><b>" + esc(e.venue || "") + "</b><span>" + esc(e.address || "") + "</span></p></div>" : "") +
       (paid(e) ? "<div>" + IC.tag + "<p><b>" + money(e.price_adult) + " " + (couple(e) ? T("por matrimonio", "per married couple") : T("por adulto", "per adult")) + (+e.price_child ? " · " + money(e.price_child) + " " + T("por menor", "per minor") : "") + "</b><span>" + (e.pay_later ? T("El equipo de KAI se comunicará contigo para el pago", "The KAI team will contact you about payment") : T("Pago por Zelle al registrarte", "Pay by Zelle after registering")) + "</span></p></div>" : "") +
       "<div>" + IC.ppl + "<p><b>" + (couple(e) ? T("Pastores y cónyuges", "Pastors & spouses") + (e.audience === "members" ? " · " + T("solo miembros de KAI", "KAI members only") : "") : e.audience === "members" ? T("Solo miembros de KAI", "KAI members only") : T("Pastores y cónyuges", "Pastors & spouses")) + "</b><span>" + (e.left != null ? e.left + " " + T("lugares disponibles", "spots left") : T("Confirma cuántas personas vienen contigo", "Tell us who is coming with you")) + "</span></p></div></div>";
