@@ -87,7 +87,7 @@
     e.status = "draft"; e._from = ttl(x.event);
     var st = parts(x.event.starts_at), en = parts(x.event.ends_at); e._time = st.time; e._end = en.time;
     COPYSRC = { copy: true, event: e, staff: x.staff || [], team_options: x.team_options, series_options: x.series_options };
-    location.hash = "#/staff/event/new";
+    KGO("/staff/event/new");
   }
   function detail(id, tab) {
     if (id === "new") { var cs = COPYSRC; COPYSRC = null; return edit(cs); }
@@ -99,7 +99,7 @@
       if (x.can_edit) tabs.push(["edit", xx("Editar evento", "Edit event")]);
       var head = K.hero(null, ldate(e.starts_at) + " · " + ltime(e.starts_at), ttl(e), null, ["#/staff/events", xx("Eventos", "Events")]);
       var nav = '<div class="pe-bar"><div class="pe-tabs2">' + tabs.map(function (t) { return '<a href="#/staff/event/' + e.id + "/" + t[0] + '"' + (t[0] === tab ? ' class="on"' : "") + ">" + t[1] + "</a>"; }).join("") + "</div>" +
-        '<div class="pe-acts">' + pill(e) + (x.can_edit ? xx(" <button class=\"btn sm ol\" id=\"pe-dup-ev\">⧉ Duplicar</button>", " <button class=\"btn sm ol\" id=\"pe-dup-ev\">⧉ Duplicate</button>") : "") + (x.can_edit ? (x.regs ? (e.status !== "cancelled" ? xx(" <button class=\"btn sm danger\" id=\"pe-cancel-ev\">Cancelar evento</button>", " <button class=\"btn sm danger\" id=\"pe-cancel-ev\">Cancel event</button>") : "") : xx(" <button class=\"btn sm danger\" id=\"pe-del-ev\">Eliminar</button>", " <button class=\"btn sm danger\" id=\"pe-del-ev\">Delete</button>")) : "") + ' <a class="btn sm ol" target="_blank" rel="noopener" href="' + SITE + "/#/ev/" + esc(e.slug) + (e.status === "published" ? "" : "?preview=1") + '">' + (e.status === "published" ? xx("Ver página ↗", "View page ↗") : xx("Vista previa ↗", "Preview ↗")) + "</a></div></div>";
+        '<div class="pe-acts">' + pill(e) + (x.can_edit ? xx(" <button class=\"btn sm ol\" id=\"pe-dup-ev\">⧉ Duplicar</button>", " <button class=\"btn sm ol\" id=\"pe-dup-ev\">⧉ Duplicate</button>") : "") + (x.can_edit ? (x.regs ? (e.status !== "cancelled" ? xx(" <button class=\"btn sm danger\" id=\"pe-cancel-ev\">Cancelar evento</button>", " <button class=\"btn sm danger\" id=\"pe-cancel-ev\">Cancel event</button>") : "") : xx(" <button class=\"btn sm danger\" id=\"pe-del-ev\">Eliminar</button>", " <button class=\"btn sm danger\" id=\"pe-del-ev\">Delete</button>")) : "") + ' <a class="btn sm ol" target="_blank" rel="noopener" href="' + SITE + "/ev/" + esc(e.slug) + (e.status === "published" ? "" : "?preview=1") + '">' + (e.status === "published" ? xx("Ver página ↗", "View page ↗") : xx("Vista previa ↗", "Preview ↗")) + "</a></div></div>";
       K.put(head + K.body(nav + xx("<div id=\"pe-tab\"><p class=\"st-wait\">Cargando…</p></div>", "<div id=\"pe-tab\"><p class=\"st-wait\">Loading…</p></div>")));
       if (e.status === "cancelled") $(".pe-bar").insertAdjacentHTML("afterend", xx("<div class=\"pe-cx\"><b>Evento cancelado</b>", "<div class=\"pe-cx\"><b>Event cancelled</b>") + (e.cancelled_at ? xx(" el ", " on ") + esc(la(e.cancelled_at, { day: "numeric", month: "long" })) : "") + (e.cancel_reason ? " · " + esc(e.cancel_reason) : "") + "</div>");
       if (e.status === "draft" && x.can_edit) draftBox(x);
@@ -170,14 +170,14 @@
     var e = x.event, byTask = {};
     (x.staff || []).forEach(function (s) { (byTask[s.task] = byTask[s.task] || []).push(s.name); });
     var t = Object.keys(byTask).length ? Object.keys(byTask).map(function (k) { return '<div class="asg"><b>' + esc(k) + '</b><div class="chips">' + byTask[k].map(function (n) { return "<span>" + esc(n) + "</span>"; }).join("") + "</div></div>"; }).join("") : xx("<p class=\"st-muted\">Nadie asignado todavía.", "<p class=\"st-muted\">No one assigned yet.") + (x.can_edit ? ' <a href="#/staff/event/' + e.id + xx("/edit\">Asignar equipo</a>", "/edit\">Assign team</a>") : "") + "</p>";
-    var link = SITE + "/#/checkin/" + e.slug;
+    var link = SITE + "/checkin/" + e.slug;
     var ci = xx("<div class=\"pe-sec\"><h3>Check-in</h3><div class=\"in\"><p class=\"st-muted\" style=\"margin:0 0 10px\">El equipo entra con su login. Los voluntarios usan el enlace y el PIN; el PIN solo sirve el día del evento.</p>", "<div class=\"pe-sec\"><h3>Check-in</h3><div class=\"in\"><p class=\"st-muted\" style=\"margin:0 0 10px\">The team signs in with their login. Volunteers use the link and the PIN; the PIN only works on the day of the event.</p>") +
       (e.checkin_pin ? '<div class="pin"><code>' + esc(e.checkin_pin) + xx("</code><p>PIN para voluntarios · ", "</code><p>Volunteer PIN · ") + esc(ldate(e.starts_at)) + "</p></div>" : "") +
       xx("<div class=\"pe-f\"><small>Enlace del check-in</small><div class=\"i lk\"><span>", "<div class=\"pe-f\"><small>Check-in link</small><div class=\"i lk\"><span>") + esc(link.replace(/^https?:\/\//, "")) + '</span><button class="st-mini" data-copy="' + esc(link) + '">Copiar</button></div></div></div></div>';
     var paidEv = (+e.price_adult || 0) > 0 || (+e.price_child || 0) > 0;
     var cty = x.courtesy ? xx("<div class=\"pe-sec\"><h3>Enlaces de cortesía del Board</h3><div class=\"in\">", "<div class=\"pe-sec\"><h3>Board courtesy links</h3><div class=\"in\">") + (paidEv ? xx("<p class=\"st-muted\" style=\"margin:0 0 10px\">Cada miembro del Board tiene su enlace. Quien se registre con él no paga (hasta ", "<p class=\"st-muted\" style=\"margin:0 0 10px\">Each Board member has their own link. Whoever registers with it doesn't pay (up to ") + esc(e.courtesy_per_board) + xx(" personas por enlace). Al publicar el evento se envía por correo a cada uno.</p>", " people per link). When the event is published, it is emailed to each of them.</p>") : xx("<p class=\"st-muted\" style=\"margin:0 0 10px\">Este evento es gratis; los enlaces de cortesía no son necesarios.</p>", "<p class=\"st-muted\" style=\"margin:0 0 10px\">This event is free; courtesy links aren't needed.</p>")) +
       xx("<table class=\"pe sm\"><tr><th>Board</th><th>Usados</th><th></th></tr>", "<table class=\"pe sm\"><tr><th>Board</th><th>Used</th><th></th></tr>") + x.courtesy.map(function (c) {
-        var url = SITE + "/#/ev/" + e.slug + "?c=" + c.code;
+        var url = SITE + "/ev/" + e.slug + "?c=" + c.code;
         return "<tr><td><b>" + esc(c.name) + "</b><small>" + esc(c.email || xx("sin correo registrado", "no email on file")) + "</small></td><td>" + (c.code ? c.used + xx(" de ", " of ") + c.max : "—") + "</td><td>" + (c.code ? '<button class="st-mini" data-copy="' + esc(url) + xx("\">Copiar enlace</button>", "\">Copy link</button>") : "") + "</td></tr>";
       }).join("") + "</table></div></div>" : "";
     tabPut(xx("<div class=\"pe-two\"><div><div class=\"pe-sec\"><h3>Equipo asignado</h3><div class=\"in\">", "<div class=\"pe-two\"><div><div class=\"pe-sec\"><h3>Assigned team</h3><div class=\"in\">") + t + "</div></div>" + ci + "</div><div>" + cty + "</div></div>");
@@ -384,12 +384,12 @@
         K.rpc("ev_staff_save", { p: p }).then(function (id) {
           if (prev) {
             return K.rpc("ev_staff_get", { p_id: id }).then(function (y) {
-              var u = SITE + "/#/ev/" + y.event.slug + "?preview=1";
+              var u = SITE + "/ev/" + y.event.slug + "?preview=1";
               if (win && !win.closed) win.location.href = u; else window.open(u, "_blank");
               K.toast(xx("Guardado. La vista previa se abrió en otra pestaña.", "Saved. The preview opened in another tab."));
-              if (!ED) location.hash = "#/staff/event/" + id + "/edit"; else { b.disabled = false; m.textContent = ""; }
+              if (!ED) KGO("/staff/event/" + id + "/edit"); else { b.disabled = false; m.textContent = ""; }
             });
-          } if (window.KAIEV_KICK) KAIEV_KICK(); K.toast(R.status === "published" ? xx("Evento guardado y publicado", "Event saved and published") : xx("Evento guardado", "Event saved")); location.hash = "#/staff/event/" + id; })
+          } if (window.KAIEV_KICK) KAIEV_KICK(); K.toast(R.status === "published" ? xx("Evento guardado y publicado", "Event saved and published") : xx("Evento guardado", "Event saved")); KGO("/staff/event/" + id); })
           .catch(function (er) { b.disabled = false; m.textContent = err(er); if (win && !win.closed) win.close(); });
       };
       $("#pe-prev").onclick = function () { F._prev = true; setTimeout(function () { F._prev = false; }, 0); if (F.requestSubmit) F.requestSubmit(); else F.onsubmit({ preventDefault: function () {} }); };
@@ -413,7 +413,7 @@
     var h = '<div class="pe-draft"><div class="ic">✎</div><div><b>' + xx("Este evento es un borrador", "This event is a draft") + "</b><p>" +
       xx("Solo lo ve el equipo. Cuando lo publique, aparece en kaie44.org y se abre el registro.", "Only the team can see it. When you publish it, it appears on kaie44.org and registration opens.") + '</p><div class="ck">' +
       c.map(function (k) { return k[0] ? "<span>✓ " + esc(k[1]) + "</span>" : '<span class="w">⚠ ' + esc(k[2]) + "</span>"; }).join("") + "</div></div>" +
-      '<div class="ac"><button class="pb" id="pe-pub">' + xx("Publicar evento", "Publish event") + '</button><a class="pv" target="_blank" rel="noopener" href="' + SITE + "/#/ev/" + esc(e.slug) + '?preview=1">' + xx("Vista previa ↗", "Preview ↗") + "</a></div></div>";
+      '<div class="ac"><button class="pb" id="pe-pub">' + xx("Publicar evento", "Publish event") + '</button><a class="pv" target="_blank" rel="noopener" href="' + SITE + "/ev/" + esc(e.slug) + '?preview=1">' + xx("Vista previa ↗", "Preview ↗") + "</a></div></div>";
     var bar = $(".pe-bar"); if (!bar) return; bar.insertAdjacentHTML("beforebegin", h);
     $("#pe-pub").onclick = function () { publishModal(x); };
   }
@@ -442,7 +442,7 @@
     var armed = false;
     $("#dl-go", ov).onclick = function () {
       var b = this; if (!armed) { armed = true; b.textContent = xx("Confirmar: eliminar para siempre", "Confirm: delete forever"); return; }
-      b.disabled = true; K.rpc("ev_staff_delete", { p_id: e.id }).then(function () { ov.remove(); K.toast(xx("Evento eliminado", "Event deleted")); location.hash = "#/staff/events"; }).catch(function (er) { b.disabled = false; $("#dl-m", ov).textContent = err(er); });
+      b.disabled = true; K.rpc("ev_staff_delete", { p_id: e.id }).then(function () { ov.remove(); K.toast(xx("Evento eliminado", "Event deleted")); KGO("/staff/events"); }).catch(function (er) { b.disabled = false; $("#dl-m", ov).textContent = err(er); });
     };
   }
   function cancelEvent(x) {

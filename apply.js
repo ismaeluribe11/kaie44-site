@@ -710,7 +710,7 @@
     }).then(function () {
       try { localStorage.removeItem(DRAFT); } catch (e) {}
       S = { agree: {} }; FILES = {}; PREV = {}; ORIG.photo = null; BUSY = false; fclear();
-      location.hash = "#/apply/done";
+      KGO("/apply/done");
     }).catch(function (e) {
       BUSY = false; btn.disabled = false; btn.textContent = xx("Enviar aplicación", "Submit application");
       var m = (e && (e.message || e.error_description)) || "";
@@ -722,7 +722,7 @@
 
   /* ---------- router ---------- */
   function screenFromHash() {
-    var h = (location.hash || "").replace(/^#\/?/, "");
+    var h = (KR() || "").replace(/^#\/?/, "");
     var m = h.match(/^apply(?:\/(a|b|c|review|done))?$/);
     if (!m) return null;
     return m[1] === "review" ? "r" : m[1] || "intro";
@@ -730,7 +730,7 @@
   function render() {
     var root = $("#apx"); if (!root) return;
     var scr = screenFromHash() || "intro";
-    if (scr === "c") { location.replace("#/apply/r"); return; }   // la Parte C ahora se pregunta en la entrevista
+    if (scr === "c") { KGO("/apply/r", true); return; }   // la Parte C ahora se pregunta en la entrevista
     if (scr === "done" && !DONE) scr = "intro";
     var key = scr + "|" + lang();
     if (CUR && CUR.getAttribute("data-key") === key) return;

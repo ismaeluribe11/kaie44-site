@@ -145,7 +145,7 @@
     events: "M3 5h18v16H3zM16 3v4M8 3v4M3 10h18", cred: "M3 5h18v14H3zM14 10h4M14 14h3M9 9a2 2 0 1 1 0 4a2 2 0 0 1 0-4"
   };
   function sxCur() {
-    var p = (location.hash || "").replace(/^#\/?/, "").split("/"), v = p[1] || "";
+    var p = (KR() || "").replace(/^#\/?/, "").split("/"), v = p[1] || "";
     return { app: "apps", member: "members", event: "events" }[v] || v || (has("president") ? "inbox" : has("admin", "membership", "care") ? "apps" : "members");
   }
   function shell(html) {
@@ -166,7 +166,7 @@
   }
   function put(html) {
     if (!ROOT) return;
-    var h = (location.hash || "").replace(/^#\/?/, ""), me = ST.me;
+    var h = (KR() || "").replace(/^#\/?/, ""), me = ST.me;
     if (me && me.aal === "aal2" && me.roles && me.roles.length && /^staff(\/|$)/.test(h) && html.indexOf("st-hero") >= 0) html = shell(html);
     ROOT.innerHTML = html;
   }
@@ -221,7 +221,7 @@
   /* ---------- router ---------- */
   function route() {
     if (typeof evInit === "function") evInit();
-    var h = (location.hash || "").replace(/^#\/?/, ""), seq = ++ST.seq;
+    var h = (KR() || "").replace(/^#\/?/, ""), seq = ++ST.seq;
     ROOT = $("#stx"); if (!ROOT) return;
     if (/^pago\//.test(h)) { payPage(decodeURIComponent(h.slice(5))); return; }
     var p = h.split("/").slice(1);
@@ -313,7 +313,7 @@
       $("#iv-go", W).onclick = function () {
         var btn = this, m = $("#iv-m", W); btn.disabled = true; m.textContent = xx("Guardando…", "Saving…");
         var p = { meta: M, refs: R }; if (careEdit) p.care = C;
-        rpc("staff_interview_save", { p_id: x.id, p: p }).then(function () { toast(xx("Entrevista guardada.", "Interview saved.")); location.hash = "#/staff/app/" + x.id; })
+        rpc("staff_interview_save", { p_id: x.id, p: p }).then(function () { toast(xx("Entrevista guardada.", "Interview saved.")); KGO("/staff/app/" + x.id); })
           .catch(function (er) { btn.disabled = false; m.textContent = errMsg(er); });
       };
     }).catch(function (e) { put(hero0(xx("No pudimos cargar la entrevista", "We couldn't load the interview"), esc(errMsg(e)))); });
@@ -354,7 +354,7 @@
     return load();
   }
   function pager(total, page) { var n = Math.ceil(total / 25); if (n < 2) return ""; var o = ""; for (var i = 0; i < n; i++) o += '<button class="' + (i === page ? "on" : "") + '" data-p="' + i + '">' + (i + 1) + "</button>"; return '<div class="st-pages st-pg">' + o + "</div>"; }
-  function bindSearch(base) { var f = $("#st-q", ROOT); if (f) f.onsubmit = function (e) { e.preventDefault(); location.hash = base + encodeURIComponent(f.q.value.trim()); }; }
+  function bindSearch(base) { var f = $("#st-q", ROOT); if (f) f.onsubmit = function (e) { e.preventDefault(); KGO(base + encodeURIComponent(f.q.value.trim())); }; }
 
   /* ---------- 2) Detalle de aplicación ---------- */
   var REASONS = ["Referencias no confirmadas", "No afirma la Declaración de Fe", "Información incompleta", "Otro"];
@@ -475,7 +475,7 @@
     });
     on("pay", function () { payModal({ app: a, name: name }); });
     on("mail-welcome", function () { mailWelcome(a, name); });
-    on("copy-link", function (b) { try { navigator.clipboard.writeText(SITE + "/#/pago/" + a.pay_token); b.textContent = xx("Enlace copiado", "Link copied"); } catch (e) { prompt(xx("Enlace de pago:", "Payment link:"), SITE + "/#/pago/" + a.pay_token); } });
+    on("copy-link", function (b) { try { navigator.clipboard.writeText(SITE + "/pago/" + a.pay_token); b.textContent = xx("Enlace copiado", "Link copied"); } catch (e) { prompt(xx("Enlace de pago:", "Payment link:"), SITE + "/pago/" + a.pay_token); } });
     on("mail-decline", function () { mailDecline(a, name); });
   }
   function on(act, fn) { $$('[data-act="' + act + '"]', ROOT).forEach(function (b) { b.onclick = function (e) { e.preventDefault(); fn(b, e); }; }); }
@@ -485,7 +485,7 @@
   function mailWelcome(a, name) {
     var es = (a.data && a.data.lang_pref) !== "en";
     (function () {
-      var link = a.pay_token ? SITE + "/#/pago/" + a.pay_token : SITE + "/#/membership";
+      var link = a.pay_token ? SITE + "/pago/" + a.pay_token : SITE + "/membership";
       var z = a;
       var zl = z.zelle_to ? (es ? "Envíe su pago por Zelle a: " : "Send your payment by Zelle to: ") + z.zelle_to + " (" + (z.zelle_name || "Kingdom Alliance International") + ")" : (es ? "Las instrucciones de Zelle están en el enlace de abajo." : "Zelle instructions are at the link below.");
       var b = es ? "Estimado(a) " + name + ":\n\n¡Bienvenido(a) a Kingdom Alliance International! Nos alegra informarle que su aplicación de membresía fue aprobada.\n\nSu número de cuenta es " + a.app_no + ". Guárdelo; lo usará en sus pagos y comunicaciones con KAI.\n\nCuota anual: $" + a.fee + "\n" + zl + "\nEn la nota del Zelle escriba: " + a.app_no + " " + name + "\n\nCuando envíe su pago, avísenos aquí: " + link + "\n\nAl confirmar su pago recibirá un correo para crear su contraseña y ver su credencial digital. Su credencial impresa le llegará en 1 a 2 semanas.\n\nBendiciones,\nKingdom Alliance International\ninfo@kaie44.org"
@@ -653,8 +653,8 @@
     on("cred", function () {
       var x = { full_name: m.name, title: m.title, credential_no: m.credential_no, valid_through: m.valid_through, member_since: m.member_since, church: m.church, city: m.city, state: m.state, photo_url: m.photo_url, verify_code: m.verify_code, status: m.state_k === "inactive" ? "inactive" : "active" };
       var c = window.KAI && window.KAI.cred ? window.KAI.cred(x) : null;
-      if (!c) { window.open(SITE + "/#/verify/" + (m.verify_code || ""), "_blank"); return; }
-      var ov = modal(xx("<h3>Credencial · ", "<h3>Credential · ") + esc(m.name) + xx("</h3><div class=\"bd\"><div class=\"ctab\"><button type=\"button\" data-s=\"f\" aria-pressed=\"true\">Frente</button><button type=\"button\" data-s=\"b\" aria-pressed=\"false\">Reverso</button></div><div class=\"cardv\"><div class=\"kc\" data-c=\"f\">", "</h3><div class=\"bd\"><div class=\"ctab\"><button type=\"button\" data-s=\"f\" aria-pressed=\"true\">Front</button><button type=\"button\" data-s=\"b\" aria-pressed=\"false\">Back</button></div><div class=\"cardv\"><div class=\"kc\" data-c=\"f\">") + c.front + '</div><div class="kc" data-c="b" hidden>' + c.back + xx("</div></div><p class=\"st-small\" style=\"margin-top:16px\">Así la ve el miembro en su Área de Miembros. <a class=\"st-link\" href=\"", "</div></div><p class=\"st-small\" style=\"margin-top:16px\">This is how the member sees it in their Members Area. <a class=\"st-link\" href=\"") + SITE + "/#/verify/" + esc(m.verify_code || "") + xx("\" target=\"_blank\" rel=\"noopener\">Página de verificación del QR ›</a></p><div class=\"ft\"><button class=\"btn navy\" data-close>Cerrar</button></div></div>", "\" target=\"_blank\" rel=\"noopener\">QR verification page ›</a></p><div class=\"ft\"><button class=\"btn navy\" data-close>Close</button></div></div>"));
+      if (!c) { window.open(SITE + "/verify/" + (m.verify_code || ""), "_blank"); return; }
+      var ov = modal(xx("<h3>Credencial · ", "<h3>Credential · ") + esc(m.name) + xx("</h3><div class=\"bd\"><div class=\"ctab\"><button type=\"button\" data-s=\"f\" aria-pressed=\"true\">Frente</button><button type=\"button\" data-s=\"b\" aria-pressed=\"false\">Reverso</button></div><div class=\"cardv\"><div class=\"kc\" data-c=\"f\">", "</h3><div class=\"bd\"><div class=\"ctab\"><button type=\"button\" data-s=\"f\" aria-pressed=\"true\">Front</button><button type=\"button\" data-s=\"b\" aria-pressed=\"false\">Back</button></div><div class=\"cardv\"><div class=\"kc\" data-c=\"f\">") + c.front + '</div><div class="kc" data-c="b" hidden>' + c.back + xx("</div></div><p class=\"st-small\" style=\"margin-top:16px\">Así la ve el miembro en su Área de Miembros. <a class=\"st-link\" href=\"", "</div></div><p class=\"st-small\" style=\"margin-top:16px\">This is how the member sees it in their Members Area. <a class=\"st-link\" href=\"") + SITE + "/verify/" + esc(m.verify_code || "") + xx("\" target=\"_blank\" rel=\"noopener\">Página de verificación del QR ›</a></p><div class=\"ft\"><button class=\"btn navy\" data-close>Cerrar</button></div></div>", "\" target=\"_blank\" rel=\"noopener\">QR verification page ›</a></p><div class=\"ft\"><button class=\"btn navy\" data-close>Close</button></div></div>"));
       ov.querySelector(".st-modal").style.maxWidth = "680px";
       $$(".ctab button", ov).forEach(function (b) { b.onclick = function () { $$(".ctab button", ov).forEach(function (z) { z.setAttribute("aria-pressed", z === b); }); $$("[data-c]", ov).forEach(function (k) { k.hidden = k.dataset.c !== b.dataset.s; }); }; });
     });
@@ -787,7 +787,7 @@
     if (r.existing) steps.push(xx("✓ Ya tenía credencial: se conservó su número y se vinculó la aplicación", "✓ Already had a credential: their number was kept and the application was linked"));
     return photoP.then(function () {
       if (r.existing) return;
-      return c.functions.invoke("kai-invite", { body: { email: r.email, redirect: SITE + "/#/password" } }).then(function (x) {
+      return c.functions.invoke("kai-invite", { body: { email: r.email, redirect: SITE + "/password" } }).then(function (x) {
         if (x.error) throw x.error; steps.push(xx("✓ Invitación enviada a ", "✓ Invitation sent to ") + r.email);
       }).catch(function () { steps.push(xx("✗ No se pudo enviar la invitación. Envíela desde Supabase → Authentication → Users → Invite, al correo ", "✗ Could not send the invitation. Send it from Supabase → Authentication → Users → Invite, to ") + r.email); });
     }).then(function () {

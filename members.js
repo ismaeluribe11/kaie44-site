@@ -23,7 +23,7 @@
       AUTH.err = q.get("error_code") || q.get("error") || "error";
     }
     var dest = (AUTH.type === "invite" || AUTH.type === "recovery" || AUTH.err) ? "#/password" : "#/membership";
-    history.replaceState(null, "", location.pathname + location.search + dest);
+    history.replaceState(null, "", dest.slice(1) + location.search);
   })();
 
   var sb = null;
@@ -76,7 +76,7 @@
     // if the photo can't load, show the initials instead of a broken image
     return '<img src="' + esc(m.photo_url) + '" alt="' + esc(m.full_name) + '" onerror="this.nextElementSibling.hidden=false;this.remove()">' + fb;
   }
-  function vurl(m) { return SITE + "/#/verify/" + encodeURIComponent(m.verify_code || ""); }
+  function vurl(m) { return SITE + "/verify/" + encodeURIComponent(m.verify_code || ""); }
   function say(el, key, cls) {
     if (!el) return;
     el.dataset.mk = key || "";
@@ -417,7 +417,7 @@
         }
         this.reset(); say(msg, "pw_ok", "ok");
         AUTH.type = null; AUTH.err = null; S.pwMode = "new";
-        setTimeout(function () { b.disabled = false; say(msg, ""); location.hash = "#/membership"; }, 1600);
+        setTimeout(function () { b.disabled = false; say(msg, ""); KGO("/membership"); }, 1600);
         var s = (await sb.auth.getSession()).data.session;
         load(s);
       } catch (x) { say(msg, "m_err", "err"); b.disabled = false; }
@@ -433,7 +433,7 @@
       document.querySelectorAll(".msg[data-mk]").forEach(function (el) { if (el.dataset.mk) el.textContent = T(el.dataset.mk); });
       if (v === "verify") {
         var code = "";
-        try { code = decodeURIComponent((location.hash || "").replace(/^#\/verify\//, "")).trim(); } catch (e) { code = ""; }
+        try { code = decodeURIComponent((KR() || "").replace(/^#\/verify\//, "").split("?")[0]).trim(); } catch (e) { code = ""; }
         if (code !== S.ver.code) verifyLoad(code);
       }
       paint();

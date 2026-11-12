@@ -55,7 +55,7 @@
     return T("Algo salió mal. Intenta de nuevo o escríbenos a info@kaie44.org.", "Something went wrong. Try again or write to info@kaie44.org.");
   }
   function hashParts() {
-    var h = (location.hash || "").replace(/^#\/?/, ""), q = "", i = h.indexOf("?");
+    var h = (KR() || "").replace(/^#\/?/, ""), q = "", i = h.indexOf("?");
     if (i >= 0) { q = h.slice(i + 1); h = h.slice(0, i); }
     return { path: h.split("/"), q: new URLSearchParams(q) };
   }
@@ -96,6 +96,19 @@
   }
   function loadList() {
     rpc("ev_public_list").then(function (x) { LIST = x || []; renderList(); }).catch(function () { LIST = []; renderList(); });
+  }
+
+  /* Direcciones cortas: /events/sd y /events/ie abren el próximo evento publicado de esa zona.
+     /events/CUALQUIER-SLUG también abre ese evento. */
+  var ALIAS = { sd: /san\s*diego/i, ie: /inland\s*empire/i };
+  function loadAlias(a, code) {
+    var re = ALIAS[a]; if (!re) return loadEvent(a, code);
+    wait();
+    rpc("ev_public_list").then(function (x) {
+      var l = (x || []).filter(function (e) { return re.test((e.title || "") + " " + (e.title_en || "") + " " + (e.slug || "")); });
+      var e = l.filter(function (e) { return e.status !== "cancelled"; })[0] || l[0];
+      loadEvent(e ? e.slug : "-", e ? code : null);
+    }).catch(function () { loadEvent("-", null); });
   }
 
   /* ================= DETALLE + REGISTRO (#/ev/SLUG) ================= */
@@ -320,7 +333,7 @@
       if (p.guests.some(function (g) { return !g.first_name || !g.last_name; })) return (msg.textContent = errText("missing_guest_name"));
       if (EV.preview) { msg.textContent = T("Vista previa: el formulario funciona, pero aquí no se guarda ningún registro.", "Preview: the form works, but no registration is saved here."); return; }
       msg.textContent = ""; btn.disabled = true; btn.textContent = T("Enviando…", "Sending…");
-      rpc("ev_register", { p_slug: EV.slug, p: p }).then(function (r) { kick(); location.hash = "#/evr/" + r.token; })
+      rpc("ev_register", { p_slug: EV.slug, p: p }).then(function (r) { kick(); KGO("/evr/" + r.token); })
         .catch(function (er) { msg.textContent = errText(er); btn.disabled = false; renderTotals(); });
     };
   }
@@ -333,14 +346,14 @@
     return ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//KAI//Eventos//ES", "METHOD:PUBLISH", "BEGIN:VEVENT",
       "UID:" + e.slug + "@kaie44.org", "DTSTAMP:" + z(new Date()), "DTSTART:" + z(s), "DTEND:" + z(en),
       "SUMMARY:" + x(title(e)), "LOCATION:" + x([e.venue, e.address].filter(Boolean).join(", ")),
-      "DESCRIPTION:" + x((extra || "") + "\n" + SITE + "/#/ev/" + e.slug),
+      "DESCRIPTION:" + x((extra || "") + "\n" + SITE + "/ev/" + e.slug),
       "BEGIN:VALARM", "TRIGGER:-PT2H", "ACTION:DISPLAY", "DESCRIPTION:" + x(title(e)), "END:VALARM", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
   }
   function gcal(e) {
     var s = new Date(e.starts_at), en = e.ends_at ? new Date(e.ends_at) : new Date(s.getTime() + 3 * 3600e3);
     function z(d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }
     return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent(title(e)) + "&dates=" + z(s) + "/" + z(en) +
-      "&location=" + encodeURIComponent([e.venue, e.address].filter(Boolean).join(", ")) + "&details=" + encodeURIComponent(SITE + "/#/ev/" + e.slug);
+      "&location=" + encodeURIComponent([e.venue, e.address].filter(Boolean).join(", ")) + "&details=" + encodeURIComponent(SITE + "/ev/" + e.slug);
   }
   function outlook(e) {
     var s = new Date(e.starts_at), en = e.ends_at ? new Date(e.ends_at) : new Date(s.getTime() + 3 * 3600e3);
@@ -403,7 +416,7 @@
     }
     if (ok && act.length) {
       body += '<div class="qrs">' + act.map(function (p) {
-        return '<div class="qrc"><div class="qrb">' + (p.qr ? qrSvg(SITE + "/#/evr/" + p.qr, 160) : "") + "</div><b>" + esc(p.name) + "</b><span>" + (p.board ? "Board KAI" : p.minor ? T("Menor", "Minor") : p.seq === 1 ? T("Registró", "Registrant") : T("Invitado(a)", "Guest")) + "</span></div>";
+        return '<div class="qrc"><div class="qrb">' + (p.qr ? qrSvg(SITE + "/evr/" + p.qr, 160) : "") + "</div><b>" + esc(p.name) + "</b><span>" + (p.board ? "Board KAI" : p.minor ? T("Menor", "Minor") : p.seq === 1 ? T("Registró", "Registrant") : T("Invitado(a)", "Guest")) + "</span></div>";
       }).join("") + '</div><p class="fine">' + T("Muestra estos códigos en la mesa de registro (en tu celular o impresos).", "Show these codes at the registration table (on your phone or printed).") + "</p>" +
         '<div class="acts2"><a class="btn navy sm" target="_blank" rel="noopener" href="' + gcal(e) + '">Google Calendar</a><a class="btn navy sm" href="#" id="ev-ics">Apple / iPhone</a><a class="btn navy sm" target="_blank" rel="noopener" href="' + outlook(e) + '">Outlook</a>' +
         (e.address ? '<a class="btn ol sm" target="_blank" rel="noopener" href="' + mapsUrl(e.address) + '">' + T("Cómo llegar", "Directions") + "</a>" : "") + "</div>";
@@ -669,12 +682,13 @@
     view: function (v) {
       if (v === "events") { if (LIST === null) loadList(); else renderList(); return; }
       if (v !== "evx") { clearTimeout(CI.timer); LAST = ""; return; }
-      var h = hashParts(), p = h.path, key = location.hash + "|" + lang();
+      var h = hashParts(), p = h.path, key = KR() + "|" + lang();
       if (key === LAST) return; LAST = key;
       if (p[0] === "ev" && p[1]) loadEvent(decodeURIComponent(p[1]), h.q.get("c"));
       else if (p[0] === "evr" && p[1]) loadMy(p[1], h.q);
       else if (p[0] === "checkin" && p[1]) ciStart(decodeURIComponent(p[1]));
       else if (p[0] === "eval" && p[1]) evalStart(p[1]);
+      else if (p[0] === "events" && p[1]) loadAlias(decodeURIComponent(p[1]).toLowerCase(), h.q.get("c"));
     },
     refresh: function () { LIST = null; }
   };
