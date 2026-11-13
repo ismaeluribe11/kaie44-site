@@ -352,6 +352,10 @@ table.pe .ck{color:#1a7f4b;font-weight:600;white-space:nowrap}table.pe .nn{color
 :root[data-theme="dark"] .frz{color:#5fd38d}
 
 /* Panel: correo y teléfono bajo el nombre del registrado */
-.pe td small.pe-ct{display:block;margin-top:3px}
-.pe td small.pe-ct a{color:inherit;text-decoration:underline;text-decoration-color:rgba(127,127,127,.45);text-underline-offset:2px;word-break:break-all}
-.pe td small.pe-ct a:hover{text-decoration:underline}
+.pe td .pe-ct a{color:inherit;text-decoration:underline;text-decoration-color:rgba(127,127,127,.45);text-underline-offset:2px;word-break:break-all}
+.pe td .pe-ct a:hover{text-decoration:underline}
+.pe td .pe-rn{color:var(--mut);font-size:12px;font-weight:600;letter-spacing:.04em;margin-left:4px}
+.pe td .pe-ct a{white-space:nowrap}
+.pe td .pe-ct{white-space:nowrap}
+table.pe:not(.sm) td:first-child{min-width:260px}
+table.pe:not(.sm) td:nth-child(2){min-width:150px}
