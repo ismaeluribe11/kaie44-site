@@ -350,3 +350,8 @@ table.pe .ck{color:#1a7f4b;font-weight:600;white-space:nowrap}table.pe .nn{color
 .frz{color:#0f7a3d;font-weight:700}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .frz{color:#5fd38d}}
 :root[data-theme="dark"] .frz{color:#5fd38d}
+
+/* Panel: correo y teléfono bajo el nombre del registrado */
+.pe td small.pe-ct{display:block;margin-top:3px}
+.pe td small.pe-ct a{color:inherit;text-decoration:underline;text-decoration-color:rgba(127,127,127,.45);text-underline-offset:2px;word-break:break-all}
+.pe td small.pe-ct a:hover{text-decoration:underline}
