@@ -659,14 +659,14 @@ a.st-mrow:hover{background:#f8fafd}
 .iv-save{display:flex;justify-content:space-between;align-items:center;gap:12px;position:sticky;bottom:0;background:var(--bg,#f4f6fa);padding:14px 0;border-top:1px solid var(--line)}
 @media (max-width:640px){.iv-g2{grid-template-columns:1fr}.st-ivc .st-cb{flex-direction:column;align-items:flex-start}}
 
-/* ===== Sub-menús del panel (Opción K): franja crema con borde dorado, la activa en azul ===== */
-.sx-main .st-seg,.sx-main .pe-tabs2,.sx-main .pe-flt{display:inline-flex;flex-wrap:wrap;gap:4px;padding:5px;border-radius:14px;background:#fffaf0;border:2px solid var(--gold);box-shadow:0 6px 18px rgba(184,137,46,.12)}
-.sx-main .st-seg a,.sx-main .st-seg button,.sx-main .pe-tabs2 a,.sx-main .pe-flt a{display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border:0;border-radius:10px;background:none;color:var(--navy);font:600 13.5px var(--sans);letter-spacing:0;text-transform:none;white-space:nowrap;box-shadow:none}
+/* ===== Sub-menús del panel: franja blanca, íconos y línea dorada en la pestaña activa ===== */
+.sx-main .st-seg,.sx-main .pe-tabs2,.sx-main .pe-flt{display:inline-flex;flex-wrap:wrap;gap:2px;padding:4px 6px 0;border-radius:12px;background:var(--card);border:1px solid var(--line);box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.sx-main .st-seg a,.sx-main .st-seg button,.sx-main .pe-tabs2 a,.sx-main .pe-flt a{display:inline-flex;align-items:center;gap:8px;padding:11px 14px 12px;border:0;border-bottom:3px solid transparent;border-radius:0;background:none;color:var(--mut);font:600 13.5px var(--sans);letter-spacing:0;text-transform:none;white-space:nowrap;box-shadow:none}
 .sx-main .kti{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--gold)}
 .sx-main .st-seg a i,.sx-main .st-seg button i,.sx-main .pe-flt a i{font-style:normal;font-size:11.5px;font-weight:700;background:#f3e9d2;color:var(--navy);border-radius:999px;padding:2px 8px;opacity:1}
-.sx-main .st-seg a:hover,.sx-main .pe-tabs2 a:hover,.sx-main .pe-flt a:hover{background:rgba(184,137,46,.12)}
-.sx-main .st-seg a.on,.sx-main .st-seg button.on,.sx-main .pe-tabs2 a.on,.sx-main .pe-flt a.on{background:linear-gradient(135deg,#0b1f4b,#173a7a);color:#fff;box-shadow:0 3px 10px rgba(11,31,75,.3)}
-.sx-main .st-seg a.on .kti,.sx-main .pe-tabs2 a.on .kti,.sx-main .pe-flt a.on .kti{color:#e3bf63!important}
-.sx-main .st-seg a.on i,.sx-main .st-seg button.on i,.sx-main .pe-flt a.on i{background:#e3bf63;color:#0b1f4b}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sx-main :is(.st-seg,.pe-tabs2,.pe-flt){background:rgba(227,191,99,.07)}:root:not([data-theme="light"]) .sx-main :is(.st-seg,.pe-tabs2,.pe-flt) a:not(.on){color:var(--ink)}:root:not([data-theme="light"]) .sx-main :is(.st-seg,.pe-flt) a:not(.on) i{background:rgba(227,191,99,.18);color:var(--ink)}}
-:root[data-theme="dark"] .sx-main :is(.st-seg,.pe-tabs2,.pe-flt){background:rgba(227,191,99,.07)}:root[data-theme="dark"] .sx-main :is(.st-seg,.pe-tabs2,.pe-flt) a:not(.on){color:var(--ink)}:root[data-theme="dark"] .sx-main :is(.st-seg,.pe-flt) a:not(.on) i{background:rgba(227,191,99,.18);color:var(--ink)}
+.sx-main .st-seg a:hover,.sx-main .pe-tabs2 a:hover,.sx-main .pe-flt a:hover{color:var(--navy);background:none}
+.sx-main .st-seg a.on,.sx-main .st-seg button.on,.sx-main .pe-tabs2 a.on,.sx-main .pe-flt a.on{background:none;color:var(--navy);border-bottom-color:var(--gold);box-shadow:none}
+.sx-main .st-seg a.on .kti,.sx-main .pe-tabs2 a.on .kti,.sx-main .pe-flt a.on .kti{color:var(--gold)!important}
+.sx-main .st-seg a.on i,.sx-main .st-seg button.on i,.sx-main .pe-flt a.on i{background:var(--gold);color:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sx-main :is(.st-seg,.pe-tabs2,.pe-flt) a.on{color:var(--ink)}:root:not([data-theme="light"]) .sx-main :is(.st-seg,.pe-flt) a:not(.on) i{background:rgba(227,191,99,.18);color:var(--ink)}}
+:root[data-theme="dark"] .sx-main :is(.st-seg,.pe-tabs2,.pe-flt) a.on{color:var(--ink)}:root[data-theme="dark"] .sx-main :is(.st-seg,.pe-flt) a:not(.on) i{background:rgba(227,191,99,.18);color:var(--ink)}
