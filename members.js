@@ -164,7 +164,7 @@
       ["l_cred", esc(m.credential_no)],
       ["l_church", esc(m.church)],
       ["l_city", esc(loc)],
-      ["l_phone", m.phone ? '<a href="tel:' + esc(String(m.phone).replace(/[^\d+]/g, "")) + '">' + esc(m.phone) + "</a>" : ""],
+      ["l_phone", m.phone ? '<a href="tel:' + esc(String(m.phone).replace(/[^\d+]/g, "")) + '">' + esc(KPH(m.phone)) + "</a>" : ""],
       ["l_email", m.email ? '<a href="mailto:' + esc(m.email) + '">' + esc(m.email) + "</a>" : ""],
       ["l_web", web ? '<a href="' + esc(webHref) + '" target="_blank" rel="noopener">' + esc(web.replace(/^https?:\/\//i, "")) + "</a>" : ""]
     ];
