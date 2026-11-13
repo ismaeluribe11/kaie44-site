@@ -837,7 +837,7 @@
     var ind = [[xx("Salud espiritual", "Spiritual health"), "spirit"], [xx("Salud física y emocional", "Physical and emotional health"), "health"], [xx("Matrimonio", "Marriage"), "marriage"]].filter(function (x) { return d[x[1]]; }).map(function (x) { var f = findF("C", x[1]); return "<div><small>" + x[0] + "</small>" + dots(d[x[1]]) + "<span><b>" + d[x[1]] + xx(" de 5</b> · ", " of 5</b> · ") + (f ? "1 = " + f.sc[0][li()] + ", 5 = " + f.sc[1][li()] : "") + "</span></div>"; }).join("");
     var secs = SC.C.map(function (s) { var h = secHTML(s, d); return h ? '<div class="st-card"><h3>' + esc(s.t[li()]) + xx(" <small>Parte C</small></h3>", " <small>Part C</small></h3>") + h.replace('<div class="st-sec"><h4>' + esc(s.t[li()]) + "</h4>", '<div class="st-sec">') + "</div>" : ""; }).join("");
     var notes = (c.notes || []).map(function (n) { var t = { care_take: xx("tomó el caso", "took the case"), care_note: xx("· nota", "· note"), care_pdf: xx("descargó la Parte C en PDF", "downloaded Part C as PDF"), care_closed: xx("cerró el caso", "closed the case") }[n.kind] || n.kind; return '<li class="' + (n.kind === "care_note" ? "note" : "sys") + '"><b>' + esc(n.actor || "") + " " + t + "</b><time>" + fdt(n.at) + "</time>" + (n.kind === "care_note" || n.kind === "care_closed" ? "<p>" + esc(n.note || "") + "</p>" : "") + "</li>"; }).join("");
-    return '<div class="st-card"><h3>' + esc(c.name) + ' <span class="st-pdfb">' + (c.owner ? "" : xx("<button class=\"st-mini\" data-act=\"take\">Tomar el caso</button>", "<button class=\"st-mini\" data-act=\"take\">Take the case</button>")) + xx("<button class=\"btn gold\" data-act=\"pdf\">Descargar Parte C (PDF)</button></span></h3><div class=\"st-cb\"><p class=\"st-subline\">", "<button class=\"btn gold\" data-act=\"pdf\">Download Part C (PDF)</button></span></h3><div class=\"st-cb\"><p class=\"st-subline\">") + esc([c.title, c.church, [c.city, c.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ")) + xx(" · Respondió el ", " · Answered on ") + fd(c.created_at) + xx(" al aplicar", " when applying") + (c.owner ? xx(" · Lleva el caso: <b>", " · Case owner: <b>") + esc(c.owner) + "</b>" : "") + '</p><div class="st-kv" style="margin-bottom:18px">' + kv(xx("Teléfono", "Phone"), KPH(c.phone)) + kv(xx("Correo", "Email"), c.email) + kv(xx("Cónyuge", "Spouse"), c.spouse_name) + "</div>" + (ind ? '<div class="st-ind">' + ind + "</div>" : "") + "</div></div>" + secs +
+    return '<div class="st-card"><h3>' + esc(c.name) + ' <span class="st-pdfb">' + (c.owner ? "" : xx("<button class=\"st-mini\" data-act=\"take\">Tomar el caso</button>", "<button class=\"st-mini\" data-act=\"take\">Take the case</button>")) + xx("<button class=\"btn gold\" data-act=\"pdf\">Descargar Parte C (PDF)</button></span></h3><div class=\"st-cb\"><p class=\"st-subline\">", "<button class=\"btn gold\" data-act=\"pdf\">Download Part C (PDF)</button></span></h3><div class=\"st-cb\"><p class=\"st-subline\">") + esc([c.title, c.church, [c.city, c.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ")) + xx(" · Respuestas de la entrevista", " · Answers from the interview") + (c.owner ? xx(" · Lleva el caso: <b>", " · Case owner: <b>") + esc(c.owner) + "</b>" : "") + '</p><div class="st-kv" style="margin-bottom:18px">' + kv(xx("Teléfono", "Phone"), KPH(c.phone)) + kv(xx("Correo", "Email"), c.email) + kv(xx("Cónyuge", "Spouse"), c.spouse_name) + "</div>" + (ind ? '<div class="st-ind">' + ind + "</div>" : "") + "</div></div>" + secs +
       xx("<div class=\"st-card\"><h3>Notas confidenciales <small>Solo Cuidado pastoral</small></h3><ul class=\"st-log\">", "<div class=\"st-card\"><h3>Confidential notes <small>Pastoral care only</small></h3><ul class=\"st-log\">") + (notes || xx("<li class=\"sys\"><b>Sin notas todavía</b></li>", "<li class=\"sys\"><b>No notes yet</b></li>")) + xx("</ul><div class=\"st-add\"><textarea id=\"cn-note\" placeholder=\"Agregar una nota confidencial…\"></textarea><div><span>Solo la ve Cuidado pastoral. No se puede editar ni borrar.</span><span><button class=\"st-mini\" data-act=\"close\">Cerrar caso</button> <button class=\"st-mini solid\" data-act=\"cnote\">Agregar nota</button></span></div></div></div>", "</ul><div class=\"st-add\"><textarea id=\"cn-note\" placeholder=\"Add a confidential note…\"></textarea><div><span>Only Pastoral care sees it. It cannot be edited or deleted.</span><span><button class=\"st-mini\" data-act=\"close\">Close case</button> <button class=\"st-mini solid\" data-act=\"cnote\">Add note</button></span></div></div></div>");
   }
   function bindCare(c) {
@@ -951,4 +951,26 @@
   document.addEventListener("DOMContentLoaded", function () {
     var c = sb(); if (c) c.auth.onAuthStateChange(function (ev) { if (ev === "SIGNED_IN" && ST.view === "membership") setTimeout(memberArea, 400); if (ev === "SIGNED_OUT") { ST.me = null; ST.team = null; } });
   });
+
+  /* Botón "Panel del equipo" en el Área de Miembros para quien tiene un rol */
+  var SLK = { tries: 0, roles: null };
+  function staffLink() {
+    var h = (KR() || "").replace(/^#\/?/, "");
+    var v = document.querySelector('.view[data-v="membership"]'); if (!v) return;
+    var old = v.querySelector(".st-golink");
+    if (!/^membership(\/|$)/.test(h)) return;
+    var c = sb(); if (!c) { if (SLK.tries++ < 20) setTimeout(staffLink, 500); return; }
+    c.auth.getSession().then(function (r) {
+      if (!(r.data && r.data.session)) { if (old) old.remove(); return; }
+      var go = function (roles) {
+        if (!roles || !roles.length) { if (old) old.remove(); return; }
+        var html = '<a class="st-golink" href="/staff"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg><span><b>' + xx("Panel del equipo", "Team panel") + "</b><small>" + xx("Aplicaciones, miembros, pagos y eventos", "Applications, members, payments and events") + "</small></span><i>" + xx("Abrir", "Open") + " →</i></a>";
+        if (old) old.outerHTML = html; else v.insertAdjacentHTML("afterbegin", '<div class="wrap st-golinkw">' + html + "</div>");
+      };
+      if (SLK.roles) return go(SLK.roles);
+      rpc("staff_me").then(function (me) { SLK.roles = (me && me.roles) || []; go(SLK.roles); }).catch(function () {});
+    });
+  }
+  window.addEventListener("kai:route", function () { setTimeout(staffLink, 300); });
+  document.addEventListener("DOMContentLoaded", function () { setTimeout(staffLink, 800); });
 })();
