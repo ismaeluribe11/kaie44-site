@@ -359,3 +359,13 @@ table.pe .ck{color:#1a7f4b;font-weight:600;white-space:nowrap}table.pe .nn{color
 .pe td .pe-ct{white-space:nowrap}
 table.pe:not(.sm) td:first-child{min-width:260px}
 table.pe:not(.sm) td:nth-child(2){min-width:150px}
+/* Registrados: filtro y "Invitar a ser miembro" */
+.pe-bar .pe-rf{display:flex;flex-wrap:wrap;gap:6px}
+.pe-rf button{border:1px solid var(--line,#d9e0ea);background:transparent;color:inherit;font:600 13px var(--sans,inherit);padding:7px 12px;border-radius:999px;cursor:pointer}
+.pe-rf button span{opacity:.6;margin-left:2px}
+.pe-rf button.on{background:var(--navy,#0b1f4b);border-color:var(--navy,#0b1f4b);color:#fff}
+.pe td .pe-invb{display:block;margin-top:6px;white-space:nowrap}
+.pe td small.pe-inv{color:#0f7a3d;font-weight:600;margin-top:6px;white-space:nowrap}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pe td small.pe-inv{color:#5fd38d}}
+:root[data-theme="dark"] .pe td small.pe-inv{color:#5fd38d}
+.pe td .pe-invb{font-size:11px;padding:6px 10px}

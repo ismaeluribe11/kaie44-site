@@ -112,8 +112,16 @@
   function tabPut(h) { var t = $("#pe-tab"); if (t) t.innerHTML = h; }
 
   var PAY = { free: "", pending: ["r", LZ("Pago pendiente", "Payment pending")], claimed: ["y", LZ("Dice que ya pagó", "Says they already paid")], paid: ["g", LZ("Pagado", "Paid")] };
+  var REGF = "all";
   function regs(x) {
-    K.rpc("ev_staff_regs", { p_id: x.event.id }).then(function (G) {
+    Promise.all([K.rpc("ev_staff_regs", { p_id: x.event.id }), K.rpc("ev_staff_invited", { p_event: x.event.id }).catch(function () { return null; })]).then(function (res) {
+      var G = res[0], INV = res[1];
+      var lc = function (v) { return String(v || "").trim().toLowerCase(); };
+      var elig = function (g, p) { return INV && !g.walkin && p.status === "active" && !p.minor && !p.member && !p.board && !!lc(p.email || (p.seq === 1 ? g.email : "")); };
+      var invAt = function (g, p) { return INV && INV[lc(p.email || (p.seq === 1 ? g.email : ""))]; };
+      var nAll = 0, nMem = 0, nNon = 0, toInv = 0;
+      G.forEach(function (g) { (g.people || []).forEach(function (p) { if (p.status !== "active") return; nAll++; if (p.member || p.board) nMem++; else nNon++; if (elig(g, p) && p.in && !invAt(g, p)) toInv++; }); });
+      var shown = function (p) { return REGF === "all" || (REGF === "mem" ? (p.member || p.board) : !(p.member || p.board)); };
       var P = [], act = 0, ad = 0, mi = 0, mem = 0, ch = {};
       G.forEach(function (g) { (g.people || []).forEach(function (p) { if (p.status === "active" && !g.walkin) { act++; if (p.minor) mi++; else ad++; if (p.member || p.board) mem++; } }); if (g.church && !g.walkin) ch[g.church.toLowerCase().trim()] = 1; });
       var cities = {}; G.forEach(function (g) { if (g.city && !g.walkin) cities[(g.city + "," + g.state).toLowerCase()] = 1; });
@@ -125,8 +133,9 @@
         if (g.refund === "due") payh += xx(" <span class=\"pe-pill r\">Reembolso pendiente · ", " <span class=\"pe-pill r\">Refund pending · ") + money(g.total) + "</span>" + (x.can_pay ? ' <button class="st-mini" data-refund="' + g.group + '" data-amt="' + g.total + '" data-nm="' + esc(g.by) + xx("\">Marcar reembolsado</button>", "\">Mark refunded</button>") : "");
         if (g.refund === "done") payh += xx(" <span class=\"pe-pill s\">Reembolsado</span>", " <span class=\"pe-pill s\">Refunded</span>");
         if ((g.pay === "pending" || g.pay === "claimed") && x.can_pay) payh += ' <button class="st-mini" data-pay="' + g.group + '" data-amt="' + g.total + '" data-nm="' + esc(g.by) + xx("\">Registrar pago</button>", "\">Record payment</button>");
-        return (g.people || []).map(function (p) {
-          var tp = g.walkin ? xx("<span class=\"pe-pill w\">Sin registro</span>", "<span class=\"pe-pill w\">Walk-in</span>") : p.board ? '<span class="pe-pill y">Board</span>' : p.member ? xx("<span class=\"pe-pill y\">Miembro</span>", "<span class=\"pe-pill y\">Member</span>") : xx("<span class=\"pe-pill s\">Invitado</span>", "<span class=\"pe-pill s\">Guest</span>");
+        return (g.people || []).filter(shown).map(function (p) {
+          var tp = g.walkin ? xx("<span class=\"pe-pill w\">Sin registro</span>", "<span class=\"pe-pill w\">Walk-in</span>") : p.board ? '<span class="pe-pill y">Board</span>' : p.member ? xx("<span class=\"pe-pill y\">Miembro</span>", "<span class=\"pe-pill y\">Member</span>") : xx("<span class=\"pe-pill s\">No miembro</span>", "<span class=\"pe-pill s\">Non-member</span>");
+          if (elig(g, p)) { var ia = invAt(g, p); tp += ia ? '<small class="pe-inv">' + xx("Invitación enviada ✓ ", "Invite sent ✓ ") + esc(new Date(ia).toLocaleDateString(xx("es-US", "en-US"), { day: "numeric", month: "short" })) + "</small>" : '<button class="st-mini pe-invb" data-inv="' + p.id + '">' + xx("Invitar a ser miembro", "Invite to join") + "</button>"; }
           var em = p.email || (p.seq === 1 ? g.email : "") || "", ph = KPH(p.phone || (p.seq === 1 ? g.phone : "") || "");
           var ct = em || ph ? '<span class="pe-ct"> · ' + (em ? '<a href="mailto:' + esc(em) + '">' + esc(em) + "</a>" : "") + (em && ph ? " · " : "") + (ph ? '<a href="tel:' + esc(ph.replace(/[^\d+]/g, "")) + '">' + esc(ph) + "</a>" : "") + "</span>" : "";
           var who = p.seq === 1 ? "<b>" + esc(p.name) + '</b> <span class="pe-rn">' + esc(g.reg_no || "") + "</span><small>" + ct.replace(/^<span class="pe-ct"> · /, '<span class="pe-ct">') + (g.comments ? ' · <span title="' + esc(g.comments) + '">💬 ' + esc(g.comments.slice(0, 40)) + (g.comments.length > 40 ? "…" : "") + "</span>" : "") + "</small>" : "<b>" + esc(p.name) + "</b><small>" + (ct ? ct.replace(/^<span class="pe-ct"> · /, '<span class="pe-ct">') : xx("Invitado(a) de ", "Guest of ") + esc(g.by)) + (p.minor ? xx(" · menor", " · minor") : "") + "</small>";
@@ -137,7 +146,7 @@
       var rd = G.filter(function (g) { return g.refund === "due"; });
       if (rd.length) k += '<div class="pe-due-box">↩️ <b>' + rd.length + xx("</b> reembolso(s) pendiente(s) por ", "</b> refund(s) pending for ") + money(rd.reduce(function (a, g) { return a + (+g.total); }, 0)) + xx(". Devuelva el dinero por Zelle a cada persona y márquelo aquí.</div>", ". Return the money by Zelle to each person and mark it here.</div>");
       tabPut(k + (due.length && x.can_pay ? '<div class="pe-due-box">💵 <b>' + due.length + xx("</b> registro(s) con pago pendiente por ", "</b> registration(s) with payment pending for ") + money(due.reduce(function (a, g) { return a + (+g.total); }, 0)) + xx(". Revise que el pago llegó a la cuenta de Zelle y confírmelo aquí; la persona recibe su confirmación con los QR.</div>", ". Check that the payment arrived in the Zelle account and confirm it here; the person receives their confirmation with the QR codes.</div>") : "") +
-        '<div class="pe-bar"><div></div><div class="pe-acts"><a class="btn sm navy" href="#/checkin/' + esc(x.event.slug) + xx("\">Abrir check-in</a><button class=\"btn sm ol\" id=\"pe-xls\">Exportar Excel</button></div></div>", "\">Open check-in</a><button class=\"btn sm ol\" id=\"pe-xls\">Export to Excel</button></div></div>") +
+        '<div class="pe-bar"><div class="pe-rf">' + [["all", xx("Todos", "All"), nAll], ["mem", xx("Miembros y Board", "Members & Board"), nMem], ["non", xx("No miembros", "Non-members"), nNon]].map(function (f) { return '<button type="button" data-rf="' + f[0] + '"' + (REGF === f[0] ? ' class="on"' : "") + ">" + f[1] + " <span>" + f[2] + "</span></button>"; }).join("") + '</div><div class="pe-acts">' + (toInv ? '<button class="btn sm gold" id="pe-invall">' + xx("Invitar a los que llegaron (", "Invite those who came (") + toInv + ")</button>" : "") + '<a class="btn sm navy" href="#/checkin/' + esc(x.event.slug) + xx("\">Abrir check-in</a><button class=\"btn sm ol\" id=\"pe-xls\">Exportar Excel</button></div></div>", "\">Open check-in</a><button class=\"btn sm ol\" id=\"pe-xls\">Export to Excel</button></div></div>") +
         (G.length ? xx("<div class=\"pe-tw\"><table class=\"pe\"><tr><th>Nombre</th><th>Ciudad</th><th>Tipo</th><th>Correo</th><th>Pago</th><th>Llegó</th></tr>", "<div class=\"pe-tw\"><table class=\"pe\"><tr><th>Name</th><th>City</th><th>Type</th><th>Email</th><th>Payment</th><th>Arrived</th></tr>") + rows + "</table></div>" : xx("<div class=\"pe-empty\">Todavía no hay registros.</div>", "<div class=\"pe-empty\">No registrations yet.</div>")));
       $$("[data-pay]").forEach(function (b) {
         b.onclick = function () {
@@ -156,12 +165,19 @@
       });
       $$("[data-cancel]").forEach(function (b) { b.onclick = function () { if (!b.dataset.armed) { b.dataset.armed = 1; b.textContent = xx("¿Seguro?", "Are you sure?"); return; } b.disabled = true; K.rpc("ev_staff_cancel", { p_reg: b.dataset.cancel }).then(function () { regs(x); }).catch(function (e) { K.toast(K.errMsg(e), true); }); }; });
       var xb = $("#pe-xls"); if (xb) xb.onclick = function () { exportCsv(x.event, G); };
+      $$("[data-rf]").forEach(function (b) { b.onclick = function () { REGF = b.dataset.rf; regs(x); }; });
+      var sent = function (n) { if (window.KAIEV_KICK) KAIEV_KICK(); K.toast(n ? xx("Invitación enviada", "Invitation sent") + (n > 1 ? " (" + n + ")" : "") : xx("Ya se le había enviado", "It had already been sent")); regs(x); };
+      $$("[data-inv]").forEach(function (b) { b.onclick = function () { b.disabled = true; K.rpc("ev_staff_invite", { p_event: x.event.id, p_regs: [b.dataset.inv] }).then(sent).catch(function (e) { b.disabled = false; K.toast(K.errMsg(e), true); }); }; });
+      var ia = $("#pe-invall"); if (ia) ia.onclick = function () {
+        if (!ia.dataset.armed) { ia.dataset.armed = 1; ia.textContent = xx("¿Enviar la invitación a ", "Send the invitation to ") + toInv + xx(" persona(s)? Confirmar", " person(s)? Confirm"); return; }
+        ia.disabled = true; K.rpc("ev_staff_invite", { p_event: x.event.id, p_regs: null }).then(sent).catch(function (e) { ia.disabled = false; K.toast(K.errMsg(e), true); });
+      };
     }).catch(function (e) { tabPut('<p class="st-msg">' + esc(K.errMsg(e)) + "</p>"); });
   }
   function exportCsv(e, G) {
     var rows = [[xx("Registro", "Registration"), xx("Nombre", "Name"), xx("Tipo", "Type"), xx("Menor", "Minor"), xx("Correo", "Email"), xx("Teléfono", "Phone"), xx("Iglesia", "Church"), xx("Ciudad", "City"), xx("Estado", "State"), xx("Registró", "Registered by"), xx("Pago", "Payment"), xx("Total del grupo", "Group total"), xx("Cortesía", "Courtesy"), xx("Estado", "State"), xx("Llegó", "Arrived"), xx("Comentarios", "Comments")]];
     G.forEach(function (g) { (g.people || []).forEach(function (p) {
-      rows.push([g.reg_no, p.name, g.walkin ? xx("Sin registro", "Walk-in") : p.board ? "Board" : p.member ? xx("Miembro", "Member") : xx("Invitado", "Guest"), p.minor ? xx("Sí", "Yes") : "", p.email || (p.seq === 1 ? g.email : "") || "", KPH(p.phone || (p.seq === 1 ? g.phone || "" : "")), g.church || "", g.city || "", g.state || "", g.by,
+      rows.push([g.reg_no, p.name, g.walkin ? xx("Sin registro", "Walk-in") : p.board ? "Board" : p.member ? xx("Miembro", "Member") : xx("No miembro", "Non-member"), p.minor ? xx("Sí", "Yes") : "", p.email || (p.seq === 1 ? g.email : "") || "", KPH(p.phone || (p.seq === 1 ? g.phone || "" : "")), g.church || "", g.city || "", g.state || "", g.by,
         g.pay === "paid" ? xx("Pagado (", "Paid (") + ({ zelle: "Zelle", cash: xx("efectivo", "cash"), check: xx("cheque", "check"), zelle_door: "Zelle" }[g.pay_method] || g.pay_method || "") + ")" : g.pay === "free" ? xx("Sin costo", "No cost") : xx("Pendiente", "Pending"), p.seq === 1 ? g.total : "", g.courtesy || "", p.status === "active" ? xx("Activo", "Active") : xx("Canceló", "Cancelled"), p.in ? ltime(p.in) : "", p.seq === 1 ? g.comments || "" : ""]);
     }); });
     var csv = "﻿" + rows.map(function (r) { return r.map(function (v) { v = String(v == null ? "" : v); return /[",\n;]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(","); }).join("\r\n");
