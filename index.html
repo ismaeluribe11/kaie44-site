@@ -21,10 +21,11 @@
   });
 
   /* Teléfonos: 123-456-7890 mientras se escribe (los internacionales con "+" o más de 10 dígitos se dejan igual) */
-  window.KPH=function(v){v=String(v==null?"":v);var t=v.trim();if(!t||t.charAt(0)==="+")return v;var d=t.replace(/\D/g,"");if(d.length===11&&d.charAt(0)==="1")d=d.slice(1);if(d.length!==10||/[a-z]/i.test(t))return v;return d.slice(0,3)+"-"+d.slice(3,6)+"-"+d.slice(6)};
-  function phLive(v){var d=v.replace(/\D/g,"");if(v.trim().charAt(0)==="+")return null;if(d.length>1&&d.charAt(0)==="1")d=d.slice(1);if(d.length>10)return null;return d.length<4?d:d.length<7?d.slice(0,3)+"-"+d.slice(3):d.slice(0,3)+"-"+d.slice(3,6)+"-"+d.slice(6)}
+  window.KPH=function(v){v=String(v==null?"":v);var t=v.trim();if(!t||(t.charAt(0)==="+"&&!/^\+\s*1\b|^\+1/.test(t)))return v;var d=t.replace(/\D/g,"");if(d.length===11&&d.charAt(0)==="1")d=d.slice(1);if(d.length!==10||/[a-z]/i.test(t))return v;return d.slice(0,3)+"-"+d.slice(3,6)+"-"+d.slice(6)};
+  function phLive(v){var d=v.replace(/\D/g,"");if(v.trim().charAt(0)==="+"&&!/^\+\s*1/.test(v.trim()))return null;if(d.length>1&&d.charAt(0)==="1")d=d.slice(1);if(d.length>10)return null;return d.length<4?d:d.length<7?d.slice(0,3)+"-"+d.slice(3):d.slice(0,3)+"-"+d.slice(3,6)+"-"+d.slice(6)}
   document.addEventListener("input",function(e){var el=e.target;if(!el||el.tagName!=="INPUT"||el.type!=="tel")return;var v=el.value,f=phLive(v);if(f==null||f===v)return;
     var c=el.selectionStart==null?v.length:el.selectionStart,n=v.slice(0,c).replace(/\D/g,"").length;if(n&&v.replace(/\D/g,"").length>f.replace(/\D/g,"").length)n--;el.value=f;var p=0;while(n>0&&p<f.length){if(/\d/.test(f.charAt(p)))n--;p++}try{el.setSelectionRange(p,p)}catch(x){}},true);
+  document.addEventListener("change",function(e){var el=e.target;if(el&&el.tagName==="INPUT"&&el.type==="tel"){var f=KPH(el.value);if(f!==el.value){el.value=f;el.dispatchEvent(new Event("input",{bubbles:true}))}}},true);
   function telPrep(root){(root.querySelectorAll?root.querySelectorAll('input[type="tel"]'):[]).forEach(function(i){if(!i.placeholder)i.placeholder="123-456-7890";else if(!/\d/.test(i.placeholder))i.placeholder=(/^tel/i.test(i.placeholder)?"Tel. ":i.placeholder.split(" ")[0]+" ")+"123-456-7890";if(i.value){var f=KPH(i.value);if(f!==i.value)i.value=f}if(!i.maxLength||i.maxLength<0)i.maxLength=20})}
   /* Muestra los enlaces internos ya sin "#", para copiar y compartir */
   function fix(root){(root.querySelectorAll?root.querySelectorAll('a[href^="#/"]'):[]).forEach(function(a){a.setAttribute("href",a.getAttribute("href").slice(1))})}
