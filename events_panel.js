@@ -70,7 +70,7 @@
         }
         if (!e.series || !seen[e.series]) html += row(e);
       });
-      var can = K.has("admin", "president");
+      var can = K.has("admin", "president", "membership");
       K.put(K.hero("events", xx("Panel del equipo", "Team panel"), xx("Eventos", "Events")) + K.body(kpi +
         '<div class="pe-bar"><div class="pe-flt">' + [["next", xx("Próximos", "Upcoming"), up.length], ["past", xx("Pasados", "Past"), past.length], ["draft", xx("Borradores", "Drafts"), drafts.length]].map(function (x) { return '<a href="#/staff/events/' + x[0] + '"' + (f === x[0] ? ' class="on"' : "") + ">" + KTAB({ next: "cal", past: "back", draft: "edit" }[x[0]]) + x[1] + " <i>" + x[2] + "</i></a>"; }).join("") + "</div>" +
         (can ? xx("<a class=\"btn gold pe-btn\" href=\"#/staff/event/new\">+ Nuevo evento</a>", "<a class=\"btn gold pe-btn\" href=\"#/staff/event/new\">+ New event</a>") : "") + "</div>" +
@@ -295,7 +295,7 @@
   var TASK_EN = { "Coordinador(a)": "Coordinator", "Mesa de registro": "Registration desk", "Bienvenida": "Welcome", "Alabanza": "Worship", "Comida": "Food" };
   function taskName(t) { return lang() === "en" ? (TASK_EN[t] || t) : t; }
   function edit(x) {
-    if (!K.has("admin", "president")) { K.put(K.denied()); return; }
+    if (!K.has("admin", "president", "membership")) { K.put(K.denied()); return; }
     var CP = !!(x && x.copy), ED = !!(x && !CP);   // CP = copia de otro evento (se guarda como nuevo)
     var load = x ? Promise.resolve(x) : K.rpc("ev_staff_options").catch(function () { return null; });
     load.then(function (y) {
