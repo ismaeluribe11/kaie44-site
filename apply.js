@@ -359,6 +359,11 @@
     var ord = S.priorities || [];
     $$("button", pk).forEach(function (b) { var i = ord.indexOf(b.dataset.b); b.classList.toggle("sel", i >= 0); $("em", b).textContent = i >= 0 ? i + 1 : ""; });
     pk.classList.toggle("full", ord.length >= 3);
+    /* "Otras áreas de interés" no repite las que ya eligió como más urgentes */
+    $$('input[name="also"]', root).forEach(function (el) {
+      var on = ord.indexOf(el.value) >= 0, lb = el.closest("label"); if (lb) lb.style.display = on ? "none" : "";
+      if (on && el.checked) { el.checked = false; if (Array.isArray(S.also)) S.also = S.also.filter(function (z) { return z !== el.value; }); }
+    });
     $$(".ap-pick-st i", root).forEach(function (s, i) { s.classList.toggle("on", i < ord.length); });
     $(".ap-pick-st span", root).textContent = ord.length >= 3 ? xx("Listo", "Done") : xx("Elija ", "Choose ") + (3 - ord.length);
   }
