@@ -369,3 +369,17 @@ table.pe:not(.sm) td:nth-child(2){min-width:150px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pe td small.pe-inv{color:#5fd38d}}
 :root[data-theme="dark"] .pe td small.pe-inv{color:#5fd38d}
 .pe td .pe-invb{font-size:11px;padding:6px 10px}
+
+/* Botones de Registrados: Check-in destacado (dorado), Excel discreto */
+.pe-acts{align-items:center}
+.pe-cib{display:inline-flex;align-items:center;gap:9px;padding:13px 22px;border-radius:12px;background:linear-gradient(135deg,#f0cf78,#c99a3c);color:#0b1f4b!important;font-weight:800;font-size:13px;letter-spacing:.12em;text-transform:uppercase;text-decoration:none!important;box-shadow:0 6px 16px rgba(201,154,60,.35);transition:transform .15s,box-shadow .15s}
+.pe-cib:hover{transform:translateY(-1px);box-shadow:0 10px 22px rgba(201,154,60,.45)}
+.pe-cib svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.pe-cib em{display:none;font-style:normal;font-size:10px;letter-spacing:.1em;background:#0b1f4b;color:#f0cf78;border-radius:999px;padding:3px 8px;margin-left:2px}
+.pe-cib.today em{display:inline-block}
+.pe-cib.today{animation:peGlow 2.2s ease-in-out infinite}
+@keyframes peGlow{0%,100%{box-shadow:0 6px 16px rgba(201,154,60,.35)}50%{box-shadow:0 0 0 6px rgba(240,207,120,.35),0 8px 20px rgba(201,154,60,.45)}}
+.pe-xl{display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:10px;background:#fff;border:1px solid var(--line,#dfe3ec);color:var(--mut,#5b6577);font:600 12px/1 inherit;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.pe-xl:hover{color:#0b1f4b;border-color:#0b1f4b}
+.pe-xl svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+@media (prefers-reduced-motion:reduce){.pe-cib.today{animation:none}}
