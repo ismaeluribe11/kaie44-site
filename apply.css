@@ -472,3 +472,16 @@ button.btn{cursor:pointer;font-family:var(--sans)}button.btn:disabled{opacity:.6
 .fld .ap-opts.cards label{border-radius:10px}.fld .ap-opts.cards label::before{display:none!important}.fld .ap-opts.cards label:has(input:checked) .ic{filter:none}
 .ap-pick.chips button{min-height:0;height:auto;width:auto;flex-direction:row;margin:0;line-height:1.2;text-align:left}
 .ap-pick.chips button em{display:none}.ap-pick.chips button.sel em{display:inline-grid}
+
+/* Ayuda por teléfono */
+.ap-help{display:flex;gap:12px;align-items:center;font-size:13.5px;line-height:1.4}
+.ap-help .ic{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:rgba(201,162,74,.14);color:var(--gold)}
+.ap-help .ic svg{width:17px;height:17px}
+.ap-help b{display:block;font-weight:600}
+.ap-help a{font-weight:600;white-space:nowrap;text-decoration:none;border-bottom:1px solid currentColor}
+.ap-help.in-side{align-items:flex-start;margin:16px 24px 0;padding-top:16px;border-top:1px solid rgba(255,255,255,.12);color:#c4d0ea}
+.ap-help.in-side b{color:#fff}.ap-help.in-side a{color:var(--gold2)}.ap-help.in-side .ic{color:var(--gold2)}
+.ap-help.below{margin:18px 0 0;padding:14px 18px;background:#fff;border:1px solid #e3e7ef;border-radius:6px;color:#4a5568}
+.ap-help.below b{color:var(--navy)}.ap-help.below a{color:var(--navy)}
+.ap-help.in-side b{margin-bottom:2px}.ap-help.in-side a{font-size:15px}
+.ap-side .ap-help a{display:inline;padding:0;border-left:0;background:none;border-bottom:1px solid currentColor}
