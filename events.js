@@ -492,6 +492,13 @@
     var d = CI.data, P = d.people || [], ev = d.event;
     var here = P.filter(function (p) { return p.in; }), regs = P.filter(function (p) { return !p.walkin; }), walk = P.filter(function (p) { return p.walkin; });
     var groups = {}; P.forEach(function (p) { (groups[p.group] = groups[p.group] || []).push(p); });
+    /* Orden alfabético por primer nombre: cada grupo se ordena por el nombre de quien registró; sus acompañantes quedan debajo. */
+    var head = {}; P.forEach(function (p) { if (!head[p.group] || p.seq < head[p.group].seq) head[p.group] = p; });
+    var cmp = function (x, y) { return String(x || "").localeCompare(String(y || ""), "es", { sensitivity: "base" }); };
+    P = P.slice().sort(function (a, b) {
+      if (a.group !== b.group) return cmp(head[a.group].name, head[b.group].name) || cmp(a.group, b.group);
+      return (a.seq || 0) - (b.seq || 0);
+    });
     var list = P.filter(function (p) {
       if (CI.filter === "in" && !p.in) return false; if (CI.filter === "out" && p.in) return false;
       if (CI.q) { var h = norm(p.name + " " + (p.by || "") + " " + (p.church || "") + " " + p.reg_no); return CI.q.split(/\s+/).every(function (w) { return h.indexOf(w) >= 0; }); }
