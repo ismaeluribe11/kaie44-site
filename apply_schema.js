@@ -135,10 +135,9 @@ window.KAIAPP_SCHEMA = (function () {
         { type: "sub", l: ["Segunda opción", "Second choice"], opt: 1 },
         { k: "iv_date2", l: ["Día", "Day"], w: 3, in: "date", future: 1 },
         { k: "iv_time2", l: ["Hora (hora del Pacífico)", "Time (Pacific time)"], w: 3, type: "select", o: IVT },
-        { k: "iv_spouse", when: "marital=c", type: "radio", req: 1,
-          l: ["¿Podrá su cónyuge acompañarle?", "Will your spouse be able to join you?"],
-          s: ["Como usted es casado(a), nos encantaría que su cónyuge también esté presente en la conversación.", "Since you are married, we would love for your spouse to be part of the conversation as well."],
-          o: [["y", "Sí, estaremos los dos", "Yes, we will both be there"], ["n", "Necesitamos coordinar otro horario", "We need to arrange another time"]] }
+        { k: "iv_spouse", when: "marital=c", type: "checks", req: 1,
+          l: ["Como usted es casado(a), ambos esposos deben estar presentes en la conversación de bienvenida.", "Since you are married, both spouses must be present at the welcome conversation."],
+          o: [["y", "Confirmo que mi cónyuge y yo estaremos presentes", "I confirm that my spouse and I will both be present"]] }
       ] }
   ];
 
@@ -237,7 +236,7 @@ window.KAIAPP_SCHEMA = (function () {
       x: [
         [["Qué recopilamos", "Los datos que usted escribe en la aplicación, su foto y su firma."], ["What we collect", "The information you enter in the application, your photo and your signature."]],
         [["Para qué la usamos", "Para evaluar su membresía, emitir su credencial, servirle con los beneficios de la alianza y brindarle cuidado pastoral."], ["How we use it", "To evaluate your membership, issue your credential, serve you with the alliance's benefits and provide pastoral care."]],
-        [["Quién la ve", "La Parte A la revisa el Comité de Membresía; la Parte B, el liderazgo de KAI. Lo que comparta en su entrevista sobre su vida personal y familiar es confidencial y solo lo ve el equipo de cuidado pastoral."], ["Who sees it", "Part A is reviewed by the Membership Committee; Part B by KAI's leadership. What you share in your interview about your personal and family life is confidential and seen only by the pastoral care team."]],
+        [["Quién la ve", "La Parte A la revisa el Comité de Membresía; la Parte B, el liderazgo de KAI. Lo que comparta en su conversación de bienvenida sobre su vida personal y familiar es confidencial y solo lo ve el equipo de cuidado pastoral."], ["Who sees it", "Part A is reviewed by the Membership Committee; Part B by KAI's leadership. What you share in your welcome conversation about your personal and family life is confidential and seen only by the pastoral care team."]],
         [["Qué no hacemos", "No vendemos ni compartimos su información con terceros. Solo la compartimos con su autorización expresa (por ejemplo, su nombre y contacto con el equipo de planeación financiera) o cuando la ley lo exija."], ["What we don't do", "We do not sell or share your information with third parties. We share it only with your express permission (for example, your name and contact with the financial planning team) or when required by law."]],
         [["Verificación de credencial", "La página pública de verificación muestra únicamente su nombre, título, número de credencial, foto y vigencia. Nunca muestra sus datos de contacto."], ["Credential verification", "The public verification page shows only your name, title, credential number, photo and validity. It never shows your contact details."]],
         [["Seguridad", "Guardamos la información en sistemas seguros, con acceso restringido a las personas autorizadas."], ["Security", "We store information in secure systems, with access limited to authorized people."]],

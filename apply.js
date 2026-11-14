@@ -463,7 +463,7 @@
     photo: ["Foto para la credencial", "Credential photo"], tier: ["Tipo de membresía", "Membership type"],
     faith_ok: ["Aceptar la Declaración de Fe", "Accept the Statement of Faith"],
     iv_date1: ["Día de la conversación de bienvenida", "Welcome conversation day"], iv_time1: ["Hora de la conversación de bienvenida", "Welcome conversation time"],
-    iv_spouse: ["Si su cónyuge podrá acompañarle", "Whether your spouse can join you"]
+    iv_spouse: ["Confirmar que su cónyuge estará presente", "Confirm that your spouse will be present"]
   };
   function secOf(k) {
     var r = null;
