@@ -195,7 +195,7 @@
     if (f.tag) {
       return '<div ' + wrapAttr(f, "ap-q") + '><div class="qh"><span>' + x(f.tag) + "</span><p>" + x(f.l) + "</p></div>" + inner + "</div>";
     }
-    if (f.desc) return '<div ' + wrapAttr(f, "ap-descf") + '><h4 class="ap-subt">' + x(f.l) + '</h4><div class="ap-desc">' + (lang() === "es" ? f.desc[0] : f.desc[1]).map(function (pp) { return "<p>" + pp + "</p>"; }).join("") + "</div>" + inner + "</div>";
+    if (f.desc) return '<div ' + wrapAttr(f, "ap-descf") + '><h4 class="ap-subt">' + x(f.l) + (f.req ? ' <span class="ap-req">' + xx("Obligatorio", "Required") + "</span>" : "") + '</h4><div class="ap-desc">' + (lang() === "es" ? f.desc[0] : f.desc[1]).map(function (pp) { return "<p>" + pp + "</p>"; }).join("") + "</div>" + inner + "</div>";
     return '<div ' + wrapAttr(f) + ">" + lab(f) + inner + (f.s ? "<small>" + x(f.s) + "</small>" : "") + "</div>";
   }
 
