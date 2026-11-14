@@ -129,6 +129,7 @@ window.KAIAPP_SCHEMA = (function () {
     { id: "b6", t: ["Su conversación de bienvenida", "Your welcome conversation"],
       h: ["El último paso es una conversación de bienvenida con el Presidente de KAI y un miembro de la Junta, para conocerle a usted y a su ministerio. Elija el día y la hora que le funcionen; nosotros le confirmaremos.", "The last step is a welcome conversation with the KAI President and a Board member, so we can get to know you and your ministry. Choose a day and time that work for you, and we'll confirm."],
       f: [
+        { type: "note", when: "marital=c", l: ["Como usted es casado(a), ambos esposos deben estar presentes en la conversación de bienvenida.", "Since you are married, both spouses must be present at the welcome conversation."] },
         { type: "sub", l: ["Primera opción", "First choice"] },
         { k: "iv_date1", l: ["Día", "Day"], w: 3, in: "date", future: 1, req: 1 },
         { k: "iv_time1", l: ["Hora (hora del Pacífico)", "Time (Pacific time)"], w: 3, type: "select", req: 1, o: IVT },
@@ -136,7 +137,7 @@ window.KAIAPP_SCHEMA = (function () {
         { k: "iv_date2", l: ["Día", "Day"], w: 3, in: "date", future: 1 },
         { k: "iv_time2", l: ["Hora (hora del Pacífico)", "Time (Pacific time)"], w: 3, type: "select", o: IVT },
         { k: "iv_spouse", when: "marital=c", type: "checks", req: 1,
-          l: ["Como usted es casado(a), ambos esposos deben estar presentes en la conversación de bienvenida.", "Since you are married, both spouses must be present at the welcome conversation."],
+          l: ["Su cónyuge", "Your spouse"],
           o: [["y", "Confirmo que mi cónyuge y yo estaremos presentes", "I confirm that my spouse and I will both be present"]] }
       ] }
   ];

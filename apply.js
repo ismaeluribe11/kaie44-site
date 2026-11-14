@@ -149,6 +149,7 @@
   /* ---------- field renderer ---------- */
   function field(f) {
     var t = f.type || "text", k = f.k;
+    if (t === "note") return '<div ' + wrapAttr(f, "ap-note") + "><p>" + x(f.l) + "</p></div>";
     if (t === "sub") return '<div class="ap-sub w6">' + x(f.l) + (f.opt ? ' <span class="opt">(' + xx("opcional", "optional") + ")</span>" : "") + "</div>";
     if (t === "offer") return '<div class="ap-offer w6">' + xx("KAI cuenta con un equipo de agentes con licencia estatal en planes de retiro, seguros de vida y educación financiera.", "KAI has a team of state-licensed agents in retirement plans, life insurance and financial education.") + "</div>";
     if (t === "care") return '<p class="ap-care w6">' + xx("KAI ofrece acompañamiento pastoral, no servicios clínicos. Cuando una situación lo requiera, podemos recomendarle ayuda profesional.", "KAI offers pastoral support, not clinical services. When a situation calls for it, we can recommend professional help.") + "</p>";
