@@ -18,7 +18,7 @@
   var LOCK = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
   /* ---------- state ---------- */
-  var S = {}, FILES = {}, PREV = {}, SIG = { drawn: false }, CUR = null, LASTLANG = null, BUSY = false, DONE = null, PDFURL = null;
+  var GOTO = null, S = {}, FILES = {}, PREV = {}, SIG = { drawn: false }, CUR = null, LASTLANG = null, BUSY = false, DONE = null, PDFURL = null;
   try { S = JSON.parse(localStorage.getItem(DRAFT) || "{}") || {}; } catch (e) { S = {}; }
   if (!S.agree) S.agree = {};
   var saveT = null;
@@ -244,7 +244,7 @@
     var conf = p === "c" ? '<div class="ap-conf-note"><span class="lk">' + LOCK + "</span><div><b>" + xx("Esta parte es confidencial", "This part is confidential") + "</b><p>" + xx("Solo el equipo de cuidado pastoral de KAI ve la información de esta sección. No forma parte de la evaluación de su membresía. Todas las preguntas son opcionales; responda con la libertad que desee.", "Only KAI's pastoral care team sees the information in this section. It is not part of your membership evaluation. All questions are optional; answer as freely as you wish.") + '</p><button type="button" class="ap-privlink" id="ap-priv">' + PRIV_ICON + '<span>' + xx("Aviso de Privacidad y Confidencialidad de la Aplicación de Membresía", "Membership Application Privacy and Confidentiality Notice") + '</span><em>' + (S.agree && S.agree.priv_read ? xx("✓ Leído", "✓ Read") : xx("Leer", "Read")) + "</em></button></div></div>" : "";
     return head(p, x(m.eb), x(m.t), x(m.p), m.ch.map(x)) +
       '<section class="ap-body"><div class="wrap ap-grid">' + side(xx("En esta parte", "In this part"), links, "") + '<div class="ap-main">' + conf + secs.map(section).join("") +
-      '<div class="ap-nav"><p><b>' + x(m.end) + "</b>" + (p === "c" ? xx("Ahora podrá revisar todas sus respuestas antes de enviar.", "Next you can review all your answers before submitting.") : xx("Su avance se guarda automáticamente en este dispositivo.", "Your progress is saved automatically on this device.")) + '</p><div class="acts">' + (m.prev ? '<a class="btn ghost" href="#/apply/' + m.prev + '">' + xx("Atrás", "Back") + "</a>" : "") + '<a class="btn gold" href="#/apply/' + (m.next === "r" ? "review" : m.next) + '" data-next="' + p + '">' + x(m.nextT) + "</a></div></div>" + helpLine("below") + "</div></div></section>";
+      '<div class="ap-miss" id="ap-miss" role="alert"></div><div class="ap-nav"><p><b>' + x(m.end) + "</b>" + (p === "c" ? xx("Ahora podrá revisar todas sus respuestas antes de enviar.", "Next you can review all your answers before submitting.") : xx("Su avance se guarda automáticamente en este dispositivo.", "Your progress is saved automatically on this device.")) + '</p><div class="acts">' + (m.prev ? '<a class="btn ghost" href="#/apply/' + m.prev + '">' + xx("Atrás", "Back") + "</a>" : "") + '<a class="btn gold" href="#/apply/' + (m.next === "r" ? "review" : m.next) + '" data-next="' + p + '">' + x(m.nextT) + "</a></div></div>" + helpLine("below") + "</div></div></section>";
   }
 
   /* ---------- review ---------- */
@@ -455,6 +455,37 @@
   }
   function alertMsg(el, msg) { var w = el.closest(".fld,.ap-file"); if (!w) return; var m = $(".ap-errm", w) || (w.insertAdjacentHTML("beforeend", '<div class="ap-errm"></div>'), $(".ap-errm:last-child", w)); m.textContent = msg; w.classList.add("err"); }
 
+  /* Nombre claro de cada dato que falta, con su sección */
+  var MISS_NAMES = {
+    title: ["Título en la credencial", "Title on the credential"], cred_name: ["Nombre en la credencial", "Name on the credential"],
+    photo: ["Foto para la credencial", "Credential photo"], tier: ["Tipo de membresía", "Membership type"],
+    faith_ok: ["Aceptar la Declaración de Fe", "Accept the Statement of Faith"]
+  };
+  function secOf(k) {
+    var r = null;
+    ["a", "b", "c"].forEach(function (p) { PARTS[p].forEach(function (sec, i) { sec.f.forEach(function (f) { if (f.k === k || (f.type === "cred" && /^(title|cred_name|photo)$/.test(k))) r = r || [p, i, sec]; }); }); });
+    return r;
+  }
+  function missName(k) {
+    var f = ALL[k], nm = MISS_NAMES[k] ? x(MISS_NAMES[k]) : (f && f.l ? x(f.l) : k);
+    if (f && f.in === "email" && filled(f)) nm += " " + xx("(revise que esté bien escrito)", "(check that it is typed correctly)");
+    return nm;
+  }
+  function missList(keys, withPart) {
+    var seen = {};
+    return "<ul>" + keys.filter(function (k) { if (seen[k]) return false; seen[k] = 1; return true; }).map(function (k) {
+      var s = secOf(k), where = s ? (withPart ? xx("Parte ", "Part ") + s[0].toUpperCase() + " · " : "") + ("0" + (s[1] + 1)).slice(-2) + " " + x(s[2].t) : "";
+      var href = s ? (withPart ? "#/apply/" + s[0] : "#") : "#";
+      return '<li><a href="' + href + '" ' + (withPart ? 'data-goto="' + k + '"' : 'data-miss="' + k + '"') + '><b>' + esc(missName(k)) + "</b>" + (where ? "<span>" + esc(where) + "</span>" : "") + "</a></li>";
+    }).join("") + "</ul>";
+  }
+  function showMiss(box, keys, title, withPart) {
+    if (!box) return;
+    if (!keys.length) { box.innerHTML = ""; box.classList.remove("on"); return; }
+    box.innerHTML = '<p><b>' + title + "</b>" + xx("Toque cada uno para ir directo a él.", "Tap each one to go straight to it.") + "</p>" + missList(keys, withPart);
+    box.classList.add("on");
+  }
+
   function validate(p) {
     var miss = [];
     PARTS[p].forEach(function (sec) {
@@ -477,7 +508,9 @@
       if (!m) { w.insertAdjacentHTML("beforeend", '<div class="ap-errm"></div>'); m = w.lastElementChild; }
       m.textContent = k === "photo" ? xx("Suba una foto para su credencial.", "Please upload a photo for your credential.") : (ALL[k] && ALL[k].in === "email" && filled(ALL[k])) ? xx("Revise el correo electrónico.", "Please check the email address.") : xx("Este dato es necesario.", "This information is required.");
     });
-    if (miss.length) { var first = $(".err", CUR); if (first) first.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    var box = $("#ap-miss", CUR);
+    showMiss(box, miss, miss.length === 1 ? xx("Falta 1 dato para continuar:", "1 item is missing before you can continue:") : xx("Faltan " + miss.length + " datos para continuar:", miss.length + " items are missing before you can continue:"), false);
+    if (miss.length) { if (box) box.scrollIntoView({ behavior: "smooth", block: "center" }); else { var first = $(".err", CUR); if (first) first.scrollIntoView({ behavior: "smooth", block: "center" }); } }
     return !miss.length;
   }
 
@@ -682,10 +715,23 @@
     var nm = $('[data-k="signed_name"]', CUR);
     if (!(S.signed_name || "").trim()) { nm.classList.add("err"); bad = true; }
     var missA = [];
-    PARTS.a.forEach(function (sec) { sec.f.forEach(function (f) { if (f.req && active(f) && !filled(f)) missA.push(f.k); }); });
-    if (!FILES.photo || !(S.cred_name || "").trim()) missA.push("photo");
-    if (missA.length) { msg.innerHTML = xx("Faltan datos en la Parte A. ", "Some Part A information is missing. ") + '<a href="#/apply/a">' + xx("Ir a la Parte A", "Go to Part A") + "</a>"; msg.classList.add("err"); return; }
-    if (bad) { var e1 = $(".rv-sign", CUR); e1.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+    ["a"].forEach(function (pp) { PARTS[pp].forEach(function (sec) { sec.f.forEach(function (f) {
+      if (f.type === "cred") { if (!(S.cred_name || "").trim()) missA.push("cred_name"); if (!FILES.photo) missA.push("photo"); return; }
+      if (f.req && active(f) && !filled(f)) missA.push(f.k);
+    }); }); });
+    var here = [];
+    if (!okA) here.push(xx("Aceptar los cinco acuerdos (abra cada uno con “Leer”)", "Accept all five agreements (open each one with “Read”)"));
+    if (!SIG.drawn) here.push(xx("Su firma en el recuadro", "Your signature in the box"));
+    if (!(S.signed_name || "").trim()) here.push(xx("Su nombre completo debajo de la firma", "Your full name below the signature"));
+    if (missA.length || here.length) {
+      var n = missA.length + here.length;
+      msg.innerHTML = '<p><b>' + (n === 1 ? xx("Falta 1 dato para poder enviar:", "1 item is missing before you can submit:") : xx("Faltan " + n + " datos para poder enviar:", n + " items are missing before you can submit:")) + "</b></p>" +
+        (here.length ? "<ul>" + here.map(function (t) { return '<li><a href="#" data-sign="1"><b>' + esc(t) + "</b><span>" + xx("En esta página", "On this page") + "</span></a></li>"; }).join("") + "</ul>" : "") +
+        (missA.length ? missList(missA, true) : "");
+      msg.classList.add("err", "ap-miss", "on");
+      if (missA.length) { try { sessionStorage.setItem("kai-apply-miss", JSON.stringify(missA)); } catch (e) {} }
+      return;
+    }
     var cl = window.supabase && window.supabase.createClient ? window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "kai-apply-auth" } }) : null;
     if (!cl) { msg.textContent = xx("No pudimos conectar. Intente de nuevo en unos minutos.", "We could not connect. Please try again in a few minutes."); msg.classList.add("err"); return; }
     BUSY = true; var btn = $("#rv-send", CUR); btn.disabled = true; btn.textContent = xx("Enviando…", "Submitting…");
@@ -745,6 +791,7 @@
     CUR = root.firstChild; LASTLANG = lang();
     restore(CUR);
     if (scr === "r") sigInit();
+    if (GOTO && (scr === "a" || scr === "b")) { var gk = GOTO; GOTO = null; setTimeout(function () { validate(scr); var w = $('[data-k="' + gk + '"]', CUR); if (w) w.scrollIntoView({ behavior: "smooth", block: "center" }); }, 60); }
     if (!CUR.__phBound) { CUR.__phBound = true; CUR.addEventListener("click", function (e) {
       if (e.target.closest("#ap-ph-del")) { ORIG.photo = null; setPhoto(null); return; }
       if (e.target.closest("#ap-ph-adj") || (e.target.id === "ap-ph" && e.target.tagName === "IMG")) openCrop();
@@ -756,12 +803,20 @@
   document.addEventListener("change", function (e) { if (!CUR || !CUR.contains(e.target)) return; if (e.target.hasAttribute("data-file")) onFile(e); else onInput(e); });
   document.addEventListener("click", function (e) {
     if (!CUR || !CUR.contains(e.target)) return;
+    var gt = e.target.closest("[data-goto]"); if (gt) GOTO = gt.getAttribute("data-goto");
     var j = e.target.closest("[data-jump]"); if (j) { e.preventDefault(); var t = $("#" + j.getAttribute("data-jump"), CUR); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+    var ml = e.target.closest("[data-miss],[data-sign]");
+    if (ml && ml.getAttribute("href") === "#") {
+      e.preventDefault();
+      var tg = ml.hasAttribute("data-sign") ? $(".rv-sign", CUR) : $('[data-k="' + ml.getAttribute("data-miss") + '"]', CUR);
+      if (tg) tg.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     var n = e.target.closest("[data-next]"); if (n && !validate(n.getAttribute("data-next"))) { e.preventDefault(); return; }
     var b = e.target.closest(".ap-pick button"); if (b) { var ord = S.priorities = S.priorities || [], i = ord.indexOf(b.dataset.b); if (i >= 0) ord.splice(i, 1); else if (ord.length < 3) ord.push(b.dataset.b); pickDraw(CUR); progress(CUR); save(); return; }
     var rd = e.target.closest(".rv-read"); if (rd) { e.preventDefault(); openDoc(rd.getAttribute("data-doc")); return; }
     if (e.target.closest("#rv-send")) { send(); return; }
-  });
+  }, true);   // fase de captura: valida antes de que el enrutador del sitio cambie de página
   window.addEventListener("scroll", function () {
     if (!CUR) return; var links = $$(".ap-side a", CUR); if (!links.length) return;
     var cur = null; links.forEach(function (l) { var t = $("#" + l.getAttribute("data-jump"), CUR); if (t && t.getBoundingClientRect().top < 260) cur = l; });
