@@ -190,7 +190,7 @@
     else if (t === "select") inner = '<select name="' + k + '"><option value="">' + xx("Elija una opción…", "Choose an option…") + "</option>" + sortedOpts(f).map(function (o) { return '<option value="' + o[0] + '">' + (lang() === "es" ? o[1] : o[2]) + "</option>"; }).join("") + "</select>";
     else {
       var ty = f.in === "email" ? "email" : f.in === "tel" ? "tel" : f.in === "date" ? "date" : "text";
-      inner = '<input name="' + k + '" type="' + ty + '"' + (f.in === "num" ? ' inputmode="numeric"' : "") + (f.ph ? ' placeholder="' + esc(x(f.ph)) + '"' : "") + ">";
+      inner = '<input name="' + k + '" type="' + ty + '"' + (f.in === "num" ? ' inputmode="numeric"' : "") + (f.future ? ' min="' + (function () { var d = new Date(Date.now() + 864e5); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); })() + '"' : "") + (f.ph ? ' placeholder="' + esc(x(f.ph)) + '"' : "") + ">";
     }
     if (f.tag) {
       return '<div ' + wrapAttr(f, "ap-q") + '><div class="qh"><span>' + x(f.tag) + "</span><p>" + x(f.l) + "</p></div>" + inner + "</div>";
@@ -248,8 +248,10 @@
   }
 
   /* ---------- review ---------- */
+  function longDate(v) { if (!/^\d{4}-\d\d-\d\d$/.test(v)) return v; return new Date(v + "T12:00:00").toLocaleDateString(lang() === "es" ? "es-MX" : "en-US", { weekday: "long", day: "numeric", month: "long", year: "numeric" }); }
   function fmt(f) {
     var v = S[f.k], t = f.type || "text";
+    if (f.future && v) return esc(longDate(v));
     if (t === "radio" || t === "select" || t === "morphe") return esc(optLabel(f, v));
     if (t === "checks") return esc((v || []).filter(function (z) { return z !== "other"; }).map(function (z) { return optLabel(f, z); }).concat((v || []).indexOf("other") >= 0 && S[f.k + "_other"] ? [S[f.k + "_other"]] : []).join(", "));
     if (t === "scale") { var d = ""; for (var i = 1; i <= 5; i++) d += '<i class="' + (i <= v ? "on" : "") + '"></i>'; return '<span class="rv-dots">' + d + "</span> <small>" + v + " / 5</small>"; }
@@ -459,7 +461,9 @@
   var MISS_NAMES = {
     title: ["Título en la credencial", "Title on the credential"], cred_name: ["Nombre en la credencial", "Name on the credential"],
     photo: ["Foto para la credencial", "Credential photo"], tier: ["Tipo de membresía", "Membership type"],
-    faith_ok: ["Aceptar la Declaración de Fe", "Accept the Statement of Faith"]
+    faith_ok: ["Aceptar la Declaración de Fe", "Accept the Statement of Faith"],
+    iv_date1: ["Día de la entrevista", "Interview day"], iv_time1: ["Hora de la entrevista", "Interview time"],
+    iv_spouse: ["Si su cónyuge podrá acompañarle", "Whether your spouse can join you"]
   };
   function secOf(k) {
     var r = null;
@@ -589,6 +593,7 @@
   function toDataURL(blob) { return new Promise(function (res) { if (!blob) return res(null); var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = function () { res(null); }; r.readAsDataURL(blob); }); }
   function txt(f) {
     var v = S[f.k], t = f.type || "text";
+    if (f.future && v) return longDate(v);
     if (t === "radio" || t === "select" || t === "morphe") return optLabel(f, v);
     if (t === "checks") return (v || []).filter(function (z) { return z !== "other"; }).map(function (z) { return optLabel(f, z); }).concat((v || []).indexOf("other") >= 0 && S[f.k + "_other"] ? [S[f.k + "_other"]] : []).join(", ");
     if (t === "scale") return v + " / 5  (" + x(f.sc[0]) + " a " + x(f.sc[1]) + ")";
@@ -715,7 +720,7 @@
     var nm = $('[data-k="signed_name"]', CUR);
     if (!(S.signed_name || "").trim()) { nm.classList.add("err"); bad = true; }
     var missA = [];
-    ["a"].forEach(function (pp) { PARTS[pp].forEach(function (sec) { sec.f.forEach(function (f) {
+    ["a", "b"].forEach(function (pp) { PARTS[pp].forEach(function (sec) { sec.f.forEach(function (f) {
       if (f.type === "cred") { if (!(S.cred_name || "").trim()) missA.push("cred_name"); if (!FILES.photo) missA.push("photo"); return; }
       if (f.req && active(f) && !filled(f)) missA.push(f.k);
     }); }); });

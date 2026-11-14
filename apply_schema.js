@@ -94,6 +94,10 @@ window.KAIAPP_SCHEMA = (function () {
     ["family", "Matrimonio y familia", "Marriage and family"], ["fellow", "Compañerismo con otros pastores", "Fellowship with other pastors"],
     ["creds", "Credenciales para mi equipo", "Credentials for my team"]
   ];
+  // Horas para la entrevista (hora del Pacífico)
+  var IVT = [];
+  for (var hh = 9; hh <= 20; hh++) { var h12 = hh > 12 ? hh - 12 : hh, ap = hh < 12 ? "AM" : "PM"; IVT.push([String(hh), h12 + ":00 " + ap, h12 + ":00 " + ap]); }
+
   var B = [
     { id: "b1", t: ["Dónde está hoy", "Where you are today"], h: ["Una sola pregunta, la más importante.", "One question, the most important one."],
       f: [
@@ -121,7 +125,21 @@ window.KAIAPP_SCHEMA = (function () {
         { k: "ws_topics", l: ["¿Sobre qué temas?", "Which topics?"], type: "checks", other: 1, when: "ws=y", o: [["couples", "Matrimonios", "Marriage"], ["parent", "Crianza", "Parenting"], ["fin", "Finanzas", "Finances"], ["lead", "Liderazgo", "Leadership"], ["evang", "Evangelismo", "Evangelism"], ["couns", "Consejería", "Counseling"], ["worship", "Alabanza", "Worship"], ["admin", "Administración", "Administration"]] }
       ] },
     { id: "b5", t: ["Para cerrar", "To finish"],
-      f: [{ k: "one_thing", l: ["Si KAI pudiera ayudarle con una sola cosa este año, ¿cuál sería?", "If KAI could help you with just one thing this year, what would it be?"], type: "area" }] }
+      f: [{ k: "one_thing", l: ["Si KAI pudiera ayudarle con una sola cosa este año, ¿cuál sería?", "If KAI could help you with just one thing this year, what would it be?"], type: "area" }] },
+    { id: "b6", t: ["Su entrevista", "Your interview"],
+      h: ["El último paso es una entrevista con el Presidente de KAI y un miembro de la Junta. Elija el día y la hora que mejor le funcionen; nosotros le confirmaremos.", "The last step is an interview with the KAI President and a Board member. Choose the day and time that work best for you; we will confirm with you."],
+      f: [
+        { type: "sub", l: ["Primera opción", "First choice"] },
+        { k: "iv_date1", l: ["Día", "Day"], w: 3, in: "date", future: 1, req: 1 },
+        { k: "iv_time1", l: ["Hora (hora del Pacífico)", "Time (Pacific time)"], w: 3, type: "select", req: 1, o: IVT },
+        { type: "sub", l: ["Segunda opción", "Second choice"], opt: 1 },
+        { k: "iv_date2", l: ["Día", "Day"], w: 3, in: "date", future: 1 },
+        { k: "iv_time2", l: ["Hora (hora del Pacífico)", "Time (Pacific time)"], w: 3, type: "select", o: IVT },
+        { k: "iv_spouse", when: "marital=c", type: "radio", req: 1,
+          l: ["¿Podrá su cónyuge acompañarle?", "Will your spouse be able to join you?"],
+          s: ["Como usted es casado(a), su cónyuge también debe estar presente en la entrevista.", "Since you are married, your spouse should also be present at the interview."],
+          o: [["y", "Sí, estaremos los dos", "Yes, we will both be there"], ["n", "Necesitamos coordinar otro horario", "We need to arrange another time"]] }
+      ] }
   ];
 
   var C = [

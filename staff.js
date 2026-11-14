@@ -87,6 +87,7 @@
   function fval(f, d) {
     var v = d[f.k], t = f.type || "text";
     if (v == null || v === "" || (Array.isArray(v) && !v.length) || v === false) return "";
+    if (f.future && /^\d{4}-\d\d-\d\d$/.test(v)) { var dd = new Date(v + "T12:00:00"); return dd.toLocaleDateString(li() ? "en-US" : "es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" }); }
     if (t === "radio" || t === "select" || t === "morphe") return opt(f, v);
     if (t === "checks") return v.filter(function (z) { return z !== "other"; }).map(function (z) { return opt(f, z); }).concat(v.indexOf("other") >= 0 && d[f.k + "_other"] ? [d[f.k + "_other"]] : []).join(", ");
     if (t === "scale") return v + xx(" de 5 (1 = ", " of 5 (1 = ") + f.sc[0][li()] + ", 5 = " + f.sc[1][li()] + ")";
@@ -99,6 +100,7 @@
   function lbl(f) { return f.tag ? f.tag[li()] : f.type === "faith" ? xx("Declaración de Fe", "Statement of Faith") : f.type === "consent" ? xx("Autorización", "Authorization") : f.type === "tier" ? xx("Membresía", "Membership") : f.type === "morphe" ? "Instituto Morphe" : (f.l ? f.l[li()] : f.k); }
   function shown(f, d) {
     if (!f.when) return true; var p = f.when.split("="), v = d[p[0]], ok = p[1].split(",");
+    if (!(p[0] in d)) return d[f.k] != null;   // la condición vive en otra parte (p. ej. estado civil en la Parte A)
     return Array.isArray(v) ? v.some(function (z) { return ok.indexOf(String(z)) >= 0; }) : ok.indexOf(String(v)) >= 0;
   }
   function secHTML(sec, d, skip) {
