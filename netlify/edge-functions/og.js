@@ -3,7 +3,7 @@
 // es un "lector de enlaces" (bot); a las personas se les entrega la página tal cual.
 // Idioma: ?lang=en o ?lang=es (sin parámetro = español).
 
-const SITE = "https://www.kaie44.org";
+const SITE = "https://kaie44.org";
 const SB = "https://mejypcqqpejsxackkngb.supabase.co";
 const KEY = "sb_publishable_l8led4zWMBxUVnCY06WJzQ_GPPMcBke"; // llave pública
 const BOT = /facebookexternalhit|facebot|twitterbot|whatsapp|slackbot|linkedinbot|discordbot|telegrambot|applebot|skypeuripreview|pinterest|redditbot|embedly|googlebot|bingbot|google-inspectiontool|iframely|vkshare|snapchat|viber|signal|line\//i;
