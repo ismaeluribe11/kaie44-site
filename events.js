@@ -123,7 +123,7 @@
     (pv ? rpc("ev_staff_preview", { p_slug: slug }).catch(function () { return rpc("ev_public_get", { p_slug: slug, p_code: null }); }) : rpc("ev_public_get", { p_slug: slug, p_code: code || null })).then(function (e) {
       if (!e) { put(hero("Kingdom Alliance International · E4:4", T("Eventos", "Events")) + '<section class="s"><div class="wrap"><p>' + T("No encontramos este evento.", "We could not find this event.") + ' <a class="evx-lnk" href="#/events">' + T("Ver eventos", "See events") + "</a></p></div></section>"); return; }
       if (pv && !e.preview) { put(hero("Kingdom Alliance International · E4:4", T("Eventos", "Events")) + '<section class="s"><div class="wrap"><p>' + T("La vista previa es solo para el equipo. Inicia sesión en el Área de Miembros (con tu código de dos pasos) y abre el enlace otra vez.", "Preview is for the team only. Sign in to the Members Area (with your two-step code) and open the link again.") + "</p></div></section>"); return; }
-      EV = e; EV.code = code || ""; FORM = { guests: [], cps: [] };
+      EV = e; EV.code = code || ""; FORM = { guests: [], cps: [] }; try { document.title = (T(e.title || e.title_en, e.title_en || e.title) || "") + " · KAI"; } catch (x) {}
       return memberPrefill().then(renderEvent);
     }).catch(function (er) { put('<section class="s"><div class="wrap"><p class="evx-err">' + esc(errText(er)) + "</p></div></section>"); });
   }
