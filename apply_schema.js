@@ -126,8 +126,8 @@ window.KAIAPP_SCHEMA = (function () {
       ] },
     { id: "b5", t: ["Para cerrar", "To finish"],
       f: [{ k: "one_thing", l: ["Si KAI pudiera ayudarle con una sola cosa este año, ¿cuál sería?", "If KAI could help you with just one thing this year, what would it be?"], type: "area" }] },
-    { id: "b6", t: ["Su entrevista", "Your interview"],
-      h: ["El último paso es una entrevista con el Presidente de KAI y un miembro de la Junta. Elija el día y la hora que mejor le funcionen; nosotros le confirmaremos.", "The last step is an interview with the KAI President and a Board member. Choose the day and time that work best for you; we will confirm with you."],
+    { id: "b6", t: ["Su conversación de bienvenida", "Your welcome conversation"],
+      h: ["El último paso es una conversación de bienvenida con el Presidente de KAI y un miembro de la Junta, para conocerle a usted y a su ministerio. Elija el día y la hora que le funcionen; nosotros le confirmaremos.", "The last step is a welcome conversation with the KAI President and a Board member, so we can get to know you and your ministry. Choose a day and time that work for you, and we'll confirm."],
       f: [
         { type: "sub", l: ["Primera opción", "First choice"] },
         { k: "iv_date1", l: ["Día", "Day"], w: 3, in: "date", future: 1, req: 1 },
@@ -137,7 +137,7 @@ window.KAIAPP_SCHEMA = (function () {
         { k: "iv_time2", l: ["Hora (hora del Pacífico)", "Time (Pacific time)"], w: 3, type: "select", o: IVT },
         { k: "iv_spouse", when: "marital=c", type: "radio", req: 1,
           l: ["¿Podrá su cónyuge acompañarle?", "Will your spouse be able to join you?"],
-          s: ["Como usted es casado(a), su cónyuge también debe estar presente en la entrevista.", "Since you are married, your spouse should also be present at the interview."],
+          s: ["Como usted es casado(a), nos encantaría que su cónyuge también esté presente en la conversación.", "Since you are married, we would love for your spouse to be part of the conversation as well."],
           o: [["y", "Sí, estaremos los dos", "Yes, we will both be there"], ["n", "Necesitamos coordinar otro horario", "We need to arrange another time"]] }
       ] }
   ];

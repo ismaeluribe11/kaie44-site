@@ -462,7 +462,7 @@
     title: ["Título en la credencial", "Title on the credential"], cred_name: ["Nombre en la credencial", "Name on the credential"],
     photo: ["Foto para la credencial", "Credential photo"], tier: ["Tipo de membresía", "Membership type"],
     faith_ok: ["Aceptar la Declaración de Fe", "Accept the Statement of Faith"],
-    iv_date1: ["Día de la entrevista", "Interview day"], iv_time1: ["Hora de la entrevista", "Interview time"],
+    iv_date1: ["Día de la conversación de bienvenida", "Welcome conversation day"], iv_time1: ["Hora de la conversación de bienvenida", "Welcome conversation time"],
     iv_spouse: ["Si su cónyuge podrá acompañarle", "Whether your spouse can join you"]
   };
   function secOf(k) {
