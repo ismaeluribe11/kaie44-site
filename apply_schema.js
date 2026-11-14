@@ -41,6 +41,10 @@ window.KAIAPP_SCHEMA = (function () {
       ] },
     { id: "a5", t: ["Ministerio actual", "Current ministry"],
       f: [
+        { k: "leads", l: ["¿Pastorea actualmente una congregación?", "Do you currently lead a congregation?"], type: "radio", req: 1, o: Y },
+        { k: "ministry_desc", type: "area", req: 1, when: "leads=n", l: ["Describa su ministerio", "Describe your ministry"],
+          desc: [["Por ejemplo: itinerante, evangelismo, capellanía, enseñanza, misiones o en transición. Cuéntenos dónde y con quién sirve actualmente."],
+                 ["For example: itinerant, evangelism, chaplaincy, teaching, missions, or in transition. Tell us where and with whom you currently serve."]] },
         { k: "church", l: ["Nombre de la iglesia o ministerio", "Church or ministry name"], w: 3, req: 1 },
         { k: "role", l: ["Su rol", "Your role"], w: 3, type: "select", req: 1, sort: 1, o: [["Founding Pastor", "Pastor(a) Fundador(a)", "Founding Pastor"], ["Apostle", "Apóstol", "Apostle"], ["Assistant Pastor", "Pastor(a) Asistente", "Assistant Pastor"], ["Bishop", "Obispo", "Bishop"], ["Deacon", "Diácono / Diaconisa", "Deacon"], ["Evangelist", "Evangelista", "Evangelist"], ["Missionary", "Misionero(a)", "Missionary"], ["Ordained Minister", "Ministro(a) Ordenado(a)", "Ordained Minister"], ["Pastor", "Pastor(a)", "Pastor"], ["Pastor Emeritus", "Pastor(a) Emérito(a)", "Pastor Emeritus"], ["other", "Otro", "Other"]] },
         { k: "role_other", l: ["Especifique su rol", "Please specify your role"], w: 6, req: 1, when: "role=other" },
@@ -52,19 +56,19 @@ window.KAIAPP_SCHEMA = (function () {
                   "If the founding involved a transition from another congregation, please describe the circumstances of that transition, including communication with your former leadership and whether any concerns remain unresolved.",
                   "We recognize that churches are established under different circumstances. This question helps us understand your ministry background and the relationships surrounding the founding of your church."]] },
         { k: "church_city", l: ["Ciudad y estado", "City and state"], w: 2 },
-        { k: "founded", l: ["Año de fundación", "Year founded"], w: 2, in: "num" },
+        { k: "founded", when: "leads=y", l: ["Año de fundación", "Year founded"], w: 2, in: "num" },
         { k: "website", l: ["Sitio web", "Website"], w: 2, opt: 1 },
-        { k: "attendance", l: ["Asistencia promedio", "Average attendance"], type: "radio", o: [["lt50", "Menos de 50", "Under 50"], ["50", "50 a 150", "50 to 150"], ["150", "150 a 500", "150 to 500"], ["500", "Más de 500", "Over 500"]] },
-        { k: "gov", l: ["Forma de gobierno", "Church government"], type: "radio", o: [["ind", "Independiente", "Independent"], ["elders", "Ancianos", "Elders"], ["board", "Junta directiva", "Board"], ["other", "Otra", "Other"]] },
+        { k: "attendance", when: "leads=y", l: ["Asistencia promedio", "Average attendance"], type: "radio", o: [["lt50", "Menos de 50", "Under 50"], ["50", "50 a 150", "50 to 150"], ["150", "150 a 500", "150 to 500"], ["500", "Más de 500", "Over 500"]] },
+        { k: "gov", when: "leads=y", l: ["Forma de gobierno", "Church government"], type: "radio", o: [["ind", "Independiente", "Independent"], ["elders", "Ancianos", "Elders"], ["board", "Junta directiva", "Board"], ["other", "Otra", "Other"]] },
         { k: "gov_other", l: ["Especifique la forma de gobierno", "Please specify the church government"], w: 6, when: "gov=other" },
-        { k: "ministries", l: ["Ministerios activos", "Active ministries"], type: "checks", other: 1, o: [["kids", "Niños", "Children"], ["youth", "Jóvenes", "Youth"], ["couples", "Matrimonios", "Couples"], ["worship", "Alabanza", "Worship"], ["missions", "Misiones", "Missions"], ["groups", "Grupos pequeños", "Small groups"]] }
+        { k: "ministries", when: "leads=y", l: ["Ministerios activos", "Active ministries"], type: "checks", other: 1, o: [["kids", "Niños", "Children"], ["youth", "Jóvenes", "Youth"], ["couples", "Matrimonios", "Couples"], ["worship", "Alabanza", "Worship"], ["missions", "Misiones", "Missions"], ["groups", "Grupos pequeños", "Small groups"]] }
       ] },
     { id: "a6", t: ["Trabajo y sostenimiento", "Work and support"],
       f: [
         { k: "work", l: ["Su dedicación al ministerio", "Your ministry commitment"], type: "radio", req: 1, o: [["ft", "Tiempo completo", "Full time"], ["bi", "Bivocacional", "Bivocational"], ["vo", "Voluntario", "Volunteer"]] },
         { k: "job", l: ["¿En qué trabaja?", "What is your other job?"], w: 3, when: "work=bi" },
         { k: "hours", l: ["Horas por semana", "Hours per week"], w: 3, in: "num", when: "work=bi" },
-        { k: "provides", l: ["La iglesia le provee", "Your church provides"], s2: ["marque los que apliquen", "check all that apply"], type: "checks", o: [["salary", "Salario", "Salary"], ["health", "Seguro médico", "Health insurance"], ["retire", "Plan de retiro", "Retirement plan"], ["housing", "Asignación para vivienda pastoral", "Housing allowance"], ["parsonage", "Casa pastoral", "Parsonage"], ["other", "Otro", "Other"], ["none", "Ninguno", "None"]] },
+        { k: "provides", when: "leads=y", l: ["La iglesia le provee", "Your church provides"], s2: ["marque los que apliquen", "check all that apply"], type: "checks", o: [["salary", "Salario", "Salary"], ["health", "Seguro médico", "Health insurance"], ["retire", "Plan de retiro", "Retirement plan"], ["housing", "Asignación para vivienda pastoral", "Housing allowance"], ["parsonage", "Casa pastoral", "Parsonage"], ["other", "Otro", "Other"], ["none", "Ninguno", "None"]] },
         { k: "provides_other", l: ["Especifique qué más le provee", "Please specify what else"], w: 6, when: "provides=other" }
       ] },
     { id: "a7", t: ["Historial y formación", "Background and training"],
