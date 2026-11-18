@@ -1,0 +1,18 @@
+{
+  "id": "/app",
+  "name": "KAI · Kingdom Alliance International",
+  "short_name": "KAI",
+  "description": "Su credencial, eventos y avisos de Kingdom Alliance International. Your credential, events and notices from KAI.",
+  "lang": "es",
+  "start_url": "/app?src=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf7f0",
+  "theme_color": "#0b1f4b",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
