@@ -305,15 +305,15 @@ body.is-appteam .ka-back{display:none}
 @keyframes kaPulse{from{opacity:.85;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
 @media (display-mode:standalone){body::before{background:#0b1f4b!important}}
 /* ---------- Avisos: bandeja, detalle y activar ---------- */
-.kp{display:flex;gap:14px;align-items:flex-start;margin-top:18px;background:#fff;border:1px solid var(--kl,#ebe3d2);border-radius:22px;padding:16px;box-shadow:0 10px 26px rgba(11,31,75,.06)}
-.kp .ic{flex:none;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(145deg,#e0875c,#b9542c);box-shadow:0 8px 16px rgba(162,74,37,.25)}
-.kp .ic svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.kp b{display:block;font-size:15.5px;color:#0b1f4b}
-.kp span{display:block;font-size:13.5px;color:#5b6577;line-height:1.45;margin-top:2px}
-.kp .ka-btn{margin-top:12px;padding:10px 16px;font-size:14px}
-.kp .ka-msg{text-align:left}
-.kp.on{background:linear-gradient(180deg,#fff,#f1faf5);border-color:#cdebd9}
-.kp.on .ic{background:linear-gradient(145deg,#3cbf7e,#1f8a59);box-shadow:0 8px 16px rgba(31,138,89,.25)}
+.kpu{display:flex;gap:14px;align-items:flex-start;margin-top:18px;background:#fff;border:1px solid var(--kl,#ebe3d2);border-radius:22px;padding:16px;box-shadow:0 10px 26px rgba(11,31,75,.06)}
+.kpu .ic{flex:none;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(145deg,#e0875c,#b9542c);box-shadow:0 8px 16px rgba(162,74,37,.25)}
+.kpu .ic svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.kpu b{display:block;font-size:15.5px;color:#0b1f4b}
+.kpu span{display:block;font-size:13.5px;color:#5b6577;line-height:1.45;margin-top:2px}
+.kpu .ka-btn{margin-top:12px;padding:10px 16px;font-size:14px}
+.kpu .ka-msg{text-align:left}
+.kpu.on{background:linear-gradient(180deg,#fff,#f1faf5);border-color:#cdebd9}
+.kpu.on .ic{background:linear-gradient(145deg,#3cbf7e,#1f8a59);box-shadow:0 8px 16px rgba(31,138,89,.25)}
 .kn-bar{display:flex;justify-content:space-between;align-items:center;margin:24px 4px 10px}
 .kn-bar span{font-family:var(--serif);font-weight:600;font-size:20px;color:#0b1f4b}
 .kn-bar button{border:0;background:none;color:#c8643b;font-weight:700;font-size:13px}
@@ -419,3 +419,22 @@ a.kt-act{display:block;text-decoration:none}
 .ka-steps .hl{margin:14px 0 0;padding-top:12px;border-top:1px solid #ece6d8;font-size:13.5px;color:#5b6577}
 .ka-steps .hl a{color:var(--tc,#c4643f);font-weight:700;text-decoration:none}
 .pchips .ka-pill{white-space:nowrap}
+/* detalle de evento dentro de la app */
+.ka-evh{position:relative;margin:0 -16px;height:min(62vh,440px);background:#33415f center/cover no-repeat;border-radius:0 0 30px 30px;overflow:hidden;color:#fff}
+.ka-evh::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,31,75,.55) 0%,rgba(11,31,75,0) 30%,rgba(11,31,75,.35) 55%,rgba(8,20,48,.92) 100%)}
+.ka-evh .ka-evback{position:absolute;z-index:2;top:calc(env(safe-area-inset-top,0px) + 14px);left:16px}
+.ka-evback{display:inline-flex;align-items:center;gap:6px;padding:9px 14px 9px 10px;border-radius:999px;background:rgba(255,255,255,.92);color:var(--kn,#0b1f4b);font-weight:700;font-size:14px;text-decoration:none;box-shadow:0 6px 16px rgba(0,0,0,.18);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.ka-evback svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.ka-evh .bd{position:absolute;z-index:2;left:20px;right:20px;bottom:22px;display:flex;gap:14px;align-items:flex-end}
+.ka-evh .dt{flex:0 0 auto;width:62px;padding:8px 0;border-radius:16px;background:#fff;text-align:center;color:var(--kn,#0b1f4b);box-shadow:0 8px 20px rgba(0,0,0,.25)}
+.ka-evh .dt b{display:block;font-size:12px;letter-spacing:.12em;color:var(--tc,#c4643f)}
+.ka-evh .dt i{display:block;font-style:normal;font-family:Georgia,serif;font-size:28px;font-weight:700;line-height:1.05}
+.ka-evh h1{margin:0;color:#fff;font-size:26px;line-height:1.12;text-shadow:0 2px 12px rgba(0,0,0,.35)}
+.ka-evi{margin-top:-6px;position:relative;z-index:3}
+.ka-evi .ka-dl{margin:0;border:0;box-shadow:none;padding:0;background:none}
+.ka-evi .ka-dl dd{text-align:right}
+.ka-evbt{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:2px}
+.ka-evbt .ka-btn{margin-top:0;white-space:nowrap;font-size:14px;padding:12px 10px}
+.ka-evbt .ka-btn svg{width:18px;height:18px;flex:0 0 18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ka-evtx{font-size:15px;line-height:1.55;color:#33415f}
+.ka-evi .ka-msg a{color:var(--tc,#c4643f);font-weight:700}

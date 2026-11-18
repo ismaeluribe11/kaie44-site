@@ -52,21 +52,20 @@
     try { s = (await c.auth.getSession()).data.session; } catch (e) { s = null; }
     if (!s) { A.st = "out"; A.m = null; paint(); return; }
     A.user = s.user;
-    var cached = store("kai-app-m");
-    if (cached && cached.email && String(cached.email).toLowerCase() === String(s.user.email || "").toLowerCase()) { A.m = cached; A.st = "in"; paint(); }
-    try {
-      var em = String(s.user.email || "").toLowerCase().replace(/[\\%_]/g, "\\$&");
-      var r = await c.from("members").select("*").ilike("email", em).limit(1).maybeSingle();
-      if (r.error) throw r.error;
-      A.m = r.data || null; A.st = r.data ? "in" : "none";
-      if (r.data) store("kai-app-m", r.data);
-    } catch (e) { if (!A.m) A.st = "down"; }
-    try { var me = await c.rpc("staff_me"); A.me = me.data || null; A.roles = (me.data && me.data.roles) || []; } catch (e) { A.roles = []; }
+    var cached = store("kai-app-m"), first = A.st === "load";
+    if (cached && cached.email && String(cached.email).toLowerCase() === String(s.user.email || "").toLowerCase()) A.m = cached;
+    A.quiet = true;   // un solo repintado al terminar de cargar (evita parpadeos)
+    var em = String(s.user.email || "").toLowerCase().replace(/[\\%_]/g, "\\$&");
+    var pm = c.from("members").select("*").ilike("email", em).limit(1).maybeSingle().then(function (r) {
+      if (r.error) throw r.error; A.m = r.data || null; A.st = r.data ? "in" : "none"; if (r.data) store("kai-app-m", r.data);
+    }).catch(function () { A.st = A.m ? "in" : "down"; });
+    var pr = c.rpc("staff_me").then(function (me) { A.me = me.data || null; A.roles = (me.data && me.data.roles) || []; }).catch(function () { A.roles = A.roles || []; });
+    var slow = new Promise(function (ok) { setTimeout(ok, 4000); });
+    await Promise.race([Promise.all([pm, pr, loadEvents(), loadInbox(), pushCheck()]).then(function () { return A.roles.length ? loadTeam() : null; }), slow]);
+    if (A.st === "load") A.st = A.m ? "in" : "none";
+    A.quiet = false;
     paint();
-    loadEvents();
-    loadInbox();
-    pushCheck();
-    if (A.roles.length) loadTeam();
+    if (!first && A.roles.length && !A.team) loadTeam();
   }
   async function loadEvents() {
     var c = sb(); if (!c) return;
@@ -76,12 +75,13 @@
       A.events = (r.data || []).filter(function (e) { return new Date(e.starts_at).getTime() >= now; })
         .sort(function (a, b) { return new Date(a.starts_at) - new Date(b.starts_at); });
     } catch (e) { A.events = A.events || []; }
-    if (A.st === "in" || A.st === "none") paint();
+    if (!A.quiet && (A.st === "in" || A.st === "none")) paint();
   }
 
   /* ---------- rutas ---------- */
   function sub() { var p = location.pathname.replace(/\/+$/, ""); var m = p.match(/^\/app\/?([a-z]*)/); return (m && m[1]) || "home"; }
   function sub2() { var m = location.pathname.match(/^\/app\/[a-z]+\/([a-z]+)/); return (m && m[1]) || ""; }
+  function evSlug() { var m = location.pathname.match(/^\/app\/events\/([^\/?#]+)/); return m ? decodeURIComponent(m[1]) : ""; }
   function qn() { try { return +new URLSearchParams(location.search).get("n") || 0; } catch (e) { return 0; } }
 
   /* ---------- pintar ---------- */
@@ -94,13 +94,13 @@
     else if (A.st === "out") html = loginHTML();
     else if (A.st === "down") html = hero({ eb: "KAI", title: T("Sin conexión", "No connection") }) + '<div class="ka-empty"><h3>' + T("Sin conexión", "No connection") + "</h3><p>" + T("No pudimos conectar con KAI. Revise su internet e intente de nuevo.", "We couldn't reach KAI. Check your internet and try again.") + '</p><button class="ka-btn navy" data-a="retry">' + T("Intentar de nuevo", "Try again") + "</button></div>";
     else {
-      if (tab === "events") html += eventsHTML();
+      if (tab === "events") html += evSlug() ? eventHTML(evSlug()) : eventsHTML();
       else if (tab === "inbox") html += inboxHTML();
       else if (tab === "profile") html += profileHTML();
       else if (tab === "team") html += sub2() === "aviso" ? composeHTML("notice") : sub2() === "reunion" ? composeHTML("meeting") : teamHTML();
       else html += homeHTML();
     }
-    root.innerHTML = html;
+    if (html !== A.lastHtml || !root.firstChild) { root.innerHTML = html; A.lastHtml = html; }
     if (A.lastTab !== tab) { root.classList.remove("ka-enter"); void root.offsetWidth; root.classList.add("ka-enter"); A.lastTab = tab; window.scrollTo(0, 0); }
     var nv = $("ka-navw");
     if (!nv) { nv = document.createElement("div"); nv.id = "ka-navw"; document.body.appendChild(nv); }
@@ -147,7 +147,7 @@
     var ev = (A.events || [])[0];
     if (ev) {
       var d = new Date(ev.starts_at), days = Math.ceil((d - new Date()) / 864e5);
-      h += '<div class="ka-sec">' + T("Próximo evento", "Next event") + '</div><a class="ka-next" href="/ev/' + esc(ev.slug) + '" style="background-image:url(&quot;' + esc(ev.photo_url || "images/mission.jpg") + '&quot;)">' +
+      h += '<div class="ka-sec">' + T("Próximo evento", "Next event") + '</div><a class="ka-next" href="/app/events/' + encodeURIComponent(ev.slug) + '" style="background-image:url(&quot;' + esc(ev.photo_url || "images/mission.jpg") + '&quot;)">' +
         '<span class="cd">' + (days <= 0 ? T("¡Hoy!", "Today!") : days === 1 ? T("Mañana", "Tomorrow") : T("En " + days + " días", "In " + days + " days")) + "</span>" +
         '<div class="nb"><div class="dt"><b>' + esc(fdt(d, { month: "short" }).replace(".", "").toUpperCase()) + "</b><i>" + d.getDate() + "</i></div><div><h3>" + esc(evTitle(ev)) + "</h3><p>" + esc(cap(fdt(d, { weekday: "long", hour: "numeric", minute: "2-digit" }))) + (ev.venue ? " · " + esc(ev.venue) : "") + "</p></div></div>" +
         '<span class="go">' + (ev.open ? T("Registrarme", "Register") : T("Ver evento", "View event")) + " →</span></a>";
@@ -185,12 +185,37 @@
     if (!A.events.length) return h + emptyHTML("cal", T("Sin eventos por ahora", "No events right now"), T("Cuando KAI anuncie un evento, aparecerá aquí.", "When KAI announces an event, it will show up here."));
     return h + '<div class="ka-list">' + A.events.map(function (e, i) {
       var cx = String(e.status || "") === "cancelled", d = new Date(e.starts_at), days = Math.ceil((d - new Date()) / 864e5);
-      return '<a class="ka-ev" href="/ev/' + esc(e.slug) + '" style="--i:' + i + ';background-image:url(&quot;' + esc(e.photo_url || "images/mission.jpg") + '&quot;)">' +
+      return '<a class="ka-ev" href="/app/events/' + encodeURIComponent(e.slug) + '" style="--i:' + i + ';background-image:url(&quot;' + esc(e.photo_url || "images/mission.jpg") + '&quot;)">' +
         '<div class="dt"><b>' + esc(fdt(d, { month: "short" }).replace(".", "").toUpperCase()) + "</b><i>" + d.getDate() + "</i></div>" +
         (cx ? '<span class="cd cx">' + T("Cancelado", "Cancelled") + "</span>" : '<span class="cd">' + (days <= 0 ? T("¡Hoy!", "Today!") : days === 1 ? T("Mañana", "Tomorrow") : T("En " + days + " días", "In " + days + " days")) + "</span>") +
         '<div class="bd"><h3>' + esc(evTitle(e)) + '</h3><p>' + svg("cal") + esc(cap(fdt(d, { weekday: "long", hour: "numeric", minute: "2-digit" }))) + "</p>" + (e.venue ? "<p>" + svg("pin") + esc(e.venue) + "</p>" : "") +
         (cx ? "" : '<span class="go">' + (e.open ? T("Registrarme", "Register") : T("Ver detalles", "View details")) + " →</span>") + "</div></a>";
     }).join("") + "</div>";
+  }
+
+  function eventHTML(slug) {
+    var e = (A.events || []).filter(function (x) { return x.slug === slug; })[0];
+    var back = '<a class="ka-evback" href="/app/events">' + svg("back") + T("Eventos", "Events") + "</a>";
+    if (!e) return back + (A.events ? emptyHTML("cal", T("Evento no disponible", "Event not available"), T("Puede que ya haya pasado o que se haya quitado.", "It may have already happened or been removed.")) : '<div class="ka-load"><div class="ka-sp"></div></div>');
+    var d = new Date(e.starts_at), en = e.ends_at ? new Date(e.ends_at) : null, cx = String(e.status || "") === "cancelled";
+    var desc = L_() === "en" ? (e.description_en || e.description) : (e.description || e.description_en);
+    var note = L_() === "en" ? (e.arrive_note_en || e.arrive_note) : (e.arrive_note || e.arrive_note_en);
+    var place = [e.venue, e.address].filter(Boolean).join(", ");
+    var z = function (x) { return x.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); };
+    var gcal = "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent(evTitle(e)) + "&dates=" + z(d) + "/" + z(en || new Date(d.getTime() + 3 * 36e5)) + "&location=" + encodeURIComponent(place) + "&details=" + encodeURIComponent("https://www.kaie44.org/ev/" + e.slug);
+    var h = '<div class="ka-evh" style="background-image:url(&quot;' + esc(e.photo_url || "images/mission.jpg") + '&quot;)">' + back +
+      '<div class="bd"><div class="dt"><b>' + esc(fdt(d, { month: "short" }).replace(".", "").toUpperCase()) + "</b><i>" + d.getDate() + "</i></div><h1>" + esc(evTitle(e)) + "</h1></div></div>";
+    h += '<div class="ka-card ka-evi"><dl class="ka-dl">' +
+      "<div><dt>" + svg("cal") + T("Cuándo", "When") + "</dt><dd>" + esc(cap(fdt(d, { weekday: "long", day: "numeric", month: "long" }))) + "<br>" + esc(fdt(d, { hour: "numeric", minute: "2-digit" })) + (en ? " – " + esc(fdt(en, { hour: "numeric", minute: "2-digit" })) : "") + "</dd></div>" +
+      (place ? "<div><dt>" + svg("pin") + T("Dónde", "Where") + "</dt><dd>" + (e.venue ? "<b>" + esc(e.venue) + "</b><br>" : "") + esc(e.address || "") + "</dd></div>" : "") + "</dl>";
+    if (cx) h += '<p class="ka-msg err">' + T("Este evento fue cancelado.", "This event was cancelled.") + (e.cancel_reason ? " " + esc(e.cancel_reason) : "") + "</p>";
+    else h += (e.open ? '<a class="ka-btn tc wide" href="/ev/' + encodeURIComponent(e.slug) + '">' + T("Registrarme", "Register") + "</a>" : '<p class="ka-msg">' + (e.full ? T("Cupo lleno.", "This event is full.") : T("El registro en línea está cerrado.", "Online registration is closed.")) + ' <a href="/ev/' + encodeURIComponent(e.slug) + '">' + T("Ver mi registro", "See my registration") + "</a></p>") +
+      '<div class="ka-evbt">' + (e.address ? '<a class="ka-btn line" target="_blank" rel="noopener" href="https://maps.apple.com/?q=' + encodeURIComponent(place) + '">' + svg("pin") + T("Cómo llegar", "Directions") + "</a>" : "") +
+      '<a class="ka-btn line" target="_blank" rel="noopener" href="' + gcal + '">' + svg("cal") + T("Al calendario", "Add to calendar") + "</a></div>";
+    h += "</div>";
+    if (note) h += '<div class="ka-sec">' + T("Al llegar", "When you arrive") + '</div><div class="ka-card ka-evtx">' + esc(note).replace(/\n/g, "<br>") + "</div>";
+    if (desc) h += '<div class="ka-sec">' + T("Detalles", "Details") + '</div><div class="ka-card ka-evtx">' + esc(desc).replace(/\n/g, "<br>") + "</div>";
+    return h;
   }
 
   /* ---------- Avisos (bandeja del miembro) ---------- */
@@ -201,7 +226,7 @@
       A.inbox = r.data || { rows: [], unread: 0 };
       A.unread = A.inbox.unread || 0;
     } catch (e) { A.inbox = A.inbox || { rows: [], unread: 0, off: true }; }
-    if (A.st === "in" || A.st === "none") paint();
+    if (!A.quiet && (A.st === "in" || A.st === "none")) paint();
   }
   function inboxOpened() {
     var id = qn();
@@ -276,12 +301,12 @@
   }
   function pushCardHTML() {
     var st = pushState();
-    if (st === "on") return '<div class="kp on"><span class="ic">' + svg("bell") + "</span><div><b>" + T("Avisos activados", "Notices are on") + "</b><span>" + T("Le llegarán a este celular aunque la app esté cerrada.", "They'll reach this phone even when the app is closed.") + "</span></div></div>";
+    if (st === "on") return '<div class="kpu on"><span class="ic">' + svg("bell") + "</span><div><b>" + T("Avisos activados", "Notices are on") + "</b><span>" + T("Le llegarán a este celular aunque la app esté cerrada.", "They'll reach this phone even when the app is closed.") + "</span></div></div>";
     if (st === "nosup") return "";
     var p = st === "install" ? T("Primero agregue KAI a su pantalla de inicio (Compartir → Agregar a pantalla de inicio) y ábrala desde el ícono.", "First add KAI to your home screen (Share → Add to Home Screen) and open it from the icon.")
       : st === "denied" ? T("Los avisos están bloqueados. Actívelos en Ajustes → Notificaciones → KAI.", "Notices are blocked. Turn them on in Settings → Notifications → KAI.")
       : T("Reciba los avisos del equipo y los recordatorios de reuniones en su celular, con el numerito sobre el ícono.", "Get team notices and meeting reminders on your phone, with a badge on the icon.");
-    return '<div class="kp"><span class="ic">' + svg("bell") + "</span><div><b>" + T("Active los avisos", "Turn on notices") + "</b><span>" + p + "</span>" +
+    return '<div class="kpu"><span class="ic">' + svg("bell") + "</span><div><b>" + T("Active los avisos", "Turn on notices") + "</b><span>" + p + "</span>" +
       (st === "off" ? '<button class="ka-btn tc" data-a="pushon">' + T("Activar avisos", "Turn on notices") + "</button>" : "") + '<p class="ka-msg" id="kp-m"></p></div></div>';
   }
   function b64u(s) { var p = "=".repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
@@ -298,8 +323,9 @@
   }
   function pushOn() {
     var m = $("kp-m"), btn = document.querySelector('[data-a="pushon"]');
-    function say(t, ok) { if (m) { m.textContent = t; m.className = "ka-msg" + (ok ? "" : " err"); } if (btn) btn.disabled = false; }
+    function say(t, ok) { if (m) { m.textContent = t; m.className = "ka-msg" + (ok ? "" : " err"); } if (btn) { btn.disabled = false; btn.textContent = T("Activar avisos", "Turn on notices"); } }
     if (m) { m.textContent = T("Un momento…", "One moment…"); m.className = "ka-msg"; }
+    if (btn) btn.textContent = T("Activando…", "Turning on…");
     // iPhone: el permiso se pide en el mismo instante del toque, antes de cualquier espera.
     var ask;
     try { ask = Notification.requestPermission(); } catch (e) { ask = Promise.resolve(Notification.permission); }
@@ -591,7 +617,7 @@
       }
     } catch (e) { A.team = { st: "err" }; }
     A.tcount = teamCount();
-    paint();
+    if (!A.quiet) paint();
   }
   function teamCount() {
     var t = A.team; if (!t || t.st !== "ok") return 0;
