@@ -756,6 +756,8 @@
   /* ---------- enganche con el router del sitio ---------- */
   window.KAIAPPX = {
     view: function (v) {
+      if (v === "home" && standalone() && !A.homeOk) { A.homeOk = true; KGO("/app", true); return; }
+      A.homeOk = true;
       if (v === "app") { try { sessionStorage.setItem("kai-in-app", "1"); } catch (e) {} }
       var inApp = standalone(); try { inApp = inApp || sessionStorage.getItem("kai-in-app") === "1"; } catch (e) {}
       var teamMode = v === "staff" && inApp && !/^\/pago\//.test(location.pathname);
