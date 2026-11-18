@@ -12,9 +12,21 @@ export default async (req) => {
   const title = cut(q.get("t"), 200) || "KAI";
   const id = cut(q.get("id"), 80).replace(/[^\w.-]/g, "") || z(s);
   const url = /^https:\/\//.test(q.get("u") || "") ? cut(q.get("u"), 500) : "";
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Kingdom Alliance International//KAI//ES", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
-    "BEGIN:VEVENT", "UID:kai-" + id + "@kaie44.org", "DTSTAMP:" + z(new Date()), "DTSTART:" + z(s), "DTEND:" + z(e),
-    "SUMMARY:" + x(title), q.get("d") ? "DESCRIPTION:" + x(cut(q.get("d"), 2000)) : "", q.get("l") ? "LOCATION:" + x(cut(q.get("l"), 300)) : "", url ? "URL:" + url : "",
+  // Hora del Pacífico (así el iPhone no muestra una segunda línea en "GMT")
+  const TZ = "America/Los_Angeles";
+  const loc = (d) => {
+    const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })
+      .formatToParts(d).map((x) => [x.type, x.value]));
+    return p.year + p.month + p.day + "T" + p.hour + p.minute + p.second;
+  };
+  const VTZ = ["BEGIN:VTIMEZONE", "TZID:" + TZ,
+    "BEGIN:DAYLIGHT", "TZOFFSETFROM:-0800", "TZOFFSETTO:-0700", "TZNAME:PDT", "DTSTART:19700308T020000", "RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU", "END:DAYLIGHT",
+    "BEGIN:STANDARD", "TZOFFSETFROM:-0700", "TZOFFSETTO:-0800", "TZNAME:PST", "DTSTART:19701101T020000", "RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU", "END:STANDARD",
+    "END:VTIMEZONE"];
+  const notes = [q.get("d") ? cut(q.get("d"), 2000) : "", url && !(q.get("d") || "").includes(url) ? url : ""].filter(Boolean).join("\n\n");
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Kingdom Alliance International//KAI//ES", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", ...VTZ,
+    "BEGIN:VEVENT", "UID:kai-" + id + "@kaie44.org", "DTSTAMP:" + z(new Date()), "DTSTART;TZID=" + TZ + ":" + loc(s), "DTEND;TZID=" + TZ + ":" + loc(e),
+    "SUMMARY:" + x(title), notes ? "DESCRIPTION:" + x(notes) : "", q.get("l") ? "LOCATION:" + x(cut(q.get("l"), 300)) : "",
     "BEGIN:VALARM", "TRIGGER:-PT1H", "ACTION:DISPLAY", "DESCRIPTION:" + x(title), "END:VALARM", "END:VEVENT", "END:VCALENDAR"].filter(Boolean);
   return new Response(lines.join("\r\n") + "\r\n", {
     headers: { "content-type": "text/calendar; charset=utf-8", "content-disposition": 'inline; filename="KAI.ics"', "cache-control": "no-store" },
