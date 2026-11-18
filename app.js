@@ -365,7 +365,7 @@
     ["Renovación", "Renewal", "Su membresía vence pronto", "Renueve en un toque desde la app para mantener su credencial activa."],
     ["Oración", "Prayer", "Oremos juntos", ""]
   ];
-  function C() { return A.cmp || (A.cmp = { aud: has("admin", "president") ? "all" : "board", people: [], when: "now", tpl: -1 }); }
+  function C() { return A.cmp || (A.cmp = { aud: "board", people: [], when: "now", tpl: -1 }); }
   function composeHTML(kind) {
     var c = C(), meet = kind === "meeting"; c.kind = kind;
     if (meet && !c.mInit) { c.mInit = 1; c.aud = "board"; c.title = c.title || T("Reunión del Board", "Board meeting"); c.minutes = c.minutes || 60; }
@@ -374,8 +374,9 @@
     h += '<div class="kc-h"><span class="ic ' + (meet ? "nv" : "tc") + '">' + (meet ? svg("zoom") : svg("send")) + "</span><div><h1>" + (meet ? T("Nueva reunión", "New meeting") : T("Enviar aviso", "Send notice")) + "</h1><p>" +
       (meet ? T("Zoom, calendario y confirmación en un solo paso.", "Zoom, calendar and RSVP in one step.") : T("Llega como notificación; a quien no la tiene activada, por correo.", "Arrives as a notification; by email to anyone without them on.")) + "</p></div></div>";
     // A quién
-    var opts = meet ? [["board", T("Todo el Board", "Whole Board")], ["people", T("Personas", "People")]]
-      : [].concat(has("admin", "president") ? [["all", T("Todos los miembros", "All members")]] : [], [["board", T("Solo el Board", "Board only")]], has("admin", "president", "membership") ? [["event", T("Un evento", "An event")]] : [], [["people", T("Personas", "People")]]);
+    var opts = [].concat([["board", T("Board general", "General Board")], ["exec", T("Board ejecutivo", "Executive Board")]],
+      has("admin", "president") ? [["all", T("Todos los miembros", "All members")]] : [],
+      !meet && has("admin", "president", "membership") ? [["event", T("Un evento", "An event")]] : [], [["people", T("Personas", "People")]]);
     h += '<div class="kc-sec">' + (meet ? T("Invitados", "Guests") : T("¿A quién?", "To whom?")) + '</div><div class="kc-chips">' + opts.map(function (o) { return '<button data-a="aud" data-v="' + o[0] + '" class="' + (c.aud === o[0] ? "on" : "") + '">' + o[1] + "</button>"; }).join("") + "</div>";
     if (c.aud === "event") h += '<select class="kc-in" id="kc-ev"><option value="">' + T("Elija el evento…", "Choose the event…") + "</option>" + (A.events || []).map(function (e) { return '<option value="' + esc(e.slug) + '"' + (c.event === e.slug ? " selected" : "") + ">" + esc(evTitle(e)) + "</option>"; }).join("") + "</select>";
     if (c.aud === "people" || meet) {
@@ -412,6 +413,7 @@
     var c = C(), a = {};
     if (c.aud === "all") a.all = true;
     if (c.aud === "board") a.board = true;
+    if (c.aud === "exec") a.exec = true;
     if (c.aud === "event" && c.event) a.event = c.event;
     if (c.people.length && (c.aud === "people" || c.kind === "meeting")) a.emails = c.people.map(function (p) { return p.email; });
     return a;
@@ -420,7 +422,7 @@
   function recount() {
     clearTimeout(cntT); cntT = setTimeout(async function () {
       var el = $("kc-cnt"); if (!el) return; var a = audJSON();
-      if (!a.all && !a.board && !a.event && !(a.emails && a.emails.length)) { el.textContent = ""; return; }
+      if (!a.all && !a.board && !a.exec && !a.event && !(a.emails && a.emails.length)) { el.textContent = ""; return; }
       try { var r = await sb().rpc("staff_audience_count", { p_aud: a }); if (r.error) throw r.error; var t = r.data.total, pu = r.data.push; A.cmp.count = t;
         el.innerHTML = "<b>" + T("Llegará a " + t + (t === 1 ? " persona" : " personas"), "Reaches " + t + (t === 1 ? " person" : " people")) + "</b> · " + T(pu + " por notificación, " + (t - pu) + " por correo", pu + " by notification, " + (t - pu) + " by email");
       } catch (e) { el.textContent = ""; }
@@ -469,7 +471,7 @@
     syncFields(); var c = C(), meet = c.kind === "meeting", m = $("kc-msg");
     function err(t) { m.textContent = t; m.className = "ka-msg err"; btn.disabled = false; }
     var a = audJSON();
-    if (!a.all && !a.board && !a.event && !(a.emails && a.emails.length)) return err(T("Elija a quién va dirigido.", "Choose who it's for."));
+    if (!a.all && !a.board && !a.exec && !a.event && !(a.emails && a.emails.length)) return err(T("Elija a quién va dirigido.", "Choose who it's for."));
     if (!String(c.title || "").trim()) return err(T("Escriba un título.", "Enter a title."));
     if (!meet && !String(c.body || "").trim()) return err(T("Escriba el mensaje.", "Write the message."));
     var p = { kind: c.kind, title: c.title.trim(), body: (c.body || "").trim(), audience: a };
@@ -1082,7 +1084,9 @@
       try { await sb().rpc("notice_rsvp", { p_id: id, p_ans: v }); } catch (x) {}
       return;
     }
-    if (k === "aud") { syncFields(); var ca = C(); if (ca.aud === "event" && ca.event) ca.tplEv = ca.event; ca.aud = a.dataset.v; if (ca.aud === "event" && !ca.event && ca.tpl === 1 && ca.tplEv) ca.event = ca.tplEv; if (ca.tpl === 1 && /^Recordatorio: /.test(ca.title || "")) ca.title = "Recordatorio: " + tplEvTitle(ca); paint(); return; }
+    if (k === "aud") { syncFields(); var ca = C(); if (ca.aud === "event" && ca.event) ca.tplEv = ca.event; ca.aud = a.dataset.v; if (ca.aud === "event" && !ca.event && ca.tpl === 1 && ca.tplEv) ca.event = ca.tplEv; if (ca.tpl === 1 && /^Recordatorio: /.test(ca.title || "")) ca.title = "Recordatorio: " + tplEvTitle(ca);
+      if (ca.kind === "meeting" && /^(Reunión del Board( ejecutivo)?|Board meeting|Executive Board meeting)$/.test(ca.title || "")) ca.title = ca.aud === "exec" ? T("Reunión del Board ejecutivo", "Executive Board meeting") : T("Reunión del Board", "Board meeting");
+      paint(); return; }
     if (k === "tpl") { var t = TPL[+a.dataset.i], cc = C(); cc.tpl = +a.dataset.i; if (cc.tpl === 1 && A.events && A.events[0] && !cc.tplEv) cc.tplEv = A.events[0].slug; cc.title = t[2] + (cc.tpl === 1 ? tplEvTitle(cc) : ""); cc.body = t[3]; paint(); return; }
     if (k === "when") { syncFields(); C().when = a.dataset.v; paint(); return; }
     if (k === "padd") { syncFields(); var pp = (A.cmpRes || [])[+a.dataset.i]; if (pp) C().people.push(pp); paint(); var qi = $("kc-q"); if (qi) qi.focus(); return; }
