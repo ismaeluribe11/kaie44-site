@@ -94,6 +94,7 @@
       else html += homeHTML();
     }
     root.innerHTML = html;
+    if (A.lastTab !== tab) { root.classList.remove("ka-enter"); void root.offsetWidth; root.classList.add("ka-enter"); A.lastTab = tab; window.scrollTo(0, 0); }
     var nv = $("ka-navw");
     if (!nv) { nv = document.createElement("div"); nv.id = "ka-navw"; document.body.appendChild(nv); }
     nv.innerHTML = (A.st === "in" || A.st === "none") && document.body.classList.contains("is-app") ? navHTML(tab) : "";
@@ -105,8 +106,7 @@
   function rings() { return '<svg class="rg" viewBox="0 0 400 400" aria-hidden="true"><g fill="none" stroke="#e3bf63"><circle cx="200" cy="200" r="190" stroke-opacity=".10"/><circle cx="200" cy="200" r="150" stroke-opacity=".14"/><circle cx="200" cy="200" r="110" stroke-opacity=".18"/><circle cx="200" cy="200" r="70" stroke-opacity=".22"/></g></svg>'; }
   function hero(o) {
     var l = L_();
-    return '<div class="ka-hero ' + (o.cls || "") + '">' + rings() + '<i class="glow"></i><div class="hb"><img class="lw" src="images/logo.png" alt="Kingdom Alliance International"><div class="ka-lang" role="group" aria-label="Language">' +
-      '<button data-l="es" aria-pressed="' + (l === "es") + '">ES</button><button data-l="en" aria-pressed="' + (l === "en") + '">EN</button></div></div>' +
+    return '<div class="ka-hero ' + (o.cls || "") + '">' + rings() + '<i class="glow"></i><div class="hb"><img class="lw" src="images/logo.png" alt="Kingdom Alliance International">' + (o.top || "") + "</div>" +
       '<div class="ht"><div class="tx">' + (o.eb ? "<small>" + o.eb + "</small>" : "") + "<h1>" + o.title + "</h1>" + (o.sub ? "<p>" + o.sub + "</p>" : "") + "</div>" + (o.side || "") + "</div>" + (o.extra || "") + "</div>";
   }
   function avatar(m, cls) {
@@ -126,7 +126,7 @@
       h += '<div class="ka-credw"><div class="ka-cred' + (A.flip ? " back" : "") + '" data-a="flip" role="button" tabindex="0" aria-label="' + T("Voltear credencial", "Flip credential") + '"><div class="kc">' + (A.flip ? c.back : c.front) + "</div></div>" +
         '<div class="ka-flip"><span class="ka-ok' + (st === "active" ? "" : " bad") + '"><i>' + (st === "active" ? "✓" : "!") + "</i>" +
         (st === "active" ? T("Vigente · verificada por KAI", "Valid · verified by KAI") : st === "expired" ? T("Credencial vencida", "Credential expired") : T("Credencial inactiva", "Credential inactive")) +
-        '</span><button data-a="flip">' + svg("qr") + (A.flip ? T("Ver frente", "Show front") : T("Mostrar QR", "Show QR")) + "</button></div></div>";
+        '</span><button data-a="qrfull">' + svg("qr") + T("Mostrar QR", "Show QR") + "</button></div></div>";
     } else {
       h += '<div class="ka-credw"><div class="ka-card ka-nocred"><h3>' + T("Su credencial aún no está activa", "Your credential isn't active yet") + "</h3><p>" +
         T("Cuando su membresía esté aprobada y pagada, su credencial aparecerá aquí.", "Once your membership is approved and paid, your credential will appear here.") + "</p></div></div>";
@@ -146,9 +146,9 @@
     }
     if (m && m.valid_through) {
       var end = d8(m.valid_through), start = new Date(end); start.setFullYear(start.getFullYear() - 1);
-      var left = Math.max(0, Math.ceil((end - new Date()) / 864e5)), pct = Math.min(100, Math.max(4, 100 * (new Date() - start) / (end - start)));
-      h += '<div class="ka-sec">' + T("Mi membresía", "My membership") + '</div><a class="ka-mem" href="/app/profile"><div class="r1"><div><b>' + (state(m) === "active" ? T("Activa", "Active") : T("Por renovar", "Needs renewal")) + "</b><span>" +
-        T("Vigente hasta el ", "Valid through ") + esc(fdate(m.valid_through)) + '</span></div><div class="lf"><b>' + left + "</b><span>" + T("días", "days") + '</span></div></div><div class="bar"><i style="width:' + pct.toFixed(0) + '%"></i></div></a>';
+      var left = Math.max(0, Math.ceil((end - new Date()) / 864e5)), pct = Math.min(100, Math.max(left ? 3 : 0, 100 * left / Math.max(1, (end - start) / 864e5))), warn = left <= 30;
+      h += '<div class="ka-sec">' + T("Mi membresía", "My membership") + '</div><a class="ka-mem' + (warn ? " warn" : "") + '" href="/app/profile"><div class="r1"><div><b>' + (state(m) !== "active" || left === 0 ? T("Renueve su membresía", "Renew your membership") : warn ? T("Renueve pronto", "Renew soon") : T("Activa y al día", "Active and current")) + "</b><span>" +
+        T("Vigente hasta el ", "Valid through ") + esc(fdate(m.valid_through)) + '</span></div><div class="lf"><b>' + left + "</b><span>" + T("días restantes", "days left") + '</span></div></div><div class="bar"><i style="width:' + pct.toFixed(0) + '%"></i></div>' + (warn ? '<span class="rn">' + T("Renovar ahora →", "Renew now →") + "</span>" : "") + "</a>";
     }
     h += installHTML();
     return h;
@@ -172,7 +172,7 @@
   }
 
   function eventsHTML() {
-    var h = hero({ cls: "sm", eb: "KAI", title: T("Eventos", "Events"), sub: T("Conéctese con otros pastores", "Connect with fellow pastors") });
+    var h = hero({ cls: "sm", eb: T("Comunidad", "Community"), title: T("Eventos", "Events"), sub: T("Conéctese con otros pastores", "Connect with fellow pastors") });
     if (!A.events) return h + '<div class="ka-load"><div class="ka-sp"></div></div>';
     if (!A.events.length) return h + emptyHTML("cal", T("Sin eventos por ahora", "No events right now"), T("Cuando KAI anuncie un evento, aparecerá aquí.", "When KAI announces an event, it will show up here."));
     return h + '<div class="ka-list">' + A.events.map(function (e, i) {
@@ -186,7 +186,7 @@
   }
 
   function inboxHTML() {
-    return hero({ cls: "sm", eb: "KAI", title: T("Avisos", "Notices"), sub: T("Mensajes del equipo y recordatorios", "Team messages and reminders") }) +
+    return hero({ cls: "sm", eb: T("Bandeja", "Inbox"), title: T("Avisos", "Notices"), sub: T("Mensajes del equipo y recordatorios", "Team messages and reminders") }) +
       '<div class="ka-empty art"><div class="bub"><i class="b1"></i><i class="b2"></i><i class="b3">' + svg("bell") + "</i></div><h3>" + T("Todo al día", "All caught up") + "</h3><p>" +
       T("Aquí le llegarán los mensajes del equipo de KAI, los recordatorios de eventos y las respuestas a sus solicitudes.", "Messages from the KAI team, event reminders and replies to your requests will appear here.") + "</p></div>" +
       '<div class="ka-card ka-tip"><span class="ic">' + svg("bell") + "</span><div><h3>" + T("Avisos en su celular", "Notices on your phone") + "</h3><p>" +
@@ -195,13 +195,15 @@
 
   function profileHTML() {
     var m = A.m;
-    if (!m) return hero({ cls: "sm", eb: "KAI", title: T("Perfil", "Profile"), sub: esc(A.user && A.user.email) }) + outHTML();
+    if (!m) return hero({ cls: "sm", title: T("Perfil", "Profile"), sub: esc(A.user && A.user.email) }) + outHTML();
     var st = state(m), cls = st === "active" ? "" : st === "expired" ? "exp" : "ina";
     var h = hero({ cls: "prof", title: esc(m.full_name), sub: esc(m.title || ""), side: avatar(m, "lg"),
       extra: '<div class="pchips"><span class="ka-pill ' + cls + '">' + (st === "active" ? T("Credencial activa", "Active credential") : st === "expired" ? T("Vencida", "Expired") : T("Inactiva", "Inactive")) + "</span><span>" + esc(m.credential_no || "") + "</span></div>" });
     function grp(title, rows) { return '<div class="ka-sec">' + title + '</div><dl class="ka-dl">' + rows.map(function (r) { return "<div><dt>" + svg(r[0]) + r[1] + "</dt><dd>" + r[2] + "</dd></div>"; }).join("") + "</dl>"; }
     h += grp(T("Membresía", "Membership"), [["card", T("Credencial", "Credential"), esc(m.credential_no || "—")], ["cal", T("Miembro desde", "Member since"), esc(fdate(m.member_since) || "—")], ["cal", T("Vence", "Expires"), esc(fdate(m.valid_through) || "—")]]);
     h += grp(T("Ministerio y contacto", "Ministry & contact"), [["home", T("Iglesia", "Church"), esc(m.church || "—")], ["pin", T("Ciudad", "City"), esc([m.city, m.state].filter(Boolean).join(", ") || "—")], ["bell", T("Teléfono", "Phone"), esc(m.phone ? (window.KPH ? KPH(m.phone) : m.phone) : "—")], ["user", T("Correo", "Email"), esc(m.email || "—")]]);
+    var l = L_();
+    h += '<div class="ka-sec">' + T("Idioma de la app", "App language") + '</div><div class="ka-seg" role="group" aria-label="Language"><button data-l="es" aria-pressed="' + (l === "es") + '">Español</button><button data-l="en" aria-pressed="' + (l === "en") + '">English</button></div>';
     return h + '<a class="ka-btn line wide" href="/membership" style="margin-top:16px">' + T("Pedir un cambio de datos", "Request a change") + "</a>" + outHTML();
   }
   function outHTML() { return '<button class="ka-btn line wide" data-a="out" style="margin-top:14px;border-color:#d0c7b2;color:#5b6577">' + T("Cerrar sesión", "Sign out") + "</button>"; }
@@ -314,7 +316,7 @@
     var t = A.team || { st: "load" };
     var name = (A.me && A.me.name) || first(A.m);
     var h = hero({ cls: "team", eb: T("Equipo KAI", "KAI team"), title: T("Hola, ", "Hello, ") + esc(String(name || "").split(" ")[0]), sub: todayLong(),
-      extra: '<div class="kt-roles">' + A.roles.map(function (r) { return "<span>" + esc((ROLE_N[r] || [r, r])[L_() === "es" ? 0 : 1]) + "</span>"; }).join("") + "</div>" });
+      extra: '<div class="kt-roles">' + A.roles.map(function (r) { return esc((ROLE_N[r] || [r, r])[L_() === "es" ? 0 : 1]); }).join(" · ") + "</div>" });
     if (t.st === "load") return h + '<div class="ka-load"><div class="ka-sp"></div></div>';
     if (t.st === "err") return h + '<div class="ka-card"><h3>' + T("No pudimos cargar el equipo", "We couldn't load the team") + '</h3><p>' + T("Revise su internet e intente de nuevo.", "Check your internet and try again.") + '</p><button class="ka-btn navy" data-a="tretry">' + T("Intentar de nuevo", "Try again") + "</button></div>";
     if (t.st === "enroll") return h + '<div class="ka-card kt-lock"><div class="ic">' + ti("lock") + "</div><h3>" + T("Active la verificación en dos pasos", "Turn on two-step verification") + "</h3><p>" +
@@ -389,6 +391,7 @@
     if (a.dataset.l) { window.L = a.dataset.l; try { localStorage.setItem("kai-lang", a.dataset.l); } catch (x) {} var lb = document.querySelector('.lang button[data-l="' + a.dataset.l + '"]'); if (lb) lb.click(); else paint(); return; }
     var k = a.dataset.a;
     if (k === "flip") { A.flip = !A.flip; paint(); return; }
+    if (k === "qrfull") { qrFull(); return; }
     if (k === "tretry") { A.team = { st: "load" }; paint(); loadTeam(); return; }
     if (k === "soon") { sheet(a.dataset.w); return; }
     if (k === "tdone") {
@@ -412,6 +415,56 @@
 
   window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); A.deferred = e; if (A.tab === "home") paint(); });
   window.addEventListener("appinstalled", function () { A.deferred = null; paint(); });
+
+
+  /* ---------- Credencial en pantalla completa (para escanear) ---------- */
+  function qrFull() {
+    var m = A.m; if (!m) return;
+    var base = /(^|\.)kaie44\.org$/.test(location.hostname) ? "https://www.kaie44.org" : location.origin;
+    var url = base + "/verify/" + encodeURIComponent(m.verify_code || ""), qr = "";
+    try { var q = window.qrcode(0, "M"); q.addData(url); q.make(); qr = q.createSvgTag({ cellSize: 6, margin: 0, scalable: true }); } catch (e) { qr = '<p style="color:#5b6577">' + T("Sin conexión para generar el código.", "Offline: can't build the code.") + "</p>"; }
+    var st = state(m), d = document.createElement("div"); d.id = "ka-qr"; d.className = "ka-qr";
+    d.innerHTML = '<button class="x" data-x="1" aria-label="' + T("Cerrar", "Close") + '">×</button><div class="in"><img src="images/logo.png" alt="KAI">' +
+      '<div class="who">' + avatar(m) + "<div><b>" + esc(m.full_name) + "</b><span>" + esc(m.title || "") + "</span></div></div>" +
+      '<div class="code">' + qr + '</div><div class="st ' + (st === "active" ? "ok" : "no") + '">' + (st === "active" ? "✓ " + T("Credencial vigente", "Valid credential") : T("Credencial no vigente", "Credential not valid")) + "</div>" +
+      '<p class="no">' + esc(m.credential_no || "") + "</p><p class=\"hint\">" + T("Suba el brillo de su pantalla para que el código se lea mejor.", "Turn up your screen brightness so the code scans easily.") + "</p></div>";
+    document.body.appendChild(d);
+    d.addEventListener("click", function (e) { if (e.target.dataset.x || e.target === d) d.remove(); });
+  }
+
+  /* ---------- Jalar hacia abajo para actualizar ---------- */
+  (function () {
+    var y0 = null, dy = 0, ind = null;
+    function on() { return document.body.classList.contains("is-app") && !document.body.classList.contains("is-appteam") && /^(home|inbox|team|events)$/.test(A.tab) && (A.st === "in" || A.st === "none"); }
+    window.addEventListener("touchstart", function (e) { if (!on() || window.scrollY > 0) { y0 = null; return; } y0 = e.touches[0].clientY; dy = 0; }, { passive: true });
+    window.addEventListener("touchmove", function (e) {
+      if (y0 == null) return; dy = e.touches[0].clientY - y0; if (dy <= 0) return;
+      if (!ind) { ind = document.createElement("div"); ind.className = "ka-ptr"; ind.innerHTML = '<i class="ka-sp"></i>'; document.body.appendChild(ind); }
+      var p = Math.min(dy, 110); ind.style.transform = "translate(-50%," + (p * .6) + "px) rotate(" + (p * 3) + "deg)"; ind.style.opacity = Math.min(1, p / 70);
+    }, { passive: true });
+    window.addEventListener("touchend", function () {
+      if (y0 == null) return; y0 = null;
+      if (ind && dy > 75) { ind.classList.add("go"); refresh().then(function () { if (ind) { ind.remove(); ind = null; } }); }
+      else if (ind) { ind.remove(); ind = null; }
+    });
+  })();
+  function refresh() {
+    var jobs = [loadEvents()];
+    if (A.roles.length) jobs.push(loadTeam());
+    jobs.push(load());
+    return Promise.all(jobs).catch(function () {});
+  }
+
+  /* ---------- Pantalla de bienvenida al abrir la app instalada ---------- */
+  (function () {
+    if (!standalone() || !/^\/app/.test(location.pathname)) return;
+    var sp = document.createElement("div"); sp.className = "ka-splash"; sp.innerHTML = '<img src="images/logo.png" alt="Kingdom Alliance International"><i></i>';
+    (document.body || document.documentElement).appendChild(sp);
+    var t0 = Date.now();
+    function done() { var w = Math.max(0, 650 - (Date.now() - t0)); setTimeout(function () { sp.classList.add("out"); setTimeout(function () { sp.remove(); }, 450); }, w); }
+    var iv = setInterval(function () { if (A.st !== "load") { clearInterval(iv); done(); } }, 80);
+    setTimeout(function () { clearInterval(iv); done(); }, 2500);
+  })();
 
   /* ---------- botón "Volver a la app" en páginas del sitio ---------- */
   function backBtn(v) {
