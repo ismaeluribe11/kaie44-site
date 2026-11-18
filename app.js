@@ -757,6 +757,10 @@
       ["care", T("Cuidado pastoral", "Pastoral care"), T("Confidencial. Solo lo ve el equipo de cuidado pastoral.", "Confidential. Only the pastoral care team sees it.")]
     ];
   }
+  function LEADT() {
+    return [["morphe", "Instituto Morphē", T("Formación para pastores y líderes.", "Training for pastors and leaders."), "https://institutomorphe.org"],
+      ["talleres", T("Talleres para la iglesia", "Workshops for your church"), T("Capacitación para sus líderes y su congregación.", "Training for your leaders and congregation."), ""]];
+  }
   function kindName(k) { var x = KINDS().filter(function (r) { return r[0] === k; })[0]; return x ? x[1] : k; }
   function ccSt(s) { return s === "done" ? T("Resuelta", "Resolved") : s === "progress" ? T("En proceso", "In progress") : T("Recibida", "Received"); }
   function ccStTeam(s) { return s === "done" ? T("Resuelta", "Resolved") : s === "progress" ? T("En proceso", "In progress") : T("Nueva", "New"); }
@@ -847,7 +851,15 @@
     h += '<div class="cc-sheet">';
     if (kind === "admin") h += '<p class="cc-note">' + T("Le orientamos y le decimos por dónde empezar; no hacemos el trámite por usted.", "We guide you and tell you where to start; we don't do the paperwork for you.") + "</p>";
     if (kind === "care") h += '<p class="cc-note conf">' + cci("lock") + T("Confidencial: solo lo verá el equipo de cuidado pastoral. Las notificaciones no muestran su mensaje.", "Confidential: only the pastoral care team will see it. Notifications never show your message.") + "</p>";
-    h += '<label class="cc-lb" for="cc-b">' + T("Su mensaje", "Your message") + '</label><textarea class="cc-ta" id="cc-b" rows="6" maxlength="2000" placeholder="' + esc(ph) + '">' + esc(f.body || "") + "</textarea>";
+    if (kind === "leader") {
+      var tp = f.topics || (f.topics = []);
+      h += '<div class="cc-lb">' + T("¿Qué le interesa? · Puede escoger las dos", "What interests you? · You can choose both") + '</div><div class="cc-top2">' + LEADT().map(function (o) {
+        var on = tp.indexOf(o[0]) >= 0;
+        return '<div class="cc-opt' + (on ? " on" : "") + '"><button data-a="cctop" data-v="' + o[0] + '" aria-pressed="' + on + '"><span class="cc-ck">' + (on ? "✓" : "") + "</span><span><b>" + o[1] + "</b><small>" + o[2] + "</small></span></button>" +
+          (o[3] ? '<a class="cc-ext" href="' + o[3] + '" target="_blank" rel="noopener" data-a="ccext">' + T("Conocer el Instituto", "About the Institute") + " ↗</a>" : "") + "</div>";
+      }).join("") + "</div>";
+    }
+    h += '<label class="cc-lb" for="cc-b">' + (kind === "leader" ? T("Mensaje (opcional)", "Message (optional)") : T("Su mensaje", "Your message")) + '</label><textarea class="cc-ta" id="cc-b" rows="6" maxlength="2000" placeholder="' + esc(ph) + '">' + esc(f.body || "") + "</textarea>";
     h += '<div class="cc-lb">' + T("¿Cómo prefiere que le contactemos?", "How would you like us to reach you?") + '</div><div class="cc-con">' +
       [["app", "chat"], ["phone", "phone"], ["text", "msg"], ["email", "mail"]].map(function (c) { return '<button data-a="cccon" data-v="' + c[0] + '" class="' + (f.contact === c[0] ? "on" : "") + '">' + cci(c[1]) + (c[0] === "text" ? T("Texto", "Text") : contactName(c[0])) + "</button>"; }).join("") + "</div>";
     if (f.contact === "phone" || f.contact === "text") h += '<input class="cc-ta cc-ph" id="cc-ph" type="tel" inputmode="tel" autocomplete="tel" value="' + esc(f.phone || "") + '" placeholder="' + T("Su teléfono · 123-456-7890", "Your phone · 123-456-7890") + '">';
@@ -937,13 +949,18 @@
   async function ccClick(k, a) {
     var m = $("cc-m");
     function bad(t) { if (m) { m.textContent = t; m.className = "ka-msg err"; } a.disabled = false; }
+    if (k === "cctop") { var ft = A.ccForm, bt = $("cc-b"); if (bt) ft.body = bt.value; ft.topics = ft.topics || []; var ix = ft.topics.indexOf(a.dataset.v); if (ix >= 0) ft.topics.splice(ix, 1); else ft.topics.push(a.dataset.v); paint(); return true; }
+    if (k === "ccext") { var fe = A.ccForm, be = $("cc-b"); if (fe && be) fe.body = be.value; return false; }
     if (k === "cccon") { var f = A.ccForm; var b = $("cc-b"), ph = $("cc-ph"); if (b) f.body = b.value; if (ph) f.phone = ph.value; f.contact = a.dataset.v; paint(); return true; }
     if (k === "ccnew") {
       var F = A.ccForm, bb = $("cc-b"), pp = $("cc-ph"); F.body = bb ? bb.value.trim() : ""; if (pp) F.phone = pp.value.trim();
-      if (F.body.length < 5) return bad(T("Cuéntenos un poco más en el mensaje.", "Tell us a little more in the message.")), true;
+      var tops = F.kind === "leader" ? LEADT().filter(function (o) { return (F.topics || []).indexOf(o[0]) >= 0; }).map(function (o) { return o[1]; }) : [];
+      if (F.kind === "leader" && !tops.length && F.body.length < 5) return bad(T("Escoja Instituto Morphē, Talleres o ambos.", "Choose Instituto Morphē, Workshops or both.")), true;
+      if (F.kind !== "leader" && F.body.length < 5) return bad(T("Cuéntenos un poco más en el mensaje.", "Tell us a little more in the message.")), true;
+      var sendBody = tops.length ? T("Me interesa: ", "I'm interested in: ") + tops.join(" · ") + (F.body ? "\n\n" + F.body : "") : F.body;
       a.disabled = true; a.textContent = T("Enviando…", "Sending…");
       try {
-        var r = await sb().rpc("cc_new", { p_kind: F.kind, p_body: F.body, p_contact: F.contact, p_phone: (F.contact === "phone" || F.contact === "text") ? F.phone : null });
+        var r = await sb().rpc("cc_new", { p_kind: F.kind, p_body: sendBody, p_contact: F.contact, p_phone: (F.contact === "phone" || F.contact === "text") ? F.phone : null });
         if (r.error) throw r.error; kick(); var kk = F.kind; A.ccForm = null; A.ccOne = null; loadCC(); KGO("/app/help/" + r.data, true); ccSuccess(kk, r.data);
       } catch (e) { a.textContent = T("Enviar al equipo", "Send to the team"); bad(ccErr(e)); }
       return true;

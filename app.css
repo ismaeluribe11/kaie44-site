@@ -668,3 +668,13 @@ a.kt-act{display:block;text-decoration:none}
 .cc-ok .pn{font-family:var(--sans,Inter,system-ui,sans-serif)}
 .cc-ok h2{font-family:Fraunces,Georgia,serif}
 .cc-okb{display:block;width:100%;border:0;border-radius:16px;padding:15px;font:inherit;font-weight:800;font-size:15.5px;color:#fff;background:linear-gradient(160deg,#16336f,#0b1f4b);box-shadow:0 10px 22px rgba(11,31,75,.25)}
+/* Desarrollo de liderazgo: Instituto Morphē / Talleres */
+.cc-top2{display:grid;gap:10px;margin-bottom:18px}
+.cc-opt{border:1.5px solid #e6dfcf;border-radius:18px;background:#fff;overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.cc-opt>button{display:flex;gap:12px;align-items:flex-start;width:100%;padding:14px;border:0;background:none;text-align:left;font:inherit;color:#0b1f4b}
+.cc-opt b{display:block;font-size:15.5px}
+.cc-opt small{display:block;font-size:13px;color:#5b6577;line-height:1.4;margin-top:2px}
+.cc-ck{flex:none;width:24px;height:24px;margin-top:1px;border-radius:8px;border:2px solid #d6cdb8;display:grid;place-items:center;font-size:14px;font-weight:900;color:#fff}
+.cc-opt.on{border-color:#c8643b;box-shadow:0 10px 22px rgba(162,74,37,.14);background:linear-gradient(180deg,#fff,#fff8f3)}
+.cc-opt.on .cc-ck{border-color:transparent;background:linear-gradient(145deg,#e8946a,#b24e27)}
+.cc-ext{display:inline-flex;align-items:center;gap:4px;margin:-4px 0 12px 50px;font-size:13px;font-weight:700;color:#b24e27;text-decoration:none;border-bottom:1px solid rgba(178,78,39,.3)}
