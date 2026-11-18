@@ -36,7 +36,9 @@
     user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>',
     team: '<circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M3 20c0-3 2.5-5 5-5s5 2 5 5M11 20c0-3 2.5-5 5-5s5 2 5 5"/>',
     card: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M14 10h4M14 14h4M6 16c.8-1.5 5.2-1.5 6 0"/>',
-    back: '<path d="M15 18l-6-6 6-6"/>'
+    back: '<path d="M15 18l-6-6 6-6"/>',
+    qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7h-4M17 21v-1"/>',
+    pin: '<path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'
   };
   function svg(k) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + IC[k] + "</svg>"; }
 
@@ -83,9 +85,8 @@
     var html = "";
     if (A.st === "load") html = '<div class="ka-load"><div class="ka-sp"></div>' + T("Cargando…", "Loading…") + "</div>";
     else if (A.st === "out") html = loginHTML();
-    else if (A.st === "down") html = topHTML() + '<div class="ka-empty"><h3>' + T("Sin conexión", "No connection") + "</h3><p>" + T("No pudimos conectar con KAI. Revise su internet e intente de nuevo.", "We couldn't reach KAI. Check your internet and try again.") + '</p><button class="ka-btn navy" data-a="retry">' + T("Intentar de nuevo", "Try again") + "</button></div>";
+    else if (A.st === "down") html = hero({ eb: "KAI", title: T("Sin conexión", "No connection") }) + '<div class="ka-empty"><h3>' + T("Sin conexión", "No connection") + "</h3><p>" + T("No pudimos conectar con KAI. Revise su internet e intente de nuevo.", "We couldn't reach KAI. Check your internet and try again.") + '</p><button class="ka-btn navy" data-a="retry">' + T("Intentar de nuevo", "Try again") + "</button></div>";
     else {
-      html = topHTML();
       if (tab === "events") html += eventsHTML();
       else if (tab === "inbox") html += inboxHTML();
       else if (tab === "profile") html += profileHTML();
@@ -101,37 +102,58 @@
     setBadge();
   }
 
-  function topHTML() {
+  function rings() { return '<svg class="rg" viewBox="0 0 400 400" aria-hidden="true"><g fill="none" stroke="#e3bf63"><circle cx="200" cy="200" r="190" stroke-opacity=".10"/><circle cx="200" cy="200" r="150" stroke-opacity=".14"/><circle cx="200" cy="200" r="110" stroke-opacity=".18"/><circle cx="200" cy="200" r="70" stroke-opacity=".22"/></g></svg>'; }
+  function hero(o) {
     var l = L_();
-    return '<div class="ka-top"><img src="images/logo.png" alt="Kingdom Alliance International"><div class="ka-lang" role="group" aria-label="Language">' +
-      '<button data-l="es" aria-pressed="' + (l === "es") + '">ES</button><button data-l="en" aria-pressed="' + (l === "en") + '">EN</button></div></div>';
+    return '<div class="ka-hero ' + (o.cls || "") + '">' + rings() + '<i class="glow"></i><div class="hb"><img class="lw" src="images/logo.png" alt="Kingdom Alliance International"><div class="ka-lang" role="group" aria-label="Language">' +
+      '<button data-l="es" aria-pressed="' + (l === "es") + '">ES</button><button data-l="en" aria-pressed="' + (l === "en") + '">EN</button></div></div>' +
+      '<div class="ht"><div class="tx">' + (o.eb ? "<small>" + o.eb + "</small>" : "") + "<h1>" + o.title + "</h1>" + (o.sub ? "<p>" + o.sub + "</p>" : "") + "</div>" + (o.side || "") + "</div>" + (o.extra || "") + "</div>";
   }
+  function avatar(m, cls) {
+    var ph = m && m.photo_url;
+    return '<div class="ka-av ' + (cls || "") + '"' + (ph ? ' style="background-image:url(&quot;' + esc(ph) + '&quot;)">' : ">" + esc(first(m).charAt(0) || "K")) + "</div>";
+  }
+  function todayLong() { return cap(new Date().toLocaleDateString(L_() === "es" ? "es-MX" : "en-US", { weekday: "long", day: "numeric", month: "long" })); }
 
   function greet() { var h = new Date().getHours(); return h < 12 ? T("Buenos días", "Good morning") : h < 19 ? T("Buenas tardes", "Good afternoon") : T("Buenas noches", "Good evening"); }
   function first(m) { return String((m && m.full_name) || "").trim().split(/\s+/)[0] || ""; }
 
   function homeHTML() {
-    var m = A.m, h = '<div class="ka-hi"><small>' + greet() + "</small><h1>" + esc(first(m) || T("Bienvenido", "Welcome")) + "</h1></div>";
+    var m = A.m;
+    var h = hero({ cls: "home", eb: greet(), title: esc(first(m) || T("Bienvenido", "Welcome")), sub: todayLong(), side: m ? '<a href="/app/profile" class="avl" aria-label="' + T("Mi perfil", "My profile") + '">' + avatar(m) + "</a>" : "" });
     if (m && window.KAI && window.KAI.cred) {
       var c = window.KAI.cred(m), st = state(m);
-      h += '<div class="ka-cred" data-a="flip" role="button" tabindex="0" aria-label="' + T("Voltear credencial", "Flip credential") + '"><div class="kc">' + (A.flip ? c.back : c.front) + "</div></div>" +
+      h += '<div class="ka-credw"><div class="ka-cred' + (A.flip ? " back" : "") + '" data-a="flip" role="button" tabindex="0" aria-label="' + T("Voltear credencial", "Flip credential") + '"><div class="kc">' + (A.flip ? c.back : c.front) + "</div></div>" +
         '<div class="ka-flip"><span class="ka-ok' + (st === "active" ? "" : " bad") + '"><i>' + (st === "active" ? "✓" : "!") + "</i>" +
-        (st === "active" ? T("Credencial vigente · verificada por KAI", "Valid credential · verified by KAI") : st === "expired" ? T("Credencial vencida", "Credential expired") : T("Credencial inactiva", "Credential inactive")) +
-        '</span><button data-a="flip">' + (A.flip ? T("Ver frente", "Show front") : T("Ver código QR", "Show QR code")) + "</button></div>";
+        (st === "active" ? T("Vigente · verificada por KAI", "Valid · verified by KAI") : st === "expired" ? T("Credencial vencida", "Credential expired") : T("Credencial inactiva", "Credential inactive")) +
+        '</span><button data-a="flip">' + svg("qr") + (A.flip ? T("Ver frente", "Show front") : T("Mostrar QR", "Show QR")) + "</button></div></div>";
     } else {
-      h += '<div class="ka-card"><h3>' + T("Su credencial aún no está activa", "Your credential isn't active yet") + "</h3><p>" +
-        T("Cuando su membresía esté aprobada y pagada, su credencial aparecerá aquí.", "Once your membership is approved and paid, your credential will appear here.") + "</p></div>";
+      h += '<div class="ka-credw"><div class="ka-card ka-nocred"><h3>' + T("Su credencial aún no está activa", "Your credential isn't active yet") + "</h3><p>" +
+        T("Cuando su membresía esté aprobada y pagada, su credencial aparecerá aquí.", "Once your membership is approved and paid, your credential will appear here.") + "</p></div></div>";
     }
+    h += '<div class="ka-qa">' +
+      qa("/app/events", "cal", "tc", T("Eventos", "Events")) +
+      qa("/app/inbox", "bell", "gd", T("Avisos", "Notices"), A.unread) +
+      qa("/app/profile", "card", "bl", T("Membresía", "Membership")) +
+      (A.roles.length ? qa("/app/team", "team", "nv", T("Equipo", "Team"), A.tcount) : qa("/app/profile", "user", "nv", T("Perfil", "Profile"))) + "</div>";
     var ev = (A.events || [])[0];
-    h += '<div class="ka-tiles">' +
-      tile("/app/events", "cal", T("Eventos", "Events"), ev ? esc(evTitle(ev)) + " · " + esc(fdt(ev.starts_at, { day: "numeric", month: "short" })) : A.events ? T("Sin eventos por ahora", "No events right now") : T("Cargando…", "Loading…"), "") +
-      tile("/app/inbox", "bell", T("Avisos", "Notices"), A.unread ? T(A.unread + " nuevos", A.unread + " new") : T("Al día", "All caught up"), A.unread ? "hot" : "g", A.unread) +
-      tile("/app/profile", "card", T("Mi membresía", "My membership"), m && m.valid_through ? T("Vence el ", "Expires ") + esc(fdate(m.valid_through, { day: "numeric", month: "short", year: "numeric" })) : T("Ver mis datos", "View my details"), "") +
-      (A.roles.length ? tile("/app/team", "team", T("Equipo", "Team"), A.tcount ? T(A.tcount + " pendientes", A.tcount + " to do") : T("Panel del equipo", "Team panel"), A.tcount ? "hot" : "g", A.tcount) : tile("/app/profile", "user", T("Perfil", "Profile"), T("Mis datos e idioma", "My details & language"), "g")) +
-      "</div>";
+    if (ev) {
+      var d = new Date(ev.starts_at), days = Math.ceil((d - new Date()) / 864e5);
+      h += '<div class="ka-sec">' + T("Próximo evento", "Next event") + '</div><a class="ka-next" href="/ev/' + esc(ev.slug) + '" style="background-image:url(&quot;' + esc(ev.photo_url || "images/mission.jpg") + '&quot;)">' +
+        '<span class="cd">' + (days <= 0 ? T("¡Hoy!", "Today!") : days === 1 ? T("Mañana", "Tomorrow") : T("En " + days + " días", "In " + days + " days")) + "</span>" +
+        '<div class="nb"><div class="dt"><b>' + esc(fdt(d, { month: "short" }).replace(".", "").toUpperCase()) + "</b><i>" + d.getDate() + "</i></div><div><h3>" + esc(evTitle(ev)) + "</h3><p>" + esc(cap(fdt(d, { weekday: "long", hour: "numeric", minute: "2-digit" }))) + (ev.venue ? " · " + esc(ev.venue) : "") + "</p></div></div>" +
+        '<span class="go">' + (ev.open ? T("Registrarme", "Register") : T("Ver evento", "View event")) + " →</span></a>";
+    }
+    if (m && m.valid_through) {
+      var end = d8(m.valid_through), start = new Date(end); start.setFullYear(start.getFullYear() - 1);
+      var left = Math.max(0, Math.ceil((end - new Date()) / 864e5)), pct = Math.min(100, Math.max(4, 100 * (new Date() - start) / (end - start)));
+      h += '<div class="ka-sec">' + T("Mi membresía", "My membership") + '</div><a class="ka-mem" href="/app/profile"><div class="r1"><div><b>' + (state(m) === "active" ? T("Activa", "Active") : T("Por renovar", "Needs renewal")) + "</b><span>" +
+        T("Vigente hasta el ", "Valid through ") + esc(fdate(m.valid_through)) + '</span></div><div class="lf"><b>' + left + "</b><span>" + T("días", "days") + '</span></div></div><div class="bar"><i style="width:' + pct.toFixed(0) + '%"></i></div></a>';
+    }
     h += installHTML();
     return h;
   }
+  function qa(href, ic, c, label, n) { return '<a class="qa q-' + c + '" href="' + href + '"><span class="ic">' + svg(ic) + (n ? '<i class="ka-bdg">' + n + "</i>" : "") + "</span>" + label + "</a>"; }
   function tile(href, ic, b, s, cls, n) {
     return '<a class="ka-tile ' + (cls || "") + '" href="' + href + '"><div class="ic">' + svg(ic) + "</div><b>" + b + "</b><span>" + s + "</span>" + (n ? '<i class="ka-bdg">' + n + "</i>" : "") + "</a>";
   }
@@ -150,44 +172,37 @@
   }
 
   function eventsHTML() {
-    var h = '<h2 class="ka-h2">' + T("Eventos", "Events") + "</h2>";
+    var h = hero({ cls: "sm", eb: "KAI", title: T("Eventos", "Events"), sub: T("Conéctese con otros pastores", "Connect with fellow pastors") });
     if (!A.events) return h + '<div class="ka-load"><div class="ka-sp"></div></div>';
     if (!A.events.length) return h + emptyHTML("cal", T("Sin eventos por ahora", "No events right now"), T("Cuando KAI anuncie un evento, aparecerá aquí.", "When KAI announces an event, it will show up here."));
-    return h + A.events.map(function (e) {
-      var cx = String(e.status || "") === "cancelled";
-      var d = new Date(e.starts_at);
-      return '<a class="ka-ev" href="/ev/' + esc(e.slug) + '"><div class="ph" style="background-image:url(&quot;' + esc(e.photo_url || "images/mission.jpg") + '&quot;)">' +
-        '<div class="dt"><b>' + esc(fdt(d, { month: "short" }).replace(".", "").toUpperCase()) + "</b><i>" + d.getDate() + "</i></div></div>" +
-        '<div class="bd"><h3>' + esc(evTitle(e)) + '</h3><div class="m">' + esc(cap(fdt(d, { weekday: "long", hour: "numeric", minute: "2-digit" }))) + (e.venue ? " · " + esc(e.venue) : "") + "</div>" +
-        (cx ? '<span class="cx">' + T("Cancelado", "Cancelled") + "</span>" : '<div class="go">' + (e.open ? T("Ver y registrarme →", "View & register →") : T("Ver detalles →", "View details →")) + "</div>") + "</div></a>";
-    }).join("");
+    return h + '<div class="ka-list">' + A.events.map(function (e, i) {
+      var cx = String(e.status || "") === "cancelled", d = new Date(e.starts_at), days = Math.ceil((d - new Date()) / 864e5);
+      return '<a class="ka-ev" href="/ev/' + esc(e.slug) + '" style="--i:' + i + ';background-image:url(&quot;' + esc(e.photo_url || "images/mission.jpg") + '&quot;)">' +
+        '<div class="dt"><b>' + esc(fdt(d, { month: "short" }).replace(".", "").toUpperCase()) + "</b><i>" + d.getDate() + "</i></div>" +
+        (cx ? '<span class="cd cx">' + T("Cancelado", "Cancelled") + "</span>" : '<span class="cd">' + (days <= 0 ? T("¡Hoy!", "Today!") : days === 1 ? T("Mañana", "Tomorrow") : T("En " + days + " días", "In " + days + " days")) + "</span>") +
+        '<div class="bd"><h3>' + esc(evTitle(e)) + '</h3><p>' + svg("cal") + esc(cap(fdt(d, { weekday: "long", hour: "numeric", minute: "2-digit" }))) + "</p>" + (e.venue ? "<p>" + svg("pin") + esc(e.venue) + "</p>" : "") +
+        (cx ? "" : '<span class="go">' + (e.open ? T("Registrarme", "Register") : T("Ver detalles", "View details")) + " →</span>") + "</div></a>";
+    }).join("") + "</div>";
   }
 
   function inboxHTML() {
-    return '<h2 class="ka-h2">' + T("Avisos", "Notices") + "</h2>" +
-      emptyHTML("bell", T("No tiene avisos nuevos", "No new notices"), T("Aquí le llegarán los mensajes del equipo de KAI, los recordatorios de eventos y las respuestas a sus solicitudes.", "Messages from the KAI team, event reminders and replies to your requests will appear here.")) +
-      '<div class="ka-card"><h3>' + T("Avisos en su celular", "Notices on your phone") + "</h3><p>" +
-      T("Muy pronto podrá activar los avisos para recibirlos aunque la app esté cerrada, con el numerito rojo sobre el ícono de KAI.", "Soon you'll be able to turn on notices and get them even when the app is closed, with the red badge on the KAI icon.") + "</p></div>";
+    return hero({ cls: "sm", eb: "KAI", title: T("Avisos", "Notices"), sub: T("Mensajes del equipo y recordatorios", "Team messages and reminders") }) +
+      '<div class="ka-empty art"><div class="bub"><i class="b1"></i><i class="b2"></i><i class="b3">' + svg("bell") + "</i></div><h3>" + T("Todo al día", "All caught up") + "</h3><p>" +
+      T("Aquí le llegarán los mensajes del equipo de KAI, los recordatorios de eventos y las respuestas a sus solicitudes.", "Messages from the KAI team, event reminders and replies to your requests will appear here.") + "</p></div>" +
+      '<div class="ka-card ka-tip"><span class="ic">' + svg("bell") + "</span><div><h3>" + T("Avisos en su celular", "Notices on your phone") + "</h3><p>" +
+      T("Muy pronto podrá activarlos para recibirlos aunque la app esté cerrada, con el numerito sobre el ícono de KAI.", "Soon you'll be able to turn them on and get them even when the app is closed, with a badge on the KAI icon.") + "</p></div></div>";
   }
 
   function profileHTML() {
     var m = A.m;
-    if (!m) return '<h2 class="ka-h2">' + T("Perfil", "Profile") + "</h2>" + '<div class="ka-card"><p>' + esc(A.user && A.user.email) + "</p></div>" + outHTML();
+    if (!m) return hero({ cls: "sm", eb: "KAI", title: T("Perfil", "Profile"), sub: esc(A.user && A.user.email) }) + outHTML();
     var st = state(m), cls = st === "active" ? "" : st === "expired" ? "exp" : "ina";
-    var ph = m.photo_url ? ' style="background-image:url(&quot;' + esc(m.photo_url) + '&quot;)">' : ">" + esc(first(m).charAt(0));
-    var rows = [
-      [T("Estado", "Status"), '<span class="ka-pill ' + cls + '">' + (st === "active" ? T("Activa", "Active") : st === "expired" ? T("Vencida", "Expired") : T("Inactiva", "Inactive")) + "</span>"],
-      [T("Credencial", "Credential"), esc(m.credential_no || "—")],
-      [T("Miembro desde", "Member since"), esc(fdate(m.member_since) || "—")],
-      [T("Vence", "Expires"), esc(fdate(m.valid_through) || "—")],
-      [T("Iglesia", "Church"), esc(m.church || "—")],
-      [T("Ciudad", "City"), esc([m.city, m.state].filter(Boolean).join(", ") || "—")],
-      [T("Teléfono", "Phone"), esc(m.phone ? (window.KPH ? KPH(m.phone) : m.phone) : "—")],
-      [T("Correo", "Email"), esc(m.email || "—")]
-    ];
-    return '<div class="ka-prof"><div class="ka-av"' + ph + "</div><div><h2>" + esc(m.full_name) + "</h2><span>" + esc(m.title || "") + "</span></div></div>" +
-      '<dl class="ka-dl">' + rows.map(function (r) { return "<div><dt>" + r[0] + "</dt><dd>" + r[1] + "</dd></div>"; }).join("") + "</dl>" +
-      '<div class="ka-row"><a class="ka-btn line" href="/membership">' + T("Pedir un cambio de datos", "Request a change") + "</a></div>" + outHTML();
+    var h = hero({ cls: "prof", title: esc(m.full_name), sub: esc(m.title || ""), side: avatar(m, "lg"),
+      extra: '<div class="pchips"><span class="ka-pill ' + cls + '">' + (st === "active" ? T("Credencial activa", "Active credential") : st === "expired" ? T("Vencida", "Expired") : T("Inactiva", "Inactive")) + "</span><span>" + esc(m.credential_no || "") + "</span></div>" });
+    function grp(title, rows) { return '<div class="ka-sec">' + title + '</div><dl class="ka-dl">' + rows.map(function (r) { return "<div><dt>" + svg(r[0]) + r[1] + "</dt><dd>" + r[2] + "</dd></div>"; }).join("") + "</dl>"; }
+    h += grp(T("Membresía", "Membership"), [["card", T("Credencial", "Credential"), esc(m.credential_no || "—")], ["cal", T("Miembro desde", "Member since"), esc(fdate(m.member_since) || "—")], ["cal", T("Vence", "Expires"), esc(fdate(m.valid_through) || "—")]]);
+    h += grp(T("Ministerio y contacto", "Ministry & contact"), [["home", T("Iglesia", "Church"), esc(m.church || "—")], ["pin", T("Ciudad", "City"), esc([m.city, m.state].filter(Boolean).join(", ") || "—")], ["bell", T("Teléfono", "Phone"), esc(m.phone ? (window.KPH ? KPH(m.phone) : m.phone) : "—")], ["user", T("Correo", "Email"), esc(m.email || "—")]]);
+    return h + '<a class="ka-btn line wide" href="/membership" style="margin-top:16px">' + T("Pedir un cambio de datos", "Request a change") + "</a>" + outHTML();
   }
   function outHTML() { return '<button class="ka-btn line wide" data-a="out" style="margin-top:14px;border-color:#d0c7b2;color:#5b6577">' + T("Cerrar sesión", "Sign out") + "</button>"; }
 
@@ -298,8 +313,8 @@
   function teamHTML() {
     var t = A.team || { st: "load" };
     var name = (A.me && A.me.name) || first(A.m);
-    var h = '<div class="ka-hi"><small>' + T("Equipo KAI", "KAI team") + "</small><h1>" + T("Hola, ", "Hello, ") + esc(String(name || "").split(" ")[0]) + '</h1><div class="kt-roles">' +
-      A.roles.map(function (r) { return "<span>" + esc((ROLE_N[r] || [r, r])[L_() === "es" ? 0 : 1]) + "</span>"; }).join("") + "</div></div>";
+    var h = hero({ cls: "team", eb: T("Equipo KAI", "KAI team"), title: T("Hola, ", "Hello, ") + esc(String(name || "").split(" ")[0]), sub: todayLong(),
+      extra: '<div class="kt-roles">' + A.roles.map(function (r) { return "<span>" + esc((ROLE_N[r] || [r, r])[L_() === "es" ? 0 : 1]) + "</span>"; }).join("") + "</div>" });
     if (t.st === "load") return h + '<div class="ka-load"><div class="ka-sp"></div></div>';
     if (t.st === "err") return h + '<div class="ka-card"><h3>' + T("No pudimos cargar el equipo", "We couldn't load the team") + '</h3><p>' + T("Revise su internet e intente de nuevo.", "Check your internet and try again.") + '</p><button class="ka-btn navy" data-a="tretry">' + T("Intentar de nuevo", "Try again") + "</button></div>";
     if (t.st === "enroll") return h + '<div class="ka-card kt-lock"><div class="ic">' + ti("lock") + "</div><h3>" + T("Active la verificación en dos pasos", "Turn on two-step verification") + "</h3><p>" +
@@ -313,7 +328,7 @@
       '<button class="kt-act" data-a="soon" data-w="reunion"><span class="ic">' + ti("zoom") + "</span><b>" + T("Nueva reunión", "New meeting") + "</b><small>" + T("Zoom, calendario y confirmación", "Zoom, calendar and RSVP") + "</small></button></div>";
 
     var rows = [];
-    function row(href, ic, label, sub, n, hot) { rows.push('<a class="kt-row' + (hot && n ? " hot" : "") + '" href="' + href + '"><span class="ic">' + ti(ic) + "</span><span class=\"tx\"><b>" + label + "</b><small>" + sub + "</small></span>" + (n ? '<i class="kt-n">' + n + "</i>" : '<i class="kt-ok">' + ti("check") + "</i>") + '<span class="ch">' + ti("chev") + "</span></a>"); }
+    function row(href, ic, label, sub, n, hot) { rows.push('<a class="kt-row k-' + ic + (hot && n ? " hot" : "") + '" href="' + href + '"><span class="ic">' + ti(ic) + "</span><span class=\"tx\"><b>" + label + "</b><small>" + sub + "</small></span>" + (n ? '<i class="kt-n">' + n + "</i>" : '<i class="kt-ok">' + ti("check") + "</i>") + '<span class="ch">' + ti("chev") + "</span></a>"); }
     if (has("president")) row("/staff/inbox", "crown", T("Esperan su decisión", "Awaiting your decision"), T("Aplicaciones recomendadas por el equipo", "Applications recommended by the team"), a.recommended || 0, 1);
     if (has("admin", "membership", "president", "care")) {
       row("/staff/apps/new", "doc", T("Aplicaciones nuevas", "New applications"), T("Recién llegadas, sin revisar", "Just arrived, not reviewed"), a["new"] || 0, 1);
