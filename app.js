@@ -210,8 +210,9 @@
       (place ? "<div><dt>" + svg("pin") + T("Dónde", "Where") + "</dt><dd>" + (e.venue ? "<b>" + esc(e.venue) + "</b><br>" : "") + esc(e.address || "") + "</dd></div>" : "") + "</dl>";
     if (cx) h += '<p class="ka-msg err">' + T("Este evento fue cancelado.", "This event was cancelled.") + (e.cancel_reason ? " " + esc(e.cancel_reason) : "") + "</p>";
     else h += (e.open ? '<a class="ka-btn tc wide" href="/ev/' + encodeURIComponent(e.slug) + '">' + T("Registrarme", "Register") + "</a>" : '<p class="ka-msg">' + (e.full ? T("Cupo lleno.", "This event is full.") : T("El registro en línea está cerrado.", "Online registration is closed.")) + ' <a href="/ev/' + encodeURIComponent(e.slug) + '">' + T("Ver mi registro", "See my registration") + "</a></p>") +
-      '<div class="ka-evbt">' + (e.address ? '<a class="ka-btn line" target="_blank" rel="noopener" href="https://maps.apple.com/?q=' + encodeURIComponent(place) + '">' + svg("pin") + T("Cómo llegar", "Directions") + "</a>" : "") +
-      '<a class="ka-btn line" target="_blank" rel="noopener" href="' + gcal + '">' + svg("cal") + T("Al calendario", "Add to calendar") + "</a></div>";
+      '<div class="ka-evbt">' + (e.address ? '<a class="ka-btn line full" target="_blank" rel="noopener" href="https://maps.apple.com/?q=' + encodeURIComponent(place) + '">' + svg("pin") + T("Cómo llegar", "Directions") + "</a>" : "") +
+      '<a class="ka-btn line" href="' + calUrl({ t: evTitle(e), s: d, e: en || new Date(d.getTime() + 3 * 36e5), l: place, d: "https://www.kaie44.org/ev/" + e.slug, u: "https://www.kaie44.org/ev/" + e.slug, id: "ev-" + e.slug }) + '" data-ext="1">' + svg("cal") + calLbl() + "</a>" +
+      '<a class="ka-btn line" target="_blank" rel="noopener" href="' + gcal + '">' + svg("cal") + "Google</a></div>";
     h += "</div>";
     if (note) h += '<div class="ka-sec">' + T("Al llegar", "When you arrive") + '</div><div class="ka-card ka-evtx">' + esc(note).replace(/\n/g, "<br>") + "</div>";
     if (desc) h += '<div class="ka-sec">' + T("Detalles", "Details") + '</div><div class="ka-card ka-evtx">' + esc(desc).replace(/\n/g, "<br>") + "</div>";
@@ -243,12 +244,17 @@
     return cap(fdt(s, { day: "numeric", month: "short" }));
   }
   function meetWhen(n) { return cap(fdt(n.starts_at, { weekday: "long", day: "numeric", month: "long" })) + " · " + fdt(n.starts_at, { hour: "numeric", minute: "2-digit" }); }
+  function calLbl() { return isIOS() ? T("Calendario iPhone", "iPhone Calendar") : /Macintosh/.test(navigator.userAgent) ? T("Calendario Apple", "Apple Calendar") : T("Otro calendario", "Other calendar"); }
+  function calUrl(o) {
+    var q = ["t=" + encodeURIComponent(o.t || ""), "s=" + encodeURIComponent(new Date(o.s).toISOString())];
+    if (o.e) q.push("e=" + encodeURIComponent(new Date(o.e).toISOString()));
+    if (o.l) q.push("l=" + encodeURIComponent(o.l)); if (o.d) q.push("d=" + encodeURIComponent(String(o.d).slice(0, 1200)));
+    if (o.u) q.push("u=" + encodeURIComponent(o.u)); if (o.id) q.push("id=" + encodeURIComponent(o.id));
+    return "/cal.ics?" + q.join("&");
+  }
   function icsHref(n) {
-    var z = function (d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }, s = new Date(n.starts_at), e = new Date(s.getTime() + (n.minutes || 60) * 6e4);
-    var x = function (t) { return String(t || "").replace(/[,;\\]/g, "\\$&").replace(/\n/g, "\\n"); };
-    var ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//KAI//App//ES", "BEGIN:VEVENT", "UID:kai-" + n.id + "@kaie44.org", "DTSTAMP:" + z(new Date()), "DTSTART:" + z(s), "DTEND:" + z(e),
-      "SUMMARY:" + x(n.title), "DESCRIPTION:" + x((n.body ? n.body + "\n\n" : "") + (n.zoom_url ? "Zoom: " + n.zoom_url : "")), n.zoom_url ? "LOCATION:" + x(n.zoom_url) : "", "BEGIN:VALARM", "TRIGGER:-PT15M", "ACTION:DISPLAY", "DESCRIPTION:" + x(n.title), "END:VALARM", "END:VEVENT", "END:VCALENDAR"].filter(Boolean).join("\r\n");
-    return "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+    var s = new Date(n.starts_at);
+    return calUrl({ t: n.title, s: s, e: new Date(s.getTime() + (n.minutes || 60) * 6e4), l: n.zoom_url || "", d: (n.body ? n.body + "\n\n" : "") + (n.zoom_url ? "Zoom: " + n.zoom_url : ""), u: n.zoom_url || "", id: "n" + n.id });
   }
   function gcalHref(n) {
     var z = function (d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }, s = new Date(n.starts_at), e = new Date(s.getTime() + (n.minutes || 60) * 6e4);
@@ -285,7 +291,7 @@
     if (meet && n.cancelled) h += '<div class="kn-cx">' + T("Esta reunión se canceló.", "This meeting was cancelled.") + "</div>";
     else if (meet && !past) {
       h += '<div class="kn-acts">' + (n.zoom_url ? '<a class="ka-btn zoom wide" href="' + esc(n.zoom_url) + '" target="_blank" rel="noopener">' + svg("zoom") + T("Abrir Zoom", "Open Zoom") + "</a>" : "") +
-        '<div class="two"><a class="ka-btn line" href="' + icsHref(n) + '" download="KAI-reunion.ics">' + svg("cal") + T("Calendario", "Calendar") + '</a><a class="ka-btn line" href="' + gcalHref(n) + '" target="_blank" rel="noopener">Google</a></div>' +
+        '<div class="two"><a class="ka-btn line" href="' + icsHref(n) + '" data-ext="1">' + svg("cal") + calLbl() + '</a><a class="ka-btn line" href="' + gcalHref(n) + '" target="_blank" rel="noopener">Google</a></div>' +
         '<div class="rs"><b>' + T("¿Podrá asistir?", "Will you attend?") + '</b><div class="two"><button class="ka-btn ' + (n.rsvp === "yes" ? "ok on" : "line") + '" data-a="rsvp" data-v="yes" data-id="' + n.id + '">✓ ' + T("Asistiré", "I'll be there") + '</button><button class="ka-btn ' + (n.rsvp === "no" ? "no on" : "line") + '" data-a="rsvp" data-v="no" data-id="' + n.id + '">' + T("No puedo", "Can't make it") + "</button></div>" +
         (n.invited ? '<p class="cnt">' + T(n.yes + " de " + n.invited + " confirmaron", n.yes + " of " + n.invited + " confirmed") + "</p>" : "") + "</div></div>";
     } else if (n.url && /^\//.test(n.url)) h += '<a class="ka-btn tc wide" href="' + esc(n.url) + '">' + T("Abrir", "Open") + " →</a>";

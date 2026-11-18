@@ -438,3 +438,4 @@ a.kt-act{display:block;text-decoration:none}
 .ka-evbt .ka-btn svg{width:18px;height:18px;flex:0 0 18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .ka-evtx{font-size:15px;line-height:1.55;color:#33415f}
 .ka-evi .ka-msg a{color:var(--tc,#c4643f);font-weight:700}
+.ka-evbt .full{grid-column:1/-1}

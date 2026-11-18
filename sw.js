@@ -21,7 +21,7 @@ self.addEventListener("fetch", function (e) {
   var same = u.origin === self.location.origin;
   var font = /fonts\.(googleapis|gstatic)\.com$/.test(u.hostname) || /cdn\.jsdelivr\.net$/.test(u.hostname);
   if (!same && !font) return;                       // Supabase y demás: directo, sin guardar
-  if (same && /^\/(sw\.js|manifest\.webmanifest)$/.test(u.pathname)) return;
+  if (same && /^\/(sw\.js|manifest\.webmanifest|cal\.ics)$/.test(u.pathname)) return;
   e.respondWith(fetch(r).then(function (res) {
     if (res && (res.ok || res.type === "opaque")) {
       var copy = res.clone();
