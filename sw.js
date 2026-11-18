@@ -2,7 +2,7 @@
    - Red primero: el sitio siempre se ve en su versión más nueva; la copia guardada
      solo se usa si no hay internet (así la credencial abre sin señal).
    - Notificaciones (push) y el numerito sobre el ícono. */
-var CACHE = "kai-app-v2";
+var CACHE = "kai-app-v3";
 var SHELL = ["/", "/app", "/index.html", "/app.js", "/app.css", "/members.js", "/images/logo.png", "/icon-192.png"];
 
 self.addEventListener("install", function (e) {
@@ -29,7 +29,8 @@ self.addEventListener("fetch", function (e) {
     }
     return res;
   }).catch(function () {
-    return caches.match(r.mode === "navigate" ? "/index.html" : r).then(function (m) { return m || caches.match("/index.html"); });
+    if (r.mode === "navigate") return caches.match("/index.html");
+    return caches.match(r).then(function (m) { return m || Response.error(); });
   }));
 });
 

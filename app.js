@@ -61,7 +61,7 @@
     }).catch(function () { A.st = A.m ? "in" : "down"; });
     var pr = c.rpc("staff_me").then(function (me) { A.me = me.data || null; A.roles = (me.data && me.data.roles) || []; }).catch(function () { A.roles = A.roles || []; });
     var slow = new Promise(function (ok) { setTimeout(ok, 4000); });
-    await Promise.race([Promise.all([pm, pr, loadEvents(), loadInbox(), pushCheck()]).then(function () { return A.roles.length ? loadTeam() : null; }), slow]);
+    await Promise.race([Promise.all([pm, pr, loadEvents(), loadInbox(), pushCheck(), loadCC()]).then(function () { return A.roles.length ? loadTeam() : null; }), slow]);
     if (A.st === "load") A.st = A.m ? "in" : "none";
     A.quiet = false;
     paint();
@@ -97,6 +97,8 @@
       if (tab === "events") html += evSlug() ? eventHTML(evSlug()) : eventsHTML();
       else if (tab === "inbox") html += inboxHTML();
       else if (tab === "profile") html += profileHTML();
+      else if (tab === "help") html += helpHTML();
+      else if (tab === "team" && sub2() === "cc" && A.team && A.team.st === "ok") html += ccTeamHTML();
       else if (tab === "team") html += sub2() === "aviso" ? composeHTML("notice") : sub2() === "reunion" ? composeHTML("meeting") : teamHTML();
       else html += homeHTML();
     }
@@ -144,6 +146,7 @@
       qa("/app/inbox", "bell", "gd", T("Avisos", "Notices"), A.unread) +
       qa("/app/profile", "card", "bl", T("Membresía", "Membership")) +
       (A.roles.length ? qa("/app/team", "team", "nv", T("Equipo", "Team"), A.tcount) : qa("/app/profile", "user", "nv", T("Perfil", "Profile"))) + "</div>";
+    h += ccCardHome();
     var ev = (A.events || [])[0];
     if (ev) {
       var d = new Date(ev.starts_at), days = Math.ceil((d - new Date()) / 864e5);
@@ -231,7 +234,10 @@
   }
   function inboxOpened() {
     var id = qn();
-    if (id && A.inbox) { var n = (A.inbox.rows || []).filter(function (x) { return x.id === id; })[0]; if (n && !n.read) markRead(n); }
+    if (id && A.inbox) {
+      var n = (A.inbox.rows || []).filter(function (x) { return x.id === id; })[0]; if (n && !n.read) markRead(n);
+      if (n && /^\/app\/(help|team\/cc)\/\d+$/.test(n.url || "")) { A.ccOne = null; A.ccT1 = null; setTimeout(function () { KGO(n.url, true); }, 0); }
+    }
   }
   async function markRead(n) {
     n.read = true; A.unread = Math.max(0, (A.unread || 0) - 1); if (A.inbox) A.inbox.unread = A.unread; setBadge();
@@ -548,6 +554,7 @@
   function navHTML(tab) {
     var items = [["home", "/app", "home", T("Inicio", "Home")], ["events", "/app/events", "cal", T("Eventos", "Events")], ["inbox", "/app/inbox", "bell", T("Avisos", "Notices")], ["profile", "/app/profile", "user", T("Perfil", "Profile")]];
     if (A.roles.length) items.push(["team", "/app/team", "team", T("Equipo", "Team")]);
+    if (tab === "help") tab = "home";
     return '<div class="ka-nav" role="navigation" aria-label="' + T("Menú de la app", "App menu") + '"><div class="in">' + items.map(function (x) {
       return '<a href="' + x[1] + '" class="' + (tab === x[0] ? "on" : "") + '"' + (tab === x[0] ? ' aria-current="page"' : "") + ">" + svg(x[2]) + x[3] +
         (x[0] === "inbox" && A.unread ? '<i class="ka-bdg">' + A.unread + "</i>" : "") + (x[0] === "team" && A.tcount ? '<i class="ka-bdg">' + A.tcount + "</i>" : "") + "</a>";
@@ -594,7 +601,8 @@
     d.addEventListener("click", function (e) { if (e.target.dataset.x) d.remove(); });
   }
   function setBadge() {
-    try { if (navigator.setAppBadge) { if (A.unread) navigator.setAppBadge(A.unread); else navigator.clearAppBadge(); } } catch (e) {}
+    var n = (A.unread || 0) + ((A.cc && A.cc.unread) || 0);
+    try { if (navigator.setAppBadge) { if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } } catch (e) {}
   }
 
 
@@ -616,7 +624,8 @@
     chart: '<path d="M3 3v18h18M7 15l4-4 3 3 5-6"/>',
     lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
     chev: '<path d="M9 6l6 6-6 6"/>',
-    check: '<path d="M20 6L9 17l-5-5"/>'
+    check: '<path d="M20 6L9 17l-5-5"/>',
+    chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h7M8.5 14.5h4.5"/>'
   };
   function ti(k) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + TI[k] + "</svg>"; }
 
@@ -635,6 +644,7 @@
         A.team = { st: "ok", ov: r.data };
       }
     } catch (e) { A.team = { st: "err" }; }
+    try { var cn = await c.rpc("staff_cc_count"); A.ccCount = (cn && !cn.error && cn.data) || 0; } catch (e) { A.ccCount = 0; }
     A.tcount = teamCount();
     if (!A.quiet) paint();
   }
@@ -644,7 +654,7 @@
     if (has("president")) n += a.recommended || 0;
     if (has("treasury", "admin")) n += o.pay_claimed || 0;
     if (has("care")) n += o.care || 0;
-    return n;
+    return n + (A.ccCount || 0);
   }
 
   function teamHTML() {
@@ -666,6 +676,7 @@
 
     var rows = [];
     function row(href, ic, label, sub, n, hot) { rows.push('<a class="kt-row k-' + ic + (hot && n ? " hot" : "") + '" href="' + href + '"><span class="ic">' + ti(ic) + "</span><span class=\"tx\"><b>" + label + "</b><small>" + sub + "</small></span>" + (n ? '<i class="kt-n">' + n + "</i>" : '<i class="kt-ok">' + ti("check") + "</i>") + '<span class="ch">' + ti("chev") + "</span></a>"); }
+    if (has("admin", "membership", "president", "care")) row("/app/team/cc", "chat", "Concierge", A.ccCount ? T("Pastores esperando respuesta", "Pastors waiting for an answer") : T("Peticiones de ayuda de los pastores", "Help requests from pastors"), A.ccCount || 0, 1);
     if (has("president")) row("/staff/inbox", "crown", T("Esperan su decisión", "Awaiting your decision"), T("Aplicaciones recomendadas por el equipo", "Applications recommended by the team"), a.recommended || 0, 1);
     if (has("admin", "membership", "president", "care")) {
       row("/staff/apps/new", "doc", T("Aplicaciones nuevas", "New applications"), T("Recién llegadas, sin revisar", "Just arrived, not reviewed"), a["new"] || 0, 1);
@@ -720,12 +731,224 @@
     });
   }
 
+  /* ---------- Concierge: el pastor pide ayuda, el equipo da seguimiento ---------- */
+  var CCI = {
+    mentor: '<circle cx="9" cy="7" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3 3 0 0 1 0 5.6M18.5 14.4c1.5.9 2.5 2.9 2.5 5.6"/>',
+    admin: '<path d="M9 3h6l1 3h4v15H4V6h4z"/><path d="M9 11h6M9 15h4"/>',
+    leader: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c2 2 10 2 12 0v-5M22 9v6"/>',
+    prayer: '<path d="M12 2.5c.8 2.3 3.5 3.9 3.5 7a3.5 3.5 0 0 1-7 0c0-1.6.8-2.5 1.6-3.3.2 1.3.8 2 1.6 2.2-.5-2-.3-3.9.3-5.9z"/><path d="M9 14.5h6l-.8 7h-4.4z"/>',
+    care: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+    chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h7M8.5 14.5h4.5"/>',
+    lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+    mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+    msg: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
+    chev: '<path d="M9 6l6 6-6 6"/>'
+  };
+  function cci(k) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (CCI[k] || CCI.chat) + "</svg>"; }
+  function KINDS() {
+    return [
+      ["mentor", T("Pastor mentor", "Pastor mentor"), T("Le conectamos con un pastor con experiencia que le acompañe.", "We connect you with an experienced pastor to walk with you.")],
+      ["admin", T("Orientación administrativa", "Administrative guidance"), T("Non-profit, impuestos, seguros y temas legales: le orientamos.", "Non-profit, taxes, insurance and legal topics: we guide you.")],
+      ["leader", T("Desarrollo de liderazgo", "Leadership development"), T("Instituto Morphē y talleres para su iglesia.", "Instituto Morphē and workshops for your church.")],
+      ["prayer", T("Oración", "Prayer"), T("Comparta su petición y el equipo orará por usted.", "Share your request and the team will pray for you.")],
+      ["care", T("Cuidado pastoral", "Pastoral care"), T("Confidencial. Solo lo ve el equipo de cuidado pastoral.", "Confidential. Only the pastoral care team sees it.")]
+    ];
+  }
+  function kindName(k) { var x = KINDS().filter(function (r) { return r[0] === k; })[0]; return x ? x[1] : k; }
+  function ccSt(s) { return s === "done" ? T("Resuelta", "Resolved") : s === "progress" ? T("En proceso", "In progress") : T("Recibida", "Received"); }
+  function ccStTeam(s) { return s === "done" ? T("Resuelta", "Resolved") : s === "progress" ? T("En proceso", "In progress") : T("Nueva", "New"); }
+  function contactName(c) { return c === "phone" ? T("Llamada", "Phone call") : c === "text" ? T("Mensaje de texto", "Text message") : c === "email" ? T("Correo", "Email") : T("Por la app", "In the app"); }
+  function helpPath() {
+    var m = location.pathname.match(/^\/app\/help\/(?:new\/([a-z]+)|(\d+))/);
+    return { kind: m && m[1] || "", id: m && m[2] ? +m[2] : 0 };
+  }
+  function teamCCId() { var m = location.pathname.match(/^\/app\/team\/cc\/(\d+)/); return m ? +m[1] : 0; }
+  function kick() { try { sb().functions.invoke("kai-push?kick=1", { body: {} }); } catch (x) {} }
+  function ccErr(e) {
+    var m = String((e && e.message) || e || "");
+    if (/members_only/.test(m)) return T("El Concierge es para miembros activos de KAI.", "Concierge is for active KAI members.");
+    if (/phone_required/.test(m)) return T("Escriba un teléfono de 10 dígitos para llamarle o escribirle.", "Enter a 10-digit phone number so we can call or text you.");
+    if (/body_required/.test(m)) return T("Cuéntenos un poco más en el mensaje.", "Tell us a little more in the message.");
+    if (/too_many_open/.test(m)) return T("Ya tiene 5 peticiones abiertas. El equipo le responderá pronto.", "You already have 5 open requests. The team will answer soon.");
+    return T("No se pudo enviar. Revise su internet e intente de nuevo.", "Couldn't send. Check your internet and try again.");
+  }
+  async function loadCC() {
+    try { var r = await sb().rpc("cc_mine"); if (r.error) throw r.error; A.cc = r.data; } catch (e) { A.cc = A.cc || { rows: [], unread: 0, allowed: false, off: true }; }
+    if (!A.quiet && (A.st === "in" || A.st === "none")) paint();
+  }
+  async function loadCCOne(id) {
+    if (A.ccBusy === "m" + id) return; A.ccBusy = "m" + id;
+    try { var r = await sb().rpc("cc_get", { p_id: id }); if (r.error) throw r.error; A.ccOne = r.data; } catch (e) { A.ccOne = { id: id, err: true }; }
+    A.ccBusy = null;
+    if (A.cc && A.cc.rows) A.cc.rows.forEach(function (x) { if (x.id === id && x.unread) { x.unread = false; A.cc.unread = Math.max(0, (A.cc.unread || 0) - 1); } });
+    paint(); setBadge();
+  }
+  function ccCardHome() {
+    var n = A.cc && A.cc.unread;
+    return '<a class="ka-cc" href="/app/help"><span class="ic">' + cci("chat") + (n ? '<i class="ka-bdg">' + n + "</i>" : "") + '</span><span class="tx"><small>Concierge</small><b>' + T("¿En qué le podemos ayudar?", "How can we help you?") + "</b><em>" +
+      T("Mentor, orientación, liderazgo, oración y cuidado pastoral", "Mentoring, guidance, leadership, prayer and pastoral care") + '</em></span><span class="ch">' + cci("chev") + "</span></a>";
+  }
+  function helpHTML() {
+    var p = helpPath();
+    if (p.id) return ccThreadHTML(p.id);
+    if (p.kind) return ccFormHTML(p.kind);
+    var h = hero({ cls: "sm cc", eb: "Concierge", title: T("¿En qué le ayudamos?", "How can we help?"), sub: T("El equipo de KAI, a su servicio", "The KAI team, at your service") });
+    if (!A.cc) return h + '<div class="ka-load"><div class="ka-sp"></div></div>';
+    if (!A.cc.allowed) return h + '<div class="ka-card cc-lock"><span class="ic">' + cci("lock") + "</span><h3>" + T("Un beneficio para miembros", "A member benefit") + "</h3><p>" +
+      T("El Concierge se activa cuando su membresía está activa. Si su solicitud está en proceso, vea en qué paso va.", "Concierge turns on once your membership is active. If your application is in progress, see which step you're on.") +
+      '</p><a class="ka-btn tc wide" href="/app/profile">' + T("Ver mis pasos", "See my steps") + "</a></div>";
+    h += '<div class="cc-kinds">' + KINDS().map(function (k, i) {
+      return '<a class="cc-k k-' + k[0] + '" href="/app/help/new/' + k[0] + '" style="--i:' + i + '"><span class="ic">' + cci(k[0]) + '</span><span class="tx"><b>' + k[1] + "</b><small>" + k[2] + '</small></span><span class="ch">' + cci("chev") + "</span></a>";
+    }).join("") + "</div>";
+    var rows = A.cc.rows || [];
+    if (rows.length) {
+      h += '<div class="ka-sec">' + T("Mis peticiones", "My requests") + '</div><div class="cc-list">' + rows.map(function (r) {
+        return '<a class="cc-r k-' + r.kind + (r.unread ? " new" : "") + '" href="/app/help/' + r.id + '"><span class="ic">' + cci(r.kind) + '</span><span class="tx"><b>' + esc(kindName(r.kind)) + '</b><small>' + esc(r.last || "") + "</small><em>" +
+          '<i class="cc-st s-' + r.status + '">' + ccSt(r.status) + "</i>" + (r.who ? esc(r.who) + " · " : "") + esc(agoT(r.updated_at)) + "</em></span>" + (r.unread ? '<i class="dot"></i>' : "") + "</a>";
+      }).join("") + "</div>";
+    }
+    return h;
+  }
+  function ccFormHTML(kind) {
+    var k = KINDS().filter(function (x) { return x[0] === kind; })[0];
+    if (!k) { setTimeout(function () { KGO("/app/help", true); }, 0); return ""; }
+    var f = A.ccForm && A.ccForm.kind === kind ? A.ccForm : (A.ccForm = { kind: kind, contact: "app", phone: (A.m && A.m.phone) || "", body: "" });
+    var ph = { mentor: T("Ej. Soy pastor desde hace dos años y me gustaría alguien con experiencia que me acompañe…", "E.g. I've been a pastor for two years and would like someone experienced to walk with me…"),
+      admin: T("Ej. Queremos registrar la iglesia como non-profit y no sabemos por dónde empezar…", "E.g. We want to register the church as a non-profit and don't know where to start…"),
+      leader: T("Ej. Me interesa Instituto Morphē / un taller de liderazgo para mis líderes…", "E.g. I'm interested in Instituto Morphē / a leadership workshop for my leaders…"),
+      prayer: T("Escriba su petición de oración…", "Write your prayer request…"),
+      care: T("Cuéntenos con confianza lo que está viviendo…", "Tell us, in confidence, what you're going through…") }[kind];
+    var h = '<div class="kn-top"><a href="/app/help" class="bk">' + svg("back") + "Concierge</a></div>";
+    h += '<div class="cc-fh k-' + kind + '"><span class="ic">' + cci(kind) + "</span><div><h1>" + k[1] + "</h1><p>" + (kind === "care" ? T("Le acompañamos en lo que está viviendo.", "We walk with you in what you're going through.") : k[2]) + "</p></div></div>";
+    if (kind === "admin") h += '<p class="cc-note">' + T("Le orientamos y le decimos por dónde empezar; no hacemos el trámite por usted.", "We guide you and tell you where to start; we don't do the paperwork for you.") + "</p>";
+    if (kind === "care") h += '<p class="cc-note conf">' + cci("lock") + T("Confidencial: solo lo verá el equipo de cuidado pastoral. Las notificaciones no muestran su mensaje.", "Confidential: only the pastoral care team will see it. Notifications never show your message.") + "</p>";
+    h += '<div class="kc-sec">' + T("Su mensaje", "Your message") + '</div><textarea class="kc-in" id="cc-b" rows="6" maxlength="2000" placeholder="' + esc(ph) + '">' + esc(f.body || "") + "</textarea>";
+    h += '<div class="kc-sec">' + T("¿Cómo prefiere que le contactemos?", "How would you like us to reach you?") + '</div><div class="kc-chips">' +
+      ["app", "phone", "text", "email"].map(function (c) { return '<button data-a="cccon" data-v="' + c + '" class="' + (f.contact === c ? "on" : "") + '">' + contactName(c) + "</button>"; }).join("") + "</div>";
+    if (f.contact === "phone" || f.contact === "text") h += '<input class="kc-in" id="cc-ph" type="tel" inputmode="tel" autocomplete="tel" value="' + esc(f.phone || "") + '" placeholder="123-456-7890" style="margin-top:10px">';
+    h += '<p class="ka-msg" id="cc-m"></p><button class="ka-btn tc wide kc-go" data-a="ccnew">' + T("Enviar al equipo", "Send to the team") + "</button>";
+    h += '<p class="cc-help">' + T("Le avisamos en la app cuando el equipo responda.", "We'll let you know in the app when the team answers.") + "</p>";
+    return '<div class="kc">' + h + "</div>";
+  }
+  function bubbles(msgs, teamView) {
+    return '<div class="cc-th">' + (msgs || []).map(function (m) {
+      var mineSide = teamView ? m.team : !m.team;
+      return '<div class="cc-b' + (mineSide ? " me" : "") + (m.internal ? " int" : "") + '">' + (m.internal ? '<span class="cc-tg">' + cci("lock") + T("Nota interna · el pastor no la ve", "Internal note · the pastor doesn't see it") + "</span>" : "") +
+        "<p>" + esc(m.body).replace(/\n/g, "<br>") + '</p><small>' + (m.by ? esc(m.by) + " · " : "") + esc(agoT(m.at)) + "</small></div>";
+    }).join("") + "</div>";
+  }
+  function ccThreadHTML(id) {
+    var d = A.ccOne;
+    var h = '<div class="kn-top"><a href="/app/help" class="bk">' + svg("back") + "Concierge</a></div>";
+    if (!d || d.id !== id) { loadCCOne(id); return h + '<div class="ka-load"><div class="ka-sp"></div></div>'; }
+    if (d.err) return h + emptyHTML("bell", T("No encontramos esta petición", "We couldn't find this request"), T("Vuelva a Concierge e intente de nuevo.", "Go back to Concierge and try again."));
+    h += '<div class="cc-fh sm k-' + d.kind + '"><span class="ic">' + cci(d.kind) + "</span><div><h1>" + esc(kindName(d.kind)) + '</h1><p><i class="cc-st s-' + d.status + '">' + ccSt(d.status) + "</i>" +
+      (d.who ? T("Le atiende ", "With ") + esc(d.who) : T("El equipo la recibió", "The team received it")) + "</p></div></div>";
+    h += bubbles(d.msgs, false);
+    h += '<div class="cc-reply"><textarea class="kc-in" id="cc-r" rows="2" maxlength="2000" placeholder="' + T("Escriba un mensaje…", "Write a message…") + '"></textarea><button class="ka-btn navy" data-a="ccrep" data-id="' + d.id + '" aria-label="' + T("Enviar", "Send") + '">' + svg("send") + "</button></div><p class=\"ka-msg\" id=\"cc-m\"></p>";
+    if (d.status === "done") h += '<p class="cc-help">' + T("Esta petición quedó resuelta. Si escribe de nuevo, se vuelve a abrir.", "This request was resolved. Writing again reopens it.") + "</p>";
+    return h;
+  }
+
+  /* Equipo → Concierge */
+  async function loadCCTeam() {
+    if (A.ccTBusy) return; A.ccTBusy = 1;
+    var f = A.ccFilter || "open";
+    try { var r = await sb().rpc("staff_cc_list", { p_filter: f }); if (r.error) throw r.error; A.ccTeam = r.data; } catch (e) { A.ccTeam = { rows: [], err: true }; }
+    A.ccTeamF = f;
+    A.ccTBusy = 0; paint();
+  }
+  async function loadCCTeamOne(id) {
+    if (A.ccBusy === "t" + id) return; A.ccBusy = "t" + id;
+    try { var r = await sb().rpc("staff_cc_get", { p_id: id }); if (r.error) throw r.error; A.ccT1 = r.data; } catch (e) { A.ccT1 = { id: id, err: true }; }
+    A.ccBusy = null; paint(); refreshCCCount();
+  }
+  async function refreshCCCount() { try { var r = await sb().rpc("staff_cc_count"); if (!r.error) { A.ccCount = r.data || 0; A.tcount = teamCount(); var nv = $("ka-navw"); if (nv && nv.innerHTML) nv.innerHTML = navHTML(A.tab); } } catch (e) {} }
+  function ccTeamHTML() {
+    var id = teamCCId();
+    var h = '<div class="kn-top"><a href="' + (id ? "/app/team/cc" : "/app/team") + '" class="bk">' + svg("back") + (id ? "Concierge" : T("Equipo", "Team")) + "</a></div>";
+    if (id) return h + ccTeamOneHTML(id);
+    h += '<div class="kc-h"><span class="ic nv">' + cci("chat") + "</span><div><h1>Concierge</h1><p>" + T("Peticiones de los pastores. Usted ve solo los tipos que le tocan.", "Requests from pastors. You only see the types assigned to your role.") + "</p></div></div>";
+    var f = A.ccFilter || "open";
+    h += '<div class="ka-seg cc-seg">' + [["open", T("Abiertas", "Open")], ["mine", T("Mías", "Mine")], ["done", T("Resueltas", "Resolved")]].map(function (x) {
+      return '<button data-a="ccf" data-v="' + x[0] + '" aria-pressed="' + (f === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>";
+    var t = A.ccTeam;
+    if (!t || A.ccTeamF !== f) { loadCCTeam(); return h + '<div class="ka-load"><div class="ka-sp"></div></div>'; }
+    var rows = t.rows || [];
+    if (!rows.length) return h + emptyHTML("bell", f === "done" ? T("Aún no hay resueltas", "None resolved yet") : T("Todo al día", "All caught up"), f === "mine" ? T("No tiene peticiones asignadas.", "You have no assigned requests.") : T("Cuando un pastor pida ayuda, aparecerá aquí y le llegará un aviso.", "When a pastor asks for help, it shows up here and you get a notice."));
+    return h + '<div class="cc-list">' + rows.map(function (r) {
+      return '<a class="cc-r k-' + r.kind + (r.unread ? " new" : "") + '" href="/app/team/cc/' + r.id + '"><span class="ic">' + cci(r.kind) + '</span><span class="tx"><b>' + esc(r.name) + '</b><small>' + (r.kind === "care" ? "🔒 " : "") + esc(r.last || "") + "</small><em>" +
+        '<i class="cc-st s-' + r.status + '">' + ccStTeam(r.status) + "</i>" + esc(kindName(r.kind)) + " · " + (r.who ? esc(r.who) : T("Sin asignar", "Unassigned")) + " · " + esc(agoT(r.updated_at)) + "</em></span>" + (r.unread ? '<i class="dot"></i>' : "") + "</a>";
+    }).join("") + "</div>";
+  }
+  function ccTeamOneHTML(id) {
+    var d = A.ccT1;
+    if (!d || d.id !== id) { loadCCTeamOne(id); return '<div class="ka-load"><div class="ka-sp"></div></div>'; }
+    if (d.err) return emptyHTML("bell", T("No encontramos esta petición", "We couldn't find this request"), T("Puede que no le corresponda a su rol.", "It may not belong to your role."));
+    var tel = String(d.phone || "").replace(/[^\d+]/g, "");
+    var h = '<div class="cc-who k-' + d.kind + '"><div class="cc-top">' + avatar({ full_name: d.name, photo_url: d.photo_url }) + "<div><b>" + esc(d.name) + "</b><span>" + esc([d.title, d.church, d.city].filter(Boolean).join(" · ")) + "</span></div></div>" +
+      '<div class="cc-kd"><span class="kp2 k-' + d.kind + '">' + cci(d.kind) + esc(kindName(d.kind)) + "</span><span>" + T("Prefiere: ", "Prefers: ") + "<b>" + contactName(d.contact) + "</b></span></div>" +
+      '<div class="cc-ct">' + (tel ? '<a href="tel:' + esc(tel) + '">' + cci("phone") + T("Llamar", "Call") + '</a><a href="sms:' + esc(tel) + '">' + cci("msg") + T("Texto", "Text") + "</a>" : "") + '<a href="mailto:' + esc(d.email) + '">' + cci("mail") + T("Correo", "Email") + "</a></div></div>";
+    h += '<div class="kc-sec">' + T("Estado", "Status") + '</div><div class="ka-seg">' + ["new", "progress", "done"].map(function (s) {
+      return '<button data-a="ccst" data-v="' + s + '" data-id="' + d.id + '" aria-pressed="' + (d.status === s) + '">' + ccStTeam(s) + "</button>"; }).join("") + "</div>";
+    h += '<div class="kc-sec">' + T("Le da seguimiento", "Followed up by") + '</div><select class="kc-in" id="cc-as" data-id="' + d.id + '"><option value="">' + T("Sin asignar", "Unassigned") + "</option>" +
+      (d.team || []).map(function (p) { return '<option value="' + esc(p.email) + '"' + (String(d.assigned_to || "").toLowerCase() === p.email ? " selected" : "") + ">" + esc(p.name) + "</option>"; }).join("") + "</select>";
+    h += '<div class="kc-sec">' + T("Conversación", "Conversation") + "</div>" + bubbles(d.msgs, true);
+    var mode = A.ccMode || "reply";
+    h += '<div class="ka-seg cc-mode"><button data-a="ccmode" data-v="reply" aria-pressed="' + (mode === "reply") + '">' + T("Al pastor", "To pastor") + '</button><button data-a="ccmode" data-v="note" aria-pressed="' + (mode === "note") + '">' + T("Nota interna", "Internal note") + "</button></div>";
+    h += '<div class="cc-reply' + (mode === "note" ? " int" : "") + '"><textarea class="kc-in" id="cc-r" rows="3" maxlength="2000" placeholder="' + (mode === "note" ? T("Solo la ve el equipo…", "Only the team sees it…") : T("El pastor lo verá en su app…", "The pastor will see it in the app…")) + '"></textarea><button class="ka-btn ' + (mode === "note" ? "gold" : "navy") + '" data-a="cctrep" data-id="' + d.id + '" aria-label="' + T("Enviar", "Send") + '">' + svg("send") + '</button></div><p class="ka-msg" id="cc-m"></p>';
+    return h;
+  }
+  async function ccClick(k, a) {
+    var m = $("cc-m");
+    function bad(t) { if (m) { m.textContent = t; m.className = "ka-msg err"; } a.disabled = false; }
+    if (k === "cccon") { var f = A.ccForm; var b = $("cc-b"), ph = $("cc-ph"); if (b) f.body = b.value; if (ph) f.phone = ph.value; f.contact = a.dataset.v; paint(); return true; }
+    if (k === "ccnew") {
+      var F = A.ccForm, bb = $("cc-b"), pp = $("cc-ph"); F.body = bb ? bb.value.trim() : ""; if (pp) F.phone = pp.value.trim();
+      if (F.body.length < 5) return bad(T("Cuéntenos un poco más en el mensaje.", "Tell us a little more in the message.")), true;
+      a.disabled = true; a.textContent = T("Enviando…", "Sending…");
+      try {
+        var r = await sb().rpc("cc_new", { p_kind: F.kind, p_body: F.body, p_contact: F.contact, p_phone: (F.contact === "phone" || F.contact === "text") ? F.phone : null });
+        if (r.error) throw r.error; kick(); A.ccForm = null; A.ccOne = null; loadCC(); KGO("/app/help/" + r.data, true);
+      } catch (e) { a.textContent = T("Enviar al equipo", "Send to the team"); bad(ccErr(e)); }
+      return true;
+    }
+    if (k === "ccrep" || k === "cctrep") {
+      var ta = $("cc-r"), txt = ta ? ta.value.trim() : ""; if (!txt) { if (ta) ta.focus(); return true; }
+      a.disabled = true;
+      try {
+        var id = +a.dataset.id, rr = k === "ccrep" ? await sb().rpc("cc_reply", { p_id: id, p_body: txt }) : await sb().rpc("staff_cc_reply", { p_id: id, p_body: txt, p_internal: (A.ccMode || "reply") === "note" });
+        if (rr.error) throw rr.error; if ((A.ccMode || "reply") !== "note" || k === "ccrep") kick();
+        if (k === "ccrep") { A.ccOne = null; loadCC(); } else { A.ccT1 = null; A.ccTeam = null; }
+        paint();
+      } catch (e) { bad(ccErr(e)); }
+      return true;
+    }
+    if (k === "ccf") { A.ccFilter = a.dataset.v; A.ccTeam = null; paint(); return true; }
+    if (k === "ccmode") { var t2 = $("cc-r"), keep = t2 ? t2.value : ""; A.ccMode = a.dataset.v; paint(); var t3 = $("cc-r"); if (t3) { t3.value = keep; t3.focus(); } return true; }
+    if (k === "ccst") {
+      a.disabled = true;
+      try { var rs = await sb().rpc("staff_cc_set", { p_id: +a.dataset.id, p_status: a.dataset.v }); if (rs.error) throw rs.error; if (a.dataset.v === "done") kick(); A.ccT1 = null; A.ccTeam = null; paint(); }
+      catch (e) { bad(T("No se pudo cambiar el estado.", "Couldn't change the status.")); }
+      return true;
+    }
+    return false;
+  }
+  document.addEventListener("change", async function (e) {
+    var s = e.target; if (!s || s.id !== "cc-as") return;
+    s.disabled = true;
+    try { var r = await sb().rpc("staff_cc_set", { p_id: +s.dataset.id, p_assign: s.value }); if (r.error) throw r.error; kick(); A.ccT1 = null; A.ccTeam = null; paint(); }
+    catch (x) { s.disabled = false; var m = $("cc-m"); if (m) { m.textContent = T("No se pudo asignar.", "Couldn't assign."); m.className = "ka-msg err"; } }
+  });
+
   /* ---------- acciones ---------- */
   document.addEventListener("click", async function (e) {
     var root = $("kapp"); if (!root || !root.contains(e.target)) return;
     var a = e.target.closest("[data-a],[data-l]"); if (!a) return;
     if (a.dataset.l) { window.L = a.dataset.l; try { localStorage.setItem("kai-lang", a.dataset.l); } catch (x) {} var lb = document.querySelector('.lang button[data-l="' + a.dataset.l + '"]'); if (lb) lb.click(); else paint(); return; }
     var k = a.dataset.a;
+    if (/^cc/.test(k) && await ccClick(k, a)) return;
     if (k === "flip") { A.flip = !A.flip; paint(); return; }
     if (k === "qrfull") { qrFull(); return; }
     if (k === "pushon") { a.disabled = true; pushOn(); return; }
