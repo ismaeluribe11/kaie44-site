@@ -291,15 +291,29 @@
   async function saveSub(s) {
     var j = s.toJSON(); try { await sb().rpc("push_subscribe", { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 180) }); } catch (e) {}
   }
-  async function pushOn() {
-    var m = $("kp-m"); function say(t) { if (m) { m.textContent = t; m.className = "ka-msg err"; } }
-    try {
-      var k = await sb().rpc("kai_vapid_public"); if (k.error || !k.data) { say(T("Los avisos aún no están listos. Intente más tarde.", "Notices aren't ready yet. Try again later.")); return; }
-      var perm = await Notification.requestPermission(); if (perm !== "granted") { paint(); return; }
-      var reg = await navigator.serviceWorker.ready;
+  async function swReg() {
+    var r = await navigator.serviceWorker.getRegistration();
+    if (!r) r = await navigator.serviceWorker.register("/sw.js");
+    return await Promise.race([navigator.serviceWorker.ready, new Promise(function (_, no) { setTimeout(function () { no(new Error("sw-timeout")); }, 8000); })]);
+  }
+  function pushOn() {
+    var m = $("kp-m"), btn = document.querySelector('[data-a="pushon"]');
+    function say(t, ok) { if (m) { m.textContent = t; m.className = "ka-msg" + (ok ? "" : " err"); } if (btn) btn.disabled = false; }
+    if (m) { m.textContent = T("Un momento…", "One moment…"); m.className = "ka-msg"; }
+    // iPhone: el permiso se pide en el mismo instante del toque, antes de cualquier espera.
+    var ask;
+    try { ask = Notification.requestPermission(); } catch (e) { ask = Promise.resolve(Notification.permission); }
+    var key = sb().rpc("kai_vapid_public");
+    return Promise.resolve(ask).then(async function (perm) {
+      if (perm === "denied") { paint(); return; }
+      if (perm !== "granted") { say(T("Toque \"Permitir\" cuando el teléfono pregunte.", "Tap \"Allow\" when your phone asks.")); return; }
+      var k = await key; if (k.error || !k.data) { say(T("Los avisos aún no están listos. Intente más tarde.", "Notices aren't ready yet. Try again later.")); return; }
+      var reg = await swReg();
       var s = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(k.data) });
       await saveSub(s); A.pushOn = true; paint();
-    } catch (e) { say(T("No se pudo activar. Intente de nuevo.", "Couldn't turn them on. Please try again.")); }
+    }).catch(function (e) {
+      say(T("No se pudo activar (" + ((e && e.message) || e) + "). Cierre la app y ábrala de nuevo.", "Couldn't turn them on (" + ((e && e.message) || e) + "). Close the app and open it again."));
+    });
   }
 
   /* ---------- Enviar aviso / Nueva reunión (equipo) ---------- */
@@ -669,7 +683,7 @@
     var k = a.dataset.a;
     if (k === "flip") { A.flip = !A.flip; paint(); return; }
     if (k === "qrfull") { qrFull(); return; }
-    if (k === "pushon") { a.disabled = true; await pushOn(); return; }
+    if (k === "pushon") { a.disabled = true; pushOn(); return; }
     if (k === "readall") { (A.inbox.rows || []).forEach(function (n) { n.read = true; }); A.unread = 0; A.inbox.unread = 0; paint(); try { await sb().rpc("notice_read", { p_id: null }); } catch (x) {} return; }
     if (k === "rsvp") {
       var id = +a.dataset.id, v = a.dataset.v, n = (A.inbox.rows || []).filter(function (x) { return x.id === id; })[0];
