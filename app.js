@@ -736,14 +736,16 @@
     mentor: '<circle cx="9" cy="7" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3 3 0 0 1 0 5.6M18.5 14.4c1.5.9 2.5 2.9 2.5 5.6"/>',
     admin: '<path d="M9 3h6l1 3h4v15H4V6h4z"/><path d="M9 11h6M9 15h4"/>',
     leader: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c2 2 10 2 12 0v-5M22 9v6"/>',
-    prayer: '<path d="M12 2.5c.8 2.3 3.5 3.9 3.5 7a3.5 3.5 0 0 1-7 0c0-1.6.8-2.5 1.6-3.3.2 1.3.8 2 1.6 2.2-.5-2-.3-3.9.3-5.9z"/><path d="M9 14.5h6l-.8 7h-4.4z"/>',
+    prayer: '<path d="M12 21.5c3.9 0 6.8-2.6 6.8-6.4 0-3-1.9-5.2-3.5-6.9-.4 1.7-1.4 2.9-2.5 3.3.4-3.3-1-6.4-3.7-8.5.2 3.1-1.4 5.1-2.9 7.1-1.2 1.6-1.9 3.2-1.9 5 0 3.8 2.9 6.4 7.7 6.4z"/><path d="M12 21.5c-1.7 0-3-1.2-3-2.9 0-1.6 1.3-2.7 2.2-3.8.3 1 .9 1.6 1.6 1.8.2-.9.1-1.8-.2-2.7 1.4 1.1 2.4 2.7 2.4 4.6 0 1.8-1.3 3-3 3z"/>',
     care: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
     chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h7M8.5 14.5h4.5"/>',
     lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
     msg: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
     phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
-    chev: '<path d="M9 6l6 6-6 6"/>'
+    chev: '<path d="M9 6l6 6-6 6"/>',
+    arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    bellsvc: '<path d="M3.5 17.5h17M5 17.5a7 7 0 0 1 14 0"/><path d="M12 10.5V8.5M10 8.5h4M2.5 20.5h19"/>'
   };
   function cci(k) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (CCI[k] || CCI.chat) + "</svg>"; }
   function KINDS() {
@@ -786,29 +788,51 @@
   }
   function ccCardHome() {
     var n = A.cc && A.cc.unread;
-    return '<a class="ka-cc" href="/app/help"><span class="ic">' + cci("chat") + (n ? '<i class="ka-bdg">' + n + "</i>" : "") + '</span><span class="tx"><small>Concierge</small><b>' + T("¿En qué le podemos ayudar?", "How can we help you?") + "</b><em>" +
-      T("Mentor, orientación, liderazgo, oración y cuidado pastoral", "Mentoring, guidance, leadership, prayer and pastoral care") + '</em></span><span class="ch">' + cci("chev") + "</span></a>";
+    return '<a class="ka-cc" href="/app/help"><i class="sh"></i><span class="ic">' + cci("bellsvc") + (n ? '<i class="ka-bdg">' + n + "</i>" : "") + '</span><span class="tx"><small>Concierge KAI</small><b>' + T("¿En qué le podemos ayudar?", "How can we help you?") + "</b><em>" +
+      T("Un equipo de pastores, a su servicio", "A team of pastors, at your service") + '</em></span><span class="ch">' + cci("chev") + "</span></a>";
+  }
+  function ccSteps(s) {
+    var i = s === "done" ? 2 : s === "progress" ? 1 : 0;
+    return '<div class="cc-trk">' + [T("Recibida", "Received"), T("En proceso", "In progress"), T("Resuelta", "Resolved")].map(function (t, j) {
+      return '<span class="' + (j < i ? "cc-s-ok" : j === i ? "cc-s-now" : "") + '"><i>' + (j < i || (j === i && i === 2) ? "✓" : "") + "</i>" + t + "</span>"; }).join("") + "</div>";
   }
   function helpHTML() {
     var p = helpPath();
     if (p.id) return ccThreadHTML(p.id);
     if (p.kind) return ccFormHTML(p.kind);
-    var h = hero({ cls: "sm cc", eb: "Concierge", title: T("¿En qué le ayudamos?", "How can we help?"), sub: T("El equipo de KAI, a su servicio", "The KAI team, at your service") });
+    var nm = String((A.m && A.m.full_name) || myName() || "").split(" ")[0];
+    var h = '<div class="ka-hero cc-hero">' + rings() + '<i class="glow"></i><div class="hb"><img class="lw" src="images/logo.png" alt="Kingdom Alliance International"></div>' +
+      '<div class="cc-emb">' + cci("bellsvc") + "</div><small>Concierge KAI</small><h1>" + (nm ? T("¿En qué le servimos, ", "How can we serve you, ") + esc(nm) + "?" : T("¿En qué le servimos?", "How can we serve you?")) + "</h1><p>" +
+      T("Un equipo de pastores listo para acompañarle. Escríbanos y alguien le dará seguimiento personal.", "A team of pastors ready to walk with you. Write to us and someone will follow up personally.") + "</p></div>";
     if (!A.cc) return h + '<div class="ka-load"><div class="ka-sp"></div></div>';
     if (!A.cc.allowed) return h + '<div class="ka-card cc-lock"><span class="ic">' + cci("lock") + "</span><h3>" + T("Un beneficio para miembros", "A member benefit") + "</h3><p>" +
       T("El Concierge se activa cuando su membresía está activa. Si su solicitud está en proceso, vea en qué paso va.", "Concierge turns on once your membership is active. If your application is in progress, see which step you're on.") +
       '</p><a class="ka-btn tc wide" href="/app/profile">' + T("Ver mis pasos", "See my steps") + "</a></div>";
-    h += '<div class="cc-kinds">' + KINDS().map(function (k, i) {
-      return '<a class="cc-k k-' + k[0] + '" href="/app/help/new/' + k[0] + '" style="--i:' + i + '"><span class="ic">' + cci(k[0]) + '</span><span class="tx"><b>' + k[1] + "</b><small>" + k[2] + '</small></span><span class="ch">' + cci("chev") + "</span></a>";
-    }).join("") + "</div>";
-    var rows = A.cc.rows || [];
-    if (rows.length) {
-      h += '<div class="ka-sec">' + T("Mis peticiones", "My requests") + '</div><div class="cc-list">' + rows.map(function (r) {
-        return '<a class="cc-r k-' + r.kind + (r.unread ? " new" : "") + '" href="/app/help/' + r.id + '"><span class="ic">' + cci(r.kind) + '</span><span class="tx"><b>' + esc(kindName(r.kind)) + '</b><small>' + esc(r.last || "") + "</small><em>" +
-          '<i class="cc-st s-' + r.status + '">' + ccSt(r.status) + "</i>" + (r.who ? esc(r.who) + " · " : "") + esc(agoT(r.updated_at)) + "</em></span>" + (r.unread ? '<i class="dot"></i>' : "") + "</a>";
-      }).join("") + "</div>";
+    var rows = A.cc.rows || [], open = rows.filter(function (r) { return r.status !== "done"; });
+    if (open.length) {
+      h += '<div class="ka-sec">' + T("En curso", "In progress") + '</div><div class="cc-list">' + open.map(ccRowM).join("") + "</div>";
+    } else {
+      h += '<div class="cc-how"><div><i>1</i><b>' + T("Escriba", "Write") + "</b><span>" + T("Cuéntenos qué necesita", "Tell us what you need") + '</span></div><div><i>2</i><b>' + T("Asignamos", "We assign") + "</b><span>" +
+        T("Alguien del equipo", "Someone from the team") + '</span></div><div><i>3</i><b>' + T("Acompañamos", "We follow up") + "</b><span>" + T("Aquí en la app", "Right here in the app") + "</span></div></div>";
     }
+    var K = KINDS();
+    h += '<div class="ka-sec">' + T("¿Qué necesita?", "What do you need?") + '</div><div class="cc-grid">' + K.slice(0, 4).map(function (k, i) {
+      return '<a class="cc-t k-' + k[0] + '" href="/app/help/new/' + k[0] + '" style="--i:' + i + '"><span class="gi">' + cci(k[0]) + "</span><b>" + k[1] + "</b><small>" + k[2] + '</small><span class="cc-ar">' + cci("arrow") + "</span></a>";
+    }).join("") + "</div>";
+    var c = K[4];
+    h += '<a class="cc-care" href="/app/help/new/care"><span class="gi">' + cci("care") + '</span><span class="tx"><em>' + cci("lock") + T("Confidencial", "Confidential") + "</em><b>" + c[1] + "</b><small>" +
+      T("Si está pasando por un momento difícil, no está solo. Solo el equipo de cuidado pastoral lo verá.", "If you're going through a hard time, you're not alone. Only the pastoral care team will see it.") + '</small></span><span class="cc-ar">' + cci("arrow") + "</span></a>";
+    var done = rows.filter(function (r) { return r.status === "done"; });
+    if (done.length) h += '<div class="ka-sec">' + T("Resueltas", "Resolved") + '</div><div class="cc-list">' + done.map(ccRowM).join("") + "</div>";
     return h;
+  }
+  function ccRowM(r) {
+    return '<a class="cc-r k-' + r.kind + (r.unread ? " new" : "") + '" href="/app/help/' + r.id + '"><span class="gi gi-sm">' + cci(r.kind) + '</span><span class="tx"><b>' + esc(kindName(r.kind)) + '</b><small>' + esc(r.last || "") + "</small><em>" +
+      '<i class="cc-st s-' + r.status + '">' + ccSt(r.status) + "</i>" + (r.who ? esc(r.who) + " · " : "") + esc(agoT(r.updated_at)) + "</em></span>" + (r.unread ? '<i class="dot"></i>' : "") + "</a>";
+  }
+  function ccBand(kind, title, sub, back, extra) {
+    return '<div class="cc-band k-' + kind + '"><i class="o1"></i><i class="o2"></i><a class="ka-evback" href="' + back + '">' + svg("back") + "Concierge</a>" +
+      '<div class="cc-in"><span class="gi gi-lg">' + cci(kind) + "</span><h1>" + title + "</h1>" + (sub ? "<p>" + sub + "</p>" : "") + (extra || "") + "</div></div>";
   }
   function ccFormHTML(kind) {
     var k = KINDS().filter(function (x) { return x[0] === kind; })[0];
@@ -819,36 +843,46 @@
       leader: T("Ej. Me interesa Instituto Morphē / un taller de liderazgo para mis líderes…", "E.g. I'm interested in Instituto Morphē / a leadership workshop for my leaders…"),
       prayer: T("Escriba su petición de oración…", "Write your prayer request…"),
       care: T("Cuéntenos con confianza lo que está viviendo…", "Tell us, in confidence, what you're going through…") }[kind];
-    var h = '<div class="kn-top"><a href="/app/help" class="bk">' + svg("back") + "Concierge</a></div>";
-    h += '<div class="cc-fh k-' + kind + '"><span class="ic">' + cci(kind) + "</span><div><h1>" + k[1] + "</h1><p>" + (kind === "care" ? T("Le acompañamos en lo que está viviendo.", "We walk with you in what you're going through.") : k[2]) + "</p></div></div>";
+    var h = ccBand(kind, k[1], kind === "care" ? T("Le acompañamos en lo que está viviendo.", "We walk with you in what you're going through.") : k[2], "/app/help");
+    h += '<div class="cc-sheet">';
     if (kind === "admin") h += '<p class="cc-note">' + T("Le orientamos y le decimos por dónde empezar; no hacemos el trámite por usted.", "We guide you and tell you where to start; we don't do the paperwork for you.") + "</p>";
     if (kind === "care") h += '<p class="cc-note conf">' + cci("lock") + T("Confidencial: solo lo verá el equipo de cuidado pastoral. Las notificaciones no muestran su mensaje.", "Confidential: only the pastoral care team will see it. Notifications never show your message.") + "</p>";
-    h += '<div class="kc-sec">' + T("Su mensaje", "Your message") + '</div><textarea class="kc-in" id="cc-b" rows="6" maxlength="2000" placeholder="' + esc(ph) + '">' + esc(f.body || "") + "</textarea>";
-    h += '<div class="kc-sec">' + T("¿Cómo prefiere que le contactemos?", "How would you like us to reach you?") + '</div><div class="kc-chips">' +
-      ["app", "phone", "text", "email"].map(function (c) { return '<button data-a="cccon" data-v="' + c + '" class="' + (f.contact === c ? "on" : "") + '">' + contactName(c) + "</button>"; }).join("") + "</div>";
-    if (f.contact === "phone" || f.contact === "text") h += '<input class="kc-in" id="cc-ph" type="tel" inputmode="tel" autocomplete="tel" value="' + esc(f.phone || "") + '" placeholder="123-456-7890" style="margin-top:10px">';
-    h += '<p class="ka-msg" id="cc-m"></p><button class="ka-btn tc wide kc-go" data-a="ccnew">' + T("Enviar al equipo", "Send to the team") + "</button>";
-    h += '<p class="cc-help">' + T("Le avisamos en la app cuando el equipo responda.", "We'll let you know in the app when the team answers.") + "</p>";
-    return '<div class="kc">' + h + "</div>";
+    h += '<label class="cc-lb" for="cc-b">' + T("Su mensaje", "Your message") + '</label><textarea class="cc-ta" id="cc-b" rows="6" maxlength="2000" placeholder="' + esc(ph) + '">' + esc(f.body || "") + "</textarea>";
+    h += '<div class="cc-lb">' + T("¿Cómo prefiere que le contactemos?", "How would you like us to reach you?") + '</div><div class="cc-con">' +
+      [["app", "chat"], ["phone", "phone"], ["text", "msg"], ["email", "mail"]].map(function (c) { return '<button data-a="cccon" data-v="' + c[0] + '" class="' + (f.contact === c[0] ? "on" : "") + '">' + cci(c[1]) + (c[0] === "text" ? T("Texto", "Text") : contactName(c[0])) + "</button>"; }).join("") + "</div>";
+    if (f.contact === "phone" || f.contact === "text") h += '<input class="cc-ta cc-ph" id="cc-ph" type="tel" inputmode="tel" autocomplete="tel" value="' + esc(f.phone || "") + '" placeholder="' + T("Su teléfono · 123-456-7890", "Your phone · 123-456-7890") + '">';
+    h += '<p class="ka-msg" id="cc-m"></p><button class="cc-send k-' + kind + '" data-a="ccnew">' + T("Enviar al equipo", "Send to the team") + cci("arrow") + "</button>";
+    h += '<p class="cc-help">' + T("Le avisamos en la app cuando el equipo responda.", "We'll let you know in the app when the team answers.") + "</p></div>";
+    return h;
   }
   function bubbles(msgs, teamView) {
     return '<div class="cc-th">' + (msgs || []).map(function (m) {
-      var mineSide = teamView ? m.team : !m.team;
-      return '<div class="cc-b' + (mineSide ? " me" : "") + (m.internal ? " int" : "") + '">' + (m.internal ? '<span class="cc-tg">' + cci("lock") + T("Nota interna · el pastor no la ve", "Internal note · the pastor doesn't see it") + "</span>" : "") +
-        "<p>" + esc(m.body).replace(/\n/g, "<br>") + '</p><small>' + (m.by ? esc(m.by) + " · " : "") + esc(agoT(m.at)) + "</small></div>";
+      var mineSide = teamView ? m.team : !m.team, av = m.team && !mineSide && m.by ? '<span class="av">' + esc(String(m.by).charAt(0)) + "</span>" : "";
+      return '<div class="cc-row' + (mineSide ? " me" : "") + (m.internal ? " int" : "") + '">' + av + '<div class="cc-b' + (mineSide ? " me" : "") + (m.internal ? " int" : "") + '">' + (m.internal ? '<span class="cc-tg">' + cci("lock") + T("Nota interna · el pastor no la ve", "Internal note · the pastor doesn't see it") + "</span>" : "") +
+        "<p>" + esc(m.body).replace(/\n/g, "<br>") + '</p><small>' + (m.by ? esc(m.by) + " · " : "") + esc(agoT(m.at)) + "</small></div></div>";
     }).join("") + "</div>";
   }
   function ccThreadHTML(id) {
     var d = A.ccOne;
-    var h = '<div class="kn-top"><a href="/app/help" class="bk">' + svg("back") + "Concierge</a></div>";
-    if (!d || d.id !== id) { loadCCOne(id); return h + '<div class="ka-load"><div class="ka-sp"></div></div>'; }
-    if (d.err) return h + emptyHTML("bell", T("No encontramos esta petición", "We couldn't find this request"), T("Vuelva a Concierge e intente de nuevo.", "Go back to Concierge and try again."));
-    h += '<div class="cc-fh sm k-' + d.kind + '"><span class="ic">' + cci(d.kind) + "</span><div><h1>" + esc(kindName(d.kind)) + '</h1><p><i class="cc-st s-' + d.status + '">' + ccSt(d.status) + "</i>" +
-      (d.who ? T("Le atiende ", "With ") + esc(d.who) : T("El equipo la recibió", "The team received it")) + "</p></div></div>";
-    h += bubbles(d.msgs, false);
-    h += '<div class="cc-reply"><textarea class="kc-in" id="cc-r" rows="2" maxlength="2000" placeholder="' + T("Escriba un mensaje…", "Write a message…") + '"></textarea><button class="ka-btn navy" data-a="ccrep" data-id="' + d.id + '" aria-label="' + T("Enviar", "Send") + '">' + svg("send") + "</button></div><p class=\"ka-msg\" id=\"cc-m\"></p>";
+    if (!d || d.id !== id) { loadCCOne(id); return '<div class="kn-top"><a href="/app/help" class="bk">' + svg("back") + 'Concierge</a></div><div class="ka-load"><div class="ka-sp"></div></div>'; }
+    if (d.err) return '<div class="kn-top"><a href="/app/help" class="bk">' + svg("back") + "Concierge</a></div>" + emptyHTML("bell", T("No encontramos esta petición", "We couldn't find this request"), T("Vuelva a Concierge e intente de nuevo.", "Go back to Concierge and try again."));
+    var h = ccBand(d.kind, esc(kindName(d.kind)), d.who ? T("Le atiende ", "With ") + "<b>" + esc(d.who) + "</b>" : T("El equipo de KAI ya recibió su petición", "The KAI team has received your request"), "/app/help", ccSteps(d.status));
+    h += '<div class="cc-chat">' + bubbles(d.msgs, false);
+    if (!d.msgs.some(function (m) { return m.team; })) h += '<div class="cc-wait"><span class="dots"><i></i><i></i><i></i></span>' + T("El equipo está revisando su petición. Le avisaremos aquí cuando respondan.", "The team is reviewing your request. We'll let you know here when they answer.") + "</div>";
+    h += '<div class="cc-reply"><textarea class="cc-ta" id="cc-r" rows="1" maxlength="2000" placeholder="' + T("Escriba un mensaje…", "Write a message…") + '"></textarea><button class="cc-go k-' + d.kind + '" data-a="ccrep" data-id="' + d.id + '" aria-label="' + T("Enviar", "Send") + '">' + svg("send") + "</button></div><p class=\"ka-msg\" id=\"cc-m\"></p>";
     if (d.status === "done") h += '<p class="cc-help">' + T("Esta petición quedó resuelta. Si escribe de nuevo, se vuelve a abrir.", "This request was resolved. Writing again reopens it.") + "</p>";
-    return h;
+    return h + "</div>";
+  }
+  function ccSuccess(kind, id) {
+    var old = $("cc-ok"); if (old) old.remove();
+    var d = document.createElement("div"); d.id = "cc-ok"; d.className = "cc-ok k-" + kind;
+    d.innerHTML = '<div class="pn"><div class="ring"><svg viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24"/><path d="M15 27l7 7 15-16"/></svg></div><h2>' + T("¡Recibido!", "Received!") + "</h2><p>" +
+      (kind === "care" ? T("Su petición llegó, de forma confidencial, al equipo de cuidado pastoral. Le avisaremos cuando le respondan.", "Your request reached the pastoral care team confidentially. We'll let you know when they answer.")
+        : T("Su petición llegó al equipo de KAI. Le avisaremos aquí cuando le respondan.", "Your request reached the KAI team. We'll let you know here when they answer.")) +
+      '</p><button class="cc-okb" data-x="1">' + T("Ver mi conversación", "See my conversation") + "</button></div>";
+    document.body.appendChild(d);
+    requestAnimationFrame(function () { d.classList.add("show"); });
+    d.addEventListener("click", function (e) { if (e.target.dataset.x || e.target === d) { d.classList.remove("show"); setTimeout(function () { d.remove(); }, 250); } });
   }
 
   /* Equipo → Concierge */
@@ -878,7 +912,7 @@
     var rows = t.rows || [];
     if (!rows.length) return h + emptyHTML("bell", f === "done" ? T("Aún no hay resueltas", "None resolved yet") : T("Todo al día", "All caught up"), f === "mine" ? T("No tiene peticiones asignadas.", "You have no assigned requests.") : T("Cuando un pastor pida ayuda, aparecerá aquí y le llegará un aviso.", "When a pastor asks for help, it shows up here and you get a notice."));
     return h + '<div class="cc-list">' + rows.map(function (r) {
-      return '<a class="cc-r k-' + r.kind + (r.unread ? " new" : "") + '" href="/app/team/cc/' + r.id + '"><span class="ic">' + cci(r.kind) + '</span><span class="tx"><b>' + esc(r.name) + '</b><small>' + (r.kind === "care" ? "🔒 " : "") + esc(r.last || "") + "</small><em>" +
+      return '<a class="cc-r k-' + r.kind + (r.unread ? " new" : "") + '" href="/app/team/cc/' + r.id + '"><span class="gi gi-sm">' + cci(r.kind) + '</span><span class="tx"><b>' + esc(r.name) + '</b><small>' + (r.kind === "care" ? "🔒 " : "") + esc(r.last || "") + "</small><em>" +
         '<i class="cc-st s-' + r.status + '">' + ccStTeam(r.status) + "</i>" + esc(kindName(r.kind)) + " · " + (r.who ? esc(r.who) : T("Sin asignar", "Unassigned")) + " · " + esc(agoT(r.updated_at)) + "</em></span>" + (r.unread ? '<i class="dot"></i>' : "") + "</a>";
     }).join("") + "</div>";
   }
@@ -910,7 +944,7 @@
       a.disabled = true; a.textContent = T("Enviando…", "Sending…");
       try {
         var r = await sb().rpc("cc_new", { p_kind: F.kind, p_body: F.body, p_contact: F.contact, p_phone: (F.contact === "phone" || F.contact === "text") ? F.phone : null });
-        if (r.error) throw r.error; kick(); A.ccForm = null; A.ccOne = null; loadCC(); KGO("/app/help/" + r.data, true);
+        if (r.error) throw r.error; kick(); var kk = F.kind; A.ccForm = null; A.ccOne = null; loadCC(); KGO("/app/help/" + r.data, true); ccSuccess(kk, r.data);
       } catch (e) { a.textContent = T("Enviar al equipo", "Send to the team"); bad(ccErr(e)); }
       return true;
     }
