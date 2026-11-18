@@ -378,7 +378,7 @@
     }
     if (!meet) {
       h += '<div class="kc-sec">' + T("Mensajes listos", "Ready-made messages") + '</div><div class="kc-tpl">' + TPL.map(function (t, i) { return '<button data-a="tpl" data-i="' + i + '" class="' + (c.tpl === i ? "on" : "") + '">' + (L_() === "es" ? t[0] : t[1]) + "</button>"; }).join("") + "</div>";
-      if (c.tpl === 1 && (A.events || []).length > 1) h += '<div class="kc-sec">' + T("¿De cuál evento?", "Which event?") + '</div><select class="kc-in" id="kc-tev">' + A.events.map(function (e) { return '<option value="' + esc(e.slug) + '"' + (c.tplEv === e.slug ? " selected" : "") + ">" + esc(evTitle(e)) + " · " + esc(fdt(e.starts_at, { day: "numeric", month: "short" })) + "</option>"; }).join("") + "</select>";
+      if (c.tpl === 1 && c.aud !== "event" && (A.events || []).length > 1) h += '<div class="kc-sec">' + T("¿De cuál evento?", "Which event?") + '</div><select class="kc-in" id="kc-tev">' + A.events.map(function (e) { return '<option value="' + esc(e.slug) + '"' + (c.tplEv === e.slug ? " selected" : "") + ">" + esc(evTitle(e)) + " · " + esc(fdt(e.starts_at, { day: "numeric", month: "short" })) + "</option>"; }).join("") + "</select>";
     }
     h += '<div class="kc-sec">' + T("Título", "Title") + '</div><input class="kc-in" id="kc-t" maxlength="120" value="' + esc(c.title || "") + '" placeholder="' + (meet ? T("Ej. Conversación de bienvenida", "E.g. Welcome conversation") : T("Ej. Cena Navideña este domingo", "E.g. Christmas Dinner this Sunday")) + '">';
     if (meet) {
@@ -420,7 +420,7 @@
       } catch (e) { el.textContent = ""; }
     }, 250);
   }
-  function tplEvTitle(c) { var e = (A.events || []).filter(function (x) { return x.slug === c.tplEv; })[0] || (A.events || [])[0]; return e ? evTitle(e) : ""; }
+  function tplEvTitle(c) { var sl = c.aud === "event" && c.event ? c.event : c.tplEv; var e = (A.events || []).filter(function (x) { return x.slug === sl; })[0] || (A.events || [])[0]; return e ? evTitle(e) : ""; }
   function syncFields() {
     var c = C(), g = function (id) { var e = $(id); return e ? e.value : undefined; };
     ["t", "b", "d", "h", "m", "z", "at"].forEach(function (k) { var v = g("kc-" + k); if (v !== undefined) c[{ t: "title", b: "body", d: "date", h: "time", m: "minutes", z: "zoom", at: "at" }[k]] = v; });
@@ -436,7 +436,11 @@
         if (pb) pb.textContent = meet ? (c.date ? cap(fdt(c.date + "T" + (c.time || "19:00"), { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" })) : T("Día y hora de la reunión", "Meeting day and time")) : (c.body || T("El mensaje aparece aquí.", "The message shows here."));
       });
     });
-    var ev = $("kc-ev"); if (ev) ev.addEventListener("change", function () { syncFields(); recount(); });
+    var ev = $("kc-ev"); if (ev) ev.addEventListener("change", function () {
+      syncFields(); var c = C();
+      if (c.tpl === 1 && (!c.title || /^Recordatorio: /.test(c.title))) { c.title = "Recordatorio: " + tplEvTitle(c); paint(); return; }
+      recount();
+    });
     var tev = $("kc-tev"); if (tev) tev.addEventListener("change", function () {
       syncFields(); var c = C(), old = "Recordatorio: " + tplEvTitle(c); c.tplEv = tev.value;
       if (!c.title || c.title === old || /^Recordatorio: /.test(c.title)) c.title = "Recordatorio: " + tplEvTitle(c);
@@ -732,7 +736,7 @@
       try { await sb().rpc("notice_rsvp", { p_id: id, p_ans: v }); } catch (x) {}
       return;
     }
-    if (k === "aud") { syncFields(); C().aud = a.dataset.v; paint(); return; }
+    if (k === "aud") { syncFields(); var ca = C(); if (ca.aud === "event" && ca.event) ca.tplEv = ca.event; ca.aud = a.dataset.v; if (ca.aud === "event" && !ca.event && ca.tpl === 1 && ca.tplEv) ca.event = ca.tplEv; if (ca.tpl === 1 && /^Recordatorio: /.test(ca.title || "")) ca.title = "Recordatorio: " + tplEvTitle(ca); paint(); return; }
     if (k === "tpl") { var t = TPL[+a.dataset.i], cc = C(); cc.tpl = +a.dataset.i; if (cc.tpl === 1 && A.events && A.events[0] && !cc.tplEv) cc.tplEv = A.events[0].slug; cc.title = t[2] + (cc.tpl === 1 ? tplEvTitle(cc) : ""); cc.body = t[3]; paint(); return; }
     if (k === "when") { syncFields(); C().when = a.dataset.v; paint(); return; }
     if (k === "padd") { syncFields(); var pp = (A.cmpRes || [])[+a.dataset.i]; if (pp) C().people.push(pp); paint(); var qi = $("kc-q"); if (qi) qi.focus(); return; }
