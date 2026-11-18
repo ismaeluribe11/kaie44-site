@@ -371,13 +371,14 @@
     var opts = meet ? [["board", T("Todo el Board", "Whole Board")], ["people", T("Personas", "People")]]
       : [].concat(has("admin", "president") ? [["all", T("Todos los miembros", "All members")]] : [], [["board", T("Solo el Board", "Board only")]], has("admin", "president", "membership") ? [["event", T("Un evento", "An event")]] : [], [["people", T("Personas", "People")]]);
     h += '<div class="kc-sec">' + (meet ? T("Invitados", "Guests") : T("¿A quién?", "To whom?")) + '</div><div class="kc-chips">' + opts.map(function (o) { return '<button data-a="aud" data-v="' + o[0] + '" class="' + (c.aud === o[0] ? "on" : "") + '">' + o[1] + "</button>"; }).join("") + "</div>";
-    if (c.aud === "event") h += '<select class="kc-in" id="kc-ev"><option value="">' + T("Elija el evento…", "Choose the event…") + "</option>" + (A.events || []).map(function (e) { return '<option value="' + esc(e.id) + '"' + (c.event === String(e.id) ? " selected" : "") + ">" + esc(evTitle(e)) + "</option>"; }).join("") + "</select>";
+    if (c.aud === "event") h += '<select class="kc-in" id="kc-ev"><option value="">' + T("Elija el evento…", "Choose the event…") + "</option>" + (A.events || []).map(function (e) { return '<option value="' + esc(e.slug) + '"' + (c.event === e.slug ? " selected" : "") + ">" + esc(evTitle(e)) + "</option>"; }).join("") + "</select>";
     if (c.aud === "people" || meet) {
       h += '<div class="kc-ppl">' + c.people.map(function (p, i) { return '<span>' + esc(p.name || p.email) + '<button data-a="pdel" data-i="' + i + '" aria-label="' + T("Quitar", "Remove") + '">×</button></span>'; }).join("") +
         '<input id="kc-q" class="kc-in" placeholder="' + (meet ? T("Agregar a un pastor (nombre o correo)…", "Add a pastor (name or email)…") : T("Buscar por nombre o correo…", "Search by name or email…")) + '" autocomplete="off"><div id="kc-res" class="kc-res"></div></div>';
     }
     if (!meet) {
       h += '<div class="kc-sec">' + T("Mensajes listos", "Ready-made messages") + '</div><div class="kc-tpl">' + TPL.map(function (t, i) { return '<button data-a="tpl" data-i="' + i + '" class="' + (c.tpl === i ? "on" : "") + '">' + (L_() === "es" ? t[0] : t[1]) + "</button>"; }).join("") + "</div>";
+      if (c.tpl === 1 && (A.events || []).length > 1) h += '<div class="kc-sec">' + T("¿De cuál evento?", "Which event?") + '</div><select class="kc-in" id="kc-tev">' + A.events.map(function (e) { return '<option value="' + esc(e.slug) + '"' + (c.tplEv === e.slug ? " selected" : "") + ">" + esc(evTitle(e)) + " · " + esc(fdt(e.starts_at, { day: "numeric", month: "short" })) + "</option>"; }).join("") + "</select>";
     }
     h += '<div class="kc-sec">' + T("Título", "Title") + '</div><input class="kc-in" id="kc-t" maxlength="120" value="' + esc(c.title || "") + '" placeholder="' + (meet ? T("Ej. Conversación de bienvenida", "E.g. Welcome conversation") : T("Ej. Cena Navideña este domingo", "E.g. Christmas Dinner this Sunday")) + '">';
     if (meet) {
@@ -419,6 +420,7 @@
       } catch (e) { el.textContent = ""; }
     }, 250);
   }
+  function tplEvTitle(c) { var e = (A.events || []).filter(function (x) { return x.slug === c.tplEv; })[0] || (A.events || [])[0]; return e ? evTitle(e) : ""; }
   function syncFields() {
     var c = C(), g = function (id) { var e = $(id); return e ? e.value : undefined; };
     ["t", "b", "d", "h", "m", "z", "at"].forEach(function (k) { var v = g("kc-" + k); if (v !== undefined) c[{ t: "title", b: "body", d: "date", h: "time", m: "minutes", z: "zoom", at: "at" }[k]] = v; });
@@ -435,6 +437,11 @@
       });
     });
     var ev = $("kc-ev"); if (ev) ev.addEventListener("change", function () { syncFields(); recount(); });
+    var tev = $("kc-tev"); if (tev) tev.addEventListener("change", function () {
+      syncFields(); var c = C(), old = "Recordatorio: " + tplEvTitle(c); c.tplEv = tev.value;
+      if (!c.title || c.title === old || /^Recordatorio: /.test(c.title)) c.title = "Recordatorio: " + tplEvTitle(c);
+      paint();
+    });
     var q = $("kc-q"), res = $("kc-res"), qt = null;
     if (q) q.addEventListener("input", function () {
       clearTimeout(qt); var v = q.value.trim(); if (v.length < 2) { res.innerHTML = ""; return; }
@@ -726,7 +733,7 @@
       return;
     }
     if (k === "aud") { syncFields(); C().aud = a.dataset.v; paint(); return; }
-    if (k === "tpl") { var t = TPL[+a.dataset.i], cc = C(); cc.tpl = +a.dataset.i; cc.title = t[2] + (+a.dataset.i === 1 && A.events && A.events[0] ? evTitle(A.events[0]) : ""); cc.body = t[3]; paint(); return; }
+    if (k === "tpl") { var t = TPL[+a.dataset.i], cc = C(); cc.tpl = +a.dataset.i; if (cc.tpl === 1 && A.events && A.events[0] && !cc.tplEv) cc.tplEv = A.events[0].slug; cc.title = t[2] + (cc.tpl === 1 ? tplEvTitle(cc) : ""); cc.body = t[3]; paint(); return; }
     if (k === "when") { syncFields(); C().when = a.dataset.v; paint(); return; }
     if (k === "padd") { syncFields(); var pp = (A.cmpRes || [])[+a.dataset.i]; if (pp) C().people.push(pp); paint(); var qi = $("kc-q"); if (qi) qi.focus(); return; }
     if (k === "pdel") { syncFields(); C().people.splice(+a.dataset.i, 1); paint(); return; }
