@@ -553,7 +553,7 @@
 
   function navHTML(tab) {
     var items = [["home", "/app", "home", T("Inicio", "Home")], ["events", "/app/events", "cal", T("Eventos", "Events")], ["inbox", "/app/inbox", "bell", T("Avisos", "Notices")], ["profile", "/app/profile", "user", T("Perfil", "Profile")]];
-    if (A.roles.length) items.push(["team", "/app/team", "team", T("Equipo", "Team")]);
+    if (A.roles.length || tab === "team") items.push(["team", "/app/team", "team", T("Equipo", "Team")]);
     if (tab === "help") tab = "home";
     return '<div class="ka-nav" role="navigation" aria-label="' + T("Menú de la app", "App menu") + '"><div class="in">' + items.map(function (x) {
       return '<a href="' + x[1] + '" class="' + (tab === x[0] ? "on" : "") + '"' + (tab === x[0] ? ' aria-current="page"' : "") + ">" + svg(x[2]) + x[3] +
@@ -1123,6 +1123,8 @@
       document.body.classList.toggle("is-app", v === "app" || teamMode);
       document.body.classList.toggle("is-appteam", teamMode);
       backBtn(teamMode ? "app" : v);
+      if (teamMode && !A.booted) { A.booted = true; load().then(function () { var n2 = $("ka-navw"); if (n2 && document.body.classList.contains("is-appteam")) n2.innerHTML = navHTML("team"); }); }
+      if (teamMode) [250, 1200].forEach(function (ms) { setTimeout(function () { var on = document.querySelector(".sx-nav a.on"), nav = on && on.parentElement; if (nav && on) nav.scrollTo({ left: Math.max(0, on.offsetLeft - 14), behavior: "smooth" }); }, ms); });
       if (teamMode) { appBar(); var nt = $("ka-navw"); if (!nt) { nt = document.createElement("div"); nt.id = "ka-navw"; document.body.appendChild(nt); } nt.innerHTML = navHTML("team"); return; }
       var ab = $("ka-appbar"); if (ab) ab.remove();
       if (v !== "app") { var nw = $("ka-navw"); if (nw) nw.innerHTML = ""; return; }
