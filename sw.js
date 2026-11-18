@@ -2,7 +2,7 @@
    - Red primero: el sitio siempre se ve en su versión más nueva; la copia guardada
      solo se usa si no hay internet (así la credencial abre sin señal).
    - Notificaciones (push) y el numerito sobre el ícono. */
-var CACHE = "kai-app-v1";
+var CACHE = "kai-app-v2";
 var SHELL = ["/", "/app", "/index.html", "/app.js", "/app.css", "/members.js", "/images/logo.png", "/icon-192.png"];
 
 self.addEventListener("install", function (e) {
@@ -41,6 +41,7 @@ self.addEventListener("push", function (e) {
   var opts = { body: d.body || "", icon: "/icon-192.png", badge: "/icon-192.png", tag: d.tag || undefined, data: { url: d.url || "/app/inbox" } };
   e.waitUntil(Promise.all([
     self.registration.showNotification(title, opts),
+    self.clients.matchAll({ type: "window" }).then(function (cs) { cs.forEach(function (c) { c.postMessage({ kai: "push" }); }); }),
     (typeof d.badge === "number" && self.navigator && self.navigator.setAppBadge) ? self.navigator.setAppBadge(d.badge).catch(function () {}) : null
   ]));
 });
@@ -48,6 +49,7 @@ self.addEventListener("push", function (e) {
 self.addEventListener("notificationclick", function (e) {
   e.notification.close();
   var url = (e.notification.data && e.notification.data.url) || "/app";
+  if (/^https?:\/\//.test(url) && url.indexOf(self.location.origin) !== 0) { e.waitUntil(self.clients.openWindow(url)); return; }
   e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (cs) {
     for (var i = 0; i < cs.length; i++) {
       if ("focus" in cs[i]) { cs[i].postMessage({ kai: "go", url: url }); return cs[i].focus(); }

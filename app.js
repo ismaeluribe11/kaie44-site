@@ -38,6 +38,8 @@
     card: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2.2"/><path d="M14 10h4M14 14h4M6 16c.8-1.5 5.2-1.5 6 0"/>',
     back: '<path d="M15 18l-6-6 6-6"/>',
     qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7h-4M17 21v-1"/>',
+    zoom: '<rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/>',
+    send: '<path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>',
     pin: '<path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'
   };
   function svg(k) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + IC[k] + "</svg>"; }
@@ -62,6 +64,8 @@
     try { var me = await c.rpc("staff_me"); A.me = me.data || null; A.roles = (me.data && me.data.roles) || []; } catch (e) { A.roles = []; }
     paint();
     loadEvents();
+    loadInbox();
+    pushCheck();
     if (A.roles.length) loadTeam();
   }
   async function loadEvents() {
@@ -77,11 +81,14 @@
 
   /* ---------- rutas ---------- */
   function sub() { var p = location.pathname.replace(/\/+$/, ""); var m = p.match(/^\/app\/?([a-z]*)/); return (m && m[1]) || "home"; }
+  function sub2() { var m = location.pathname.match(/^\/app\/[a-z]+\/([a-z]+)/); return (m && m[1]) || ""; }
+  function qn() { try { return +new URLSearchParams(location.search).get("n") || 0; } catch (e) { return 0; } }
 
   /* ---------- pintar ---------- */
   function paint() {
     var root = $("kapp"); if (!root) return;
     var tab = sub(); A.tab = tab;
+    var key = tab + "/" + sub2(); if (key !== A.lastKey) { if (sub2()) A.cmp = null; A.lastKey = key; }
     var html = "";
     if (A.st === "load") html = '<div class="ka-load"><div class="ka-sp"></div>' + T("Cargando…", "Loading…") + "</div>";
     else if (A.st === "out") html = loginHTML();
@@ -90,7 +97,7 @@
       if (tab === "events") html += eventsHTML();
       else if (tab === "inbox") html += inboxHTML();
       else if (tab === "profile") html += profileHTML();
-      else if (tab === "team") html += teamHTML();
+      else if (tab === "team") html += sub2() === "aviso" ? composeHTML("notice") : sub2() === "reunion" ? composeHTML("meeting") : teamHTML();
       else html += homeHTML();
     }
     root.innerHTML = html;
@@ -99,7 +106,8 @@
     if (!nv) { nv = document.createElement("div"); nv.id = "ka-navw"; document.body.appendChild(nv); }
     nv.innerHTML = (A.st === "in" || A.st === "none") && document.body.classList.contains("is-app") ? navHTML(tab) : "";
     if (A.st === "out") wireLogin();
-    if (tab === "team") wireTeam();
+    if (tab === "team") { wireTeam(); if (sub2()) wireCompose(); }
+    if (tab === "inbox") inboxOpened();
     setBadge();
   }
 
@@ -185,12 +193,254 @@
     }).join("") + "</div>";
   }
 
+  /* ---------- Avisos (bandeja del miembro) ---------- */
+  async function loadInbox() {
+    var c = sb(); if (!c) return;
+    try {
+      var r = await c.rpc("my_notices"); if (r.error) throw r.error;
+      A.inbox = r.data || { rows: [], unread: 0 };
+      A.unread = A.inbox.unread || 0;
+    } catch (e) { A.inbox = A.inbox || { rows: [], unread: 0, off: true }; }
+    if (A.st === "in" || A.st === "none") paint();
+  }
+  function inboxOpened() {
+    var id = qn();
+    if (id && A.inbox) { var n = (A.inbox.rows || []).filter(function (x) { return x.id === id; })[0]; if (n && !n.read) markRead(n); }
+  }
+  async function markRead(n) {
+    n.read = true; A.unread = Math.max(0, (A.unread || 0) - 1); if (A.inbox) A.inbox.unread = A.unread; setBadge();
+    try { await sb().rpc("notice_read", { p_id: n.id }); } catch (e) {}
+  }
+  function agoT(s) {
+    var m = (Date.now() - new Date(s).getTime()) / 6e4;
+    if (m < 1) return T("Ahora", "Now"); if (m < 60) return T("Hace " + Math.floor(m) + " min", Math.floor(m) + " min ago");
+    if (m < 1440) return T("Hace " + Math.floor(m / 60) + " h", Math.floor(m / 60) + " h ago");
+    return cap(fdt(s, { day: "numeric", month: "short" }));
+  }
+  function meetWhen(n) { return cap(fdt(n.starts_at, { weekday: "long", day: "numeric", month: "long" })) + " · " + fdt(n.starts_at, { hour: "numeric", minute: "2-digit" }); }
+  function icsHref(n) {
+    var z = function (d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }, s = new Date(n.starts_at), e = new Date(s.getTime() + (n.minutes || 60) * 6e4);
+    var x = function (t) { return String(t || "").replace(/[,;\\]/g, "\\$&").replace(/\n/g, "\\n"); };
+    var ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//KAI//App//ES", "BEGIN:VEVENT", "UID:kai-" + n.id + "@kaie44.org", "DTSTAMP:" + z(new Date()), "DTSTART:" + z(s), "DTEND:" + z(e),
+      "SUMMARY:" + x(n.title), "DESCRIPTION:" + x((n.body ? n.body + "\n\n" : "") + (n.zoom_url ? "Zoom: " + n.zoom_url : "")), n.zoom_url ? "LOCATION:" + x(n.zoom_url) : "", "BEGIN:VALARM", "TRIGGER:-PT15M", "ACTION:DISPLAY", "DESCRIPTION:" + x(n.title), "END:VALARM", "END:VEVENT", "END:VCALENDAR"].filter(Boolean).join("\r\n");
+    return "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+  }
+  function gcalHref(n) {
+    var z = function (d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); }, s = new Date(n.starts_at), e = new Date(s.getTime() + (n.minutes || 60) * 6e4);
+    return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent(n.title) + "&dates=" + z(s) + "/" + z(e) + "&details=" + encodeURIComponent((n.body || "") + (n.zoom_url ? "\n\nZoom: " + n.zoom_url : ""));
+  }
+
   function inboxHTML() {
-    return hero({ cls: "sm", eb: T("Bandeja", "Inbox"), title: T("Avisos", "Notices"), sub: T("Mensajes del equipo y recordatorios", "Team messages and reminders") }) +
-      '<div class="ka-empty art"><div class="bub"><i class="b1"></i><i class="b2"></i><i class="b3">' + svg("bell") + "</i></div><h3>" + T("Todo al día", "All caught up") + "</h3><p>" +
-      T("Aquí le llegarán los mensajes del equipo de KAI, los recordatorios de eventos y las respuestas a sus solicitudes.", "Messages from the KAI team, event reminders and replies to your requests will appear here.") + "</p></div>" +
-      '<div class="ka-card ka-tip"><span class="ic">' + svg("bell") + "</span><div><h3>" + T("Avisos en su celular", "Notices on your phone") + "</h3><p>" +
-      T("Muy pronto podrá activarlos para recibirlos aunque la app esté cerrada, con el numerito sobre el ícono de KAI.", "Soon you'll be able to turn them on and get them even when the app is closed, with a badge on the KAI icon.") + "</p></div></div>";
+    var id = qn(), ib = A.inbox;
+    if (id && ib) { var one = (ib.rows || []).filter(function (x) { return x.id === id; })[0]; if (one) return noticeHTML(one); }
+    var h = hero({ cls: "sm", eb: T("Bandeja", "Inbox"), title: T("Avisos", "Notices"), sub: A.unread ? T(A.unread + (A.unread === 1 ? " sin leer" : " sin leer"), A.unread + " unread") : T("Mensajes del equipo y recordatorios", "Team messages and reminders") });
+    h += pushCardHTML();
+    if (!ib) return h + '<div class="ka-load"><div class="ka-sp"></div></div>';
+    var rows = ib.rows || [];
+    if (!rows.length) return h + '<div class="ka-empty art"><div class="bub"><i class="b1"></i><i class="b2"></i><i class="b3">' + svg("bell") + "</i></div><h3>" + T("Todo al día", "All caught up") + "</h3><p>" +
+      T("Aquí le llegarán los mensajes del equipo de KAI, las invitaciones a reuniones y los recordatorios.", "Messages from the KAI team, meeting invitations and reminders will appear here.") + "</p></div>";
+    if (A.unread) h += '<div class="kn-bar"><span>' + T("Recientes", "Recent") + '</span><button data-a="readall">' + T("Marcar todo como leído", "Mark all as read") + "</button></div>";
+    return h + '<div class="kn-list">' + rows.map(function (n, i) {
+      var meet = n.kind === "meeting";
+      return '<a class="kn' + (n.read ? "" : " new") + (meet ? " meet" : "") + '" href="/app/inbox?n=' + n.id + '" style="--i:' + i + '"><span class="ic">' + svg(meet ? "cal" : "bell") + "</span><span class=\"tx\"><b>" + esc(n.title) + "</b>" +
+        "<small>" + (meet ? esc(meetWhen(n)) + (n.cancelled ? " · " + T("Cancelada", "Cancelled") : n.rsvp === "yes" ? " · ✓ " + T("Asistiré", "Going") : n.rsvp === "no" ? " · " + T("No puedo", "Can't go") : "") : esc(n.body || "")) + "</small>" +
+        '<em>' + esc(n.from || "KAI") + " · " + esc(agoT(n.at)) + "</em></span>" + (n.read ? "" : '<i class="dot"></i>') + "</a>";
+    }).join("") + "</div>";
+  }
+  function noticeHTML(n) {
+    var meet = n.kind === "meeting", past = meet && new Date(n.starts_at).getTime() + (n.minutes || 60) * 6e4 < Date.now();
+    var h = '<div class="kn-top"><a href="/app/inbox" class="bk">' + svg("back") + T("Avisos", "Notices") + "</a></div>";
+    h += '<div class="kn-det' + (meet ? " meet" : "") + '"><span class="tag">' + (meet ? T("Invitación · Reunión", "Invitation · Meeting") : T("Aviso", "Notice")) + "</span><h1>" + esc(n.title) + "</h1>" +
+      '<p class="by">' + T("De ", "From ") + esc(n.from || "KAI") + " · " + esc(agoT(n.at)) + "</p>";
+    if (meet) {
+      h += '<div class="when"><div class="dt"><b>' + esc(fdt(n.starts_at, { month: "short" }).replace(".", "").toUpperCase()) + "</b><i>" + new Date(n.starts_at).getDate() + "</i></div><div><b>" + esc(cap(fdt(n.starts_at, { weekday: "long", day: "numeric", month: "long" }))) + "</b><span>" +
+        esc(fdt(n.starts_at, { hour: "numeric", minute: "2-digit" })) + (n.minutes ? " · " + n.minutes + " min" : "") + (n.zoom_url ? " · Zoom" : "") + "</span></div></div>";
+    }
+    if (n.body) h += '<div class="msg">' + esc(n.body).replace(/\n/g, "<br>") + "</div>";
+    if (meet && n.cancelled) h += '<div class="kn-cx">' + T("Esta reunión se canceló.", "This meeting was cancelled.") + "</div>";
+    else if (meet && !past) {
+      h += '<div class="kn-acts">' + (n.zoom_url ? '<a class="ka-btn zoom wide" href="' + esc(n.zoom_url) + '" target="_blank" rel="noopener">' + svg("zoom") + T("Abrir Zoom", "Open Zoom") + "</a>" : "") +
+        '<div class="two"><a class="ka-btn line" href="' + icsHref(n) + '" download="KAI-reunion.ics">' + svg("cal") + T("Calendario", "Calendar") + '</a><a class="ka-btn line" href="' + gcalHref(n) + '" target="_blank" rel="noopener">Google</a></div>' +
+        '<div class="rs"><b>' + T("¿Podrá asistir?", "Will you attend?") + '</b><div class="two"><button class="ka-btn ' + (n.rsvp === "yes" ? "ok on" : "line") + '" data-a="rsvp" data-v="yes" data-id="' + n.id + '">✓ ' + T("Asistiré", "I'll be there") + '</button><button class="ka-btn ' + (n.rsvp === "no" ? "no on" : "line") + '" data-a="rsvp" data-v="no" data-id="' + n.id + '">' + T("No puedo", "Can't make it") + "</button></div>" +
+        (n.invited ? '<p class="cnt">' + T(n.yes + " de " + n.invited + " confirmaron", n.yes + " of " + n.invited + " confirmed") + "</p>" : "") + "</div></div>";
+    } else if (n.url && /^\//.test(n.url)) h += '<a class="ka-btn tc wide" href="' + esc(n.url) + '">' + T("Abrir", "Open") + " →</a>";
+    return h + "</div>";
+  }
+
+  /* ---------- Activar avisos en este celular ---------- */
+  function pushState() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return isIOS() && !standalone() ? "install" : "nosup";
+    if (Notification.permission === "denied") return "denied";
+    if (Notification.permission === "granted" && A.pushOn) return "on";
+    return "off";
+  }
+  function pushCardHTML() {
+    var st = pushState();
+    if (st === "on") return '<div class="kp on"><span class="ic">' + svg("bell") + "</span><div><b>" + T("Avisos activados", "Notices are on") + "</b><span>" + T("Le llegarán a este celular aunque la app esté cerrada.", "They'll reach this phone even when the app is closed.") + "</span></div></div>";
+    if (st === "nosup") return "";
+    var p = st === "install" ? T("Primero agregue KAI a su pantalla de inicio (Compartir → Agregar a pantalla de inicio) y ábrala desde el ícono.", "First add KAI to your home screen (Share → Add to Home Screen) and open it from the icon.")
+      : st === "denied" ? T("Los avisos están bloqueados. Actívelos en Ajustes → Notificaciones → KAI.", "Notices are blocked. Turn them on in Settings → Notifications → KAI.")
+      : T("Reciba los avisos del equipo y los recordatorios de reuniones en su celular, con el numerito sobre el ícono.", "Get team notices and meeting reminders on your phone, with a badge on the icon.");
+    return '<div class="kp"><span class="ic">' + svg("bell") + "</span><div><b>" + T("Active los avisos", "Turn on notices") + "</b><span>" + p + "</span>" +
+      (st === "off" ? '<button class="ka-btn tc" data-a="pushon">' + T("Activar avisos", "Turn on notices") + "</button>" : "") + '<p class="ka-msg" id="kp-m"></p></div></div>';
+  }
+  function b64u(s) { var p = "=".repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
+  async function pushCheck() {
+    try { if (!("serviceWorker" in navigator) || Notification.permission !== "granted") return; var r = await navigator.serviceWorker.ready; var s = await r.pushManager.getSubscription(); A.pushOn = !!s; if (s) saveSub(s); } catch (e) {}
+  }
+  async function saveSub(s) {
+    var j = s.toJSON(); try { await sb().rpc("push_subscribe", { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_ua: navigator.userAgent.slice(0, 180) }); } catch (e) {}
+  }
+  async function pushOn() {
+    var m = $("kp-m"); function say(t) { if (m) { m.textContent = t; m.className = "ka-msg err"; } }
+    try {
+      var k = await sb().rpc("kai_vapid_public"); if (k.error || !k.data) { say(T("Los avisos aún no están listos. Intente más tarde.", "Notices aren't ready yet. Try again later.")); return; }
+      var perm = await Notification.requestPermission(); if (perm !== "granted") { paint(); return; }
+      var reg = await navigator.serviceWorker.ready;
+      var s = await reg.pushManager.getSubscription() || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(k.data) });
+      await saveSub(s); A.pushOn = true; paint();
+    } catch (e) { say(T("No se pudo activar. Intente de nuevo.", "Couldn't turn them on. Please try again.")); }
+  }
+
+  /* ---------- Enviar aviso / Nueva reunión (equipo) ---------- */
+  var TPL = [
+    ["Bienvenida", "Welcome", "¡Bienvenido a la familia KAI!", "Su membresía fue aprobada. Abra la app para ver su credencial y los próximos eventos."],
+    ["Recordatorio de evento", "Event reminder", "Recordatorio: ", "¡Lo esperamos! Su boleto está en la pestaña Eventos de la app."],
+    ["Aviso al Board", "Board notice", "Junta del Board", "Junta del Board el jueves a las 7 p. m. por Zoom. Confirme su asistencia."],
+    ["Credencial activa", "Credential active", "Su credencial ya está activa", "Ábrala en la app cuando la necesite. También puede mostrar el código QR."],
+    ["Renovación", "Renewal", "Su membresía vence pronto", "Renueve en un toque desde la app para mantener su credencial activa."],
+    ["Oración", "Prayer", "Oremos juntos", ""]
+  ];
+  function C() { return A.cmp || (A.cmp = { aud: has("admin", "president") ? "all" : "board", people: [], when: "now", tpl: -1 }); }
+  function composeHTML(kind) {
+    var c = C(), meet = kind === "meeting"; c.kind = kind;
+    if (meet && !c.mInit) { c.mInit = 1; c.aud = "board"; c.title = c.title || T("Reunión del Board", "Board meeting"); c.minutes = c.minutes || 60; }
+    if (c.done) return doneHTML();
+    var h = '<div class="kn-top"><a href="/app/team" class="bk" data-a="cmpx">' + svg("back") + T("Equipo", "Team") + "</a></div>";
+    h += '<div class="kc-h"><span class="ic ' + (meet ? "nv" : "tc") + '">' + (meet ? svg("zoom") : svg("send")) + "</span><div><h1>" + (meet ? T("Nueva reunión", "New meeting") : T("Enviar aviso", "Send notice")) + "</h1><p>" +
+      (meet ? T("Zoom, calendario y confirmación en un solo paso.", "Zoom, calendar and RSVP in one step.") : T("Llega como notificación; a quien no la tiene activada, por correo.", "Arrives as a notification; by email to anyone without them on.")) + "</p></div></div>";
+    // A quién
+    var opts = meet ? [["board", T("Todo el Board", "Whole Board")], ["people", T("Personas", "People")]]
+      : [].concat(has("admin", "president") ? [["all", T("Todos los miembros", "All members")]] : [], [["board", T("Solo el Board", "Board only")]], has("admin", "president", "membership") ? [["event", T("Un evento", "An event")]] : [], [["people", T("Personas", "People")]]);
+    h += '<div class="kc-sec">' + (meet ? T("Invitados", "Guests") : T("¿A quién?", "To whom?")) + '</div><div class="kc-chips">' + opts.map(function (o) { return '<button data-a="aud" data-v="' + o[0] + '" class="' + (c.aud === o[0] ? "on" : "") + '">' + o[1] + "</button>"; }).join("") + "</div>";
+    if (c.aud === "event") h += '<select class="kc-in" id="kc-ev"><option value="">' + T("Elija el evento…", "Choose the event…") + "</option>" + (A.events || []).map(function (e) { return '<option value="' + esc(e.id) + '"' + (c.event === String(e.id) ? " selected" : "") + ">" + esc(evTitle(e)) + "</option>"; }).join("") + "</select>";
+    if (c.aud === "people" || meet) {
+      h += '<div class="kc-ppl">' + c.people.map(function (p, i) { return '<span>' + esc(p.name || p.email) + '<button data-a="pdel" data-i="' + i + '" aria-label="' + T("Quitar", "Remove") + '">×</button></span>'; }).join("") +
+        '<input id="kc-q" class="kc-in" placeholder="' + (meet ? T("Agregar a un pastor (nombre o correo)…", "Add a pastor (name or email)…") : T("Buscar por nombre o correo…", "Search by name or email…")) + '" autocomplete="off"><div id="kc-res" class="kc-res"></div></div>';
+    }
+    if (!meet) {
+      h += '<div class="kc-sec">' + T("Mensajes listos", "Ready-made messages") + '</div><div class="kc-tpl">' + TPL.map(function (t, i) { return '<button data-a="tpl" data-i="' + i + '" class="' + (c.tpl === i ? "on" : "") + '">' + (L_() === "es" ? t[0] : t[1]) + "</button>"; }).join("") + "</div>";
+    }
+    h += '<div class="kc-sec">' + T("Título", "Title") + '</div><input class="kc-in" id="kc-t" maxlength="120" value="' + esc(c.title || "") + '" placeholder="' + (meet ? T("Ej. Conversación de bienvenida", "E.g. Welcome conversation") : T("Ej. Cena Navideña este domingo", "E.g. Christmas Dinner this Sunday")) + '">';
+    if (meet) {
+      h += '<div class="kc-sec">' + T("Día", "Day") + '</div><input class="kc-in" id="kc-d" type="date" value="' + esc(c.date || "") + '"><div class="kc-row3"><div><div class="kc-sec">' + T("Hora", "Time") + '</div><input class="kc-in" id="kc-h" type="time" value="' + esc(c.time || "19:00") + '"></div><div><div class="kc-sec">' + T("Duración", "Length") + '</div><select class="kc-in" id="kc-m">' +
+        [30, 45, 60, 90].map(function (x) { return '<option value="' + x + '"' + (+c.minutes === x ? " selected" : "") + ">" + x + " min</option>"; }).join("") + "</select></div></div>" +
+        '<div class="kc-sec">' + T("Enlace de Zoom", "Zoom link") + '</div><input class="kc-in" id="kc-z" type="url" inputmode="url" value="' + esc(c.zoom || "") + '" placeholder="https://zoom.us/j/…">';
+    }
+    h += '<div class="kc-sec">' + (meet ? T("Nota (opcional)", "Note (optional)") : T("Mensaje", "Message")) + '</div><textarea class="kc-in" id="kc-b" rows="' + (meet ? 3 : 5) + '" maxlength="2000" placeholder="' + (meet ? T("Ej. Traiga su Biblia y sus preguntas.", "E.g. Bring your questions.") : T("Escriba el mensaje…", "Write the message…")) + '">' + esc(c.body || "") + "</textarea>";
+    if (!meet) {
+      h += '<div class="kc-sec">' + T("¿Cuándo?", "When?") + '</div><div class="ka-seg"><button data-a="when" data-v="now" aria-pressed="' + (c.when === "now") + '">' + T("Ahora", "Now") + '</button><button data-a="when" data-v="later" aria-pressed="' + (c.when === "later") + '">' + T("Programar", "Schedule") + "</button></div>" +
+        (c.when === "later" ? '<input class="kc-in" id="kc-at" type="datetime-local" value="' + esc(c.at || "") + '" style="margin-top:10px">' : "");
+    }
+    // vista previa
+    h += '<div class="kc-sec">' + T("Así se verá", "Preview") + '</div><div class="kc-pv"><div class="nt"><span class="ai"></span><div><small><span>KAI</span><span>' + T("ahora", "now") + '</span></small><b id="pv-t">' + esc((meet ? "📅 " : "") + (c.title || T("Título del aviso", "Notice title"))) + '</b><span id="pv-b">' +
+      esc(meet ? (c.date ? cap(fdt(c.date + "T" + (c.time || "19:00"), { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" })) : T("Día y hora de la reunión", "Meeting day and time")) : (c.body || T("El mensaje aparece aquí.", "The message shows here."))) + "</span></div></div></div>";
+    h += '<p class="kc-cnt" id="kc-cnt"></p><p class="ka-msg" id="kc-msg"></p><button class="ka-btn ' + (meet ? "navy" : "tc") + ' wide kc-go" data-a="send">' + (meet ? T("Enviar invitación", "Send invitation") : c.when === "later" ? T("Programar aviso", "Schedule notice") : T("Enviar aviso", "Send notice")) + "</button>";
+    return '<div class="kc">' + h + "</div>";
+  }
+  function doneHTML() {
+    var c = A.cmp, meet = c.kind === "meeting";
+    return '<div class="kc-done"><div class="ok">' + ti("check") + "</div><h1>" + (meet ? T("¡Invitación enviada!", "Invitation sent!") : c.when === "later" ? T("¡Aviso programado!", "Notice scheduled!") : T("¡Aviso enviado!", "Notice sent!")) + "</h1><p>" +
+      (c.count ? T("Llegará a " + c.count + (c.count === 1 ? " persona." : " personas."), "It will reach " + c.count + (c.count === 1 ? " person." : " people.")) : "") + " " + (meet ? T("Usted verá aquí quién confirma.", "You'll see here who confirms.") : "") + '</p><a class="ka-btn navy wide" href="/app/team" data-a="cmpx">' + T("Volver a Equipo", "Back to Team") + "</a></div>";
+  }
+  function audJSON() {
+    var c = C(), a = {};
+    if (c.aud === "all") a.all = true;
+    if (c.aud === "board") a.board = true;
+    if (c.aud === "event" && c.event) a.event = c.event;
+    if (c.people.length && (c.aud === "people" || c.kind === "meeting")) a.emails = c.people.map(function (p) { return p.email; });
+    return a;
+  }
+  var cntT = null;
+  function recount() {
+    clearTimeout(cntT); cntT = setTimeout(async function () {
+      var el = $("kc-cnt"); if (!el) return; var a = audJSON();
+      if (!a.all && !a.board && !a.event && !(a.emails && a.emails.length)) { el.textContent = ""; return; }
+      try { var r = await sb().rpc("staff_audience_count", { p_aud: a }); if (r.error) throw r.error; var t = r.data.total, pu = r.data.push; A.cmp.count = t;
+        el.innerHTML = "<b>" + T("Llegará a " + t + (t === 1 ? " persona" : " personas"), "Reaches " + t + (t === 1 ? " person" : " people")) + "</b> · " + T(pu + " por notificación, " + (t - pu) + " por correo", pu + " by notification, " + (t - pu) + " by email");
+      } catch (e) { el.textContent = ""; }
+    }, 250);
+  }
+  function syncFields() {
+    var c = C(), g = function (id) { var e = $(id); return e ? e.value : undefined; };
+    ["t", "b", "d", "h", "m", "z", "at"].forEach(function (k) { var v = g("kc-" + k); if (v !== undefined) c[{ t: "title", b: "body", d: "date", h: "time", m: "minutes", z: "zoom", at: "at" }[k]] = v; });
+    var ev = $("kc-ev"); if (ev) c.event = ev.value;
+  }
+  function wireCompose() {
+    var root = $("kapp"); if (!root || !$("kc-t")) return;
+    root.querySelectorAll(".kc-in").forEach(function (el) {
+      el.addEventListener("input", function () {
+        syncFields(); var c = C(), meet = c.kind === "meeting";
+        var pt = $("pv-t"), pb = $("pv-b");
+        if (pt) pt.textContent = (meet ? "📅 " : "") + (c.title || T("Título del aviso", "Notice title"));
+        if (pb) pb.textContent = meet ? (c.date ? cap(fdt(c.date + "T" + (c.time || "19:00"), { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" })) : T("Día y hora de la reunión", "Meeting day and time")) : (c.body || T("El mensaje aparece aquí.", "The message shows here."));
+      });
+    });
+    var ev = $("kc-ev"); if (ev) ev.addEventListener("change", function () { syncFields(); recount(); });
+    var q = $("kc-q"), res = $("kc-res"), qt = null;
+    if (q) q.addEventListener("input", function () {
+      clearTimeout(qt); var v = q.value.trim(); if (v.length < 2) { res.innerHTML = ""; return; }
+      qt = setTimeout(async function () {
+        try { var r = await sb().rpc("staff_people", { p_q: v }); var L = (r.data || []).filter(function (p) { return !C().people.some(function (x) { return x.email === p.email; }); });
+          var em = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v) && !L.some(function (p) { return p.email === v.toLowerCase(); }) ? [{ email: v.toLowerCase(), name: v.toLowerCase(), sub: T("Correo", "Email") }] : [];
+          A.cmpRes = L.concat(em);
+          res.innerHTML = A.cmpRes.map(function (p, i) { return '<button data-a="padd" data-i="' + i + '"><b>' + esc(p.name || p.email) + "</b><span>" + esc(p.sub || p.email) + "</span></button>"; }).join("") || '<p class="none">' + T("Sin resultados", "No results") + "</p>";
+        } catch (e) { res.innerHTML = ""; }
+      }, 220);
+    });
+    recount();
+  }
+  async function sendCompose(btn) {
+    syncFields(); var c = C(), meet = c.kind === "meeting", m = $("kc-msg");
+    function err(t) { m.textContent = t; m.className = "ka-msg err"; btn.disabled = false; }
+    var a = audJSON();
+    if (!a.all && !a.board && !a.event && !(a.emails && a.emails.length)) return err(T("Elija a quién va dirigido.", "Choose who it's for."));
+    if (!String(c.title || "").trim()) return err(T("Escriba un título.", "Enter a title."));
+    if (!meet && !String(c.body || "").trim()) return err(T("Escriba el mensaje.", "Write the message."));
+    var p = { kind: c.kind, title: c.title.trim(), body: (c.body || "").trim(), audience: a };
+    if (meet) {
+      if (!c.date || !c.time) return err(T("Elija el día y la hora.", "Choose the day and time."));
+      var st = new Date(c.date + "T" + c.time); if (isNaN(st) || st < new Date()) return err(T("La fecha ya pasó.", "That date has passed."));
+      if (c.zoom && !/^https:\/\//i.test(c.zoom.trim())) return err(T("El enlace de Zoom debe empezar con https://", "The Zoom link must start with https://"));
+      p.starts_at = st.toISOString(); p.minutes = +c.minutes || 60; p.zoom_url = (c.zoom || "").trim() || null; p.url = "/app/inbox";
+    } else if (c.when === "later") {
+      var at = new Date(c.at || ""); if (isNaN(at) || at < new Date()) return err(T("Elija una fecha y hora futuras.", "Choose a future date and time."));
+      p.send_at = at.toISOString();
+    }
+    btn.disabled = true; m.className = "ka-msg"; m.textContent = T("Enviando…", "Sending…");
+    try {
+      var r = await sb().rpc("staff_notice_send", { p: p }); if (r.error) throw r.error;
+      try { sb().functions.invoke("kai-push?kick=1", { body: {} }); } catch (x) {}
+      c.done = true; paint(); loadSent();
+    } catch (e) {
+      var msg = String((e && e.message) || e);
+      err(/no_recipients/.test(msg) ? T("No hay destinatarios con correo.", "No recipients with email.") : /forbidden/.test(msg) ? T("Su rol no permite enviar a ese grupo.", "Your role can't send to that group.") : /mfa/.test(msg) ? T("Verifique su código de dos pasos en Equipo.", "Verify your two-step code in Team.") : T("No se pudo enviar. Intente de nuevo.", "Couldn't send. Please try again."));
+    }
+  }
+
+  /* ---------- Enviados (en Equipo) ---------- */
+  async function loadSent() { try { var r = await sb().rpc("staff_notice_list", { p_limit: 12 }); if (!r.error) { A.sent = r.data || []; if (A.tab === "team") paint(); } } catch (e) {} }
+  function sentHTML() {
+    if (!A.sent) { loadSent(); A.sent = []; }
+    if (!A.sent.length) return "";
+    return '<h2 class="kt-h">' + T("Enviados", "Sent") + '</h2><div class="kt-list">' + A.sent.slice(0, 8).map(function (n) {
+      var meet = n.kind === "meeting", sch = n.status === "scheduled", cx = n.status === "cancelled";
+      var sub = cx ? T("Cancelado", "Cancelled") : sch ? T("Programado · ", "Scheduled · ") + fdt(n.send_at, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })
+        : meet ? fdt(n.starts_at, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) + " · " + T(n.yes + " de " + n.total + " asistirán", n.yes + " of " + n.total + " going")
+        : T(n.total + " personas · " + n.read + " lo leyeron", n.total + " people · " + n.read + " read it");
+      return '<div class="kt-row k-' + (meet ? "zoom" : "send") + '"><span class="ic">' + ti(meet ? "zoom" : "send") + '</span><span class="tx"><b>' + esc(n.title) + "</b><small>" + esc(sub) + "</small></span>" +
+        ((sch || (meet && !cx && new Date(n.starts_at) > new Date())) ? '<button class="kt-x" data-a="ncancel" data-id="' + n.id + '">' + T("Cancelar", "Cancel") + "</button>" : "") + "</div>";
+    }).join("") + "</div>";
   }
 
   function profileHTML() {
@@ -326,8 +576,8 @@
       '</p><form id="kt-mfa" novalidate><input class="kt-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" aria-label="' + T("Código", "Code") + '"><button class="ka-btn gold wide" type="submit">' + T("Verificar", "Verify") + '</button><p class="ka-msg" id="kt-mm" role="status"></p></form></div>';
 
     var o = t.ov, a = o.apps || {};
-    h += '<div class="kt-acts"><button class="kt-act g" data-a="soon" data-w="aviso"><span class="ic">' + ti("send") + "</span><b>" + T("Enviar aviso", "Send notice") + "</b><small>" + T("A todos, al Board o a una persona", "To all, the Board or one person") + '</small></button>' +
-      '<button class="kt-act" data-a="soon" data-w="reunion"><span class="ic">' + ti("zoom") + "</span><b>" + T("Nueva reunión", "New meeting") + "</b><small>" + T("Zoom, calendario y confirmación", "Zoom, calendar and RSVP") + "</small></button></div>";
+    h += '<div class="kt-acts"><a class="kt-act g" href="/app/team/aviso"><span class="ic">' + ti("send") + "</span><b>" + T("Enviar aviso", "Send notice") + "</b><small>" + T("A todos, al Board o a una persona", "To all, the Board or one person") + '</small></a>' +
+      '<a class="kt-act" href="/app/team/reunion"><span class="ic">' + ti("zoom") + "</span><b>" + T("Nueva reunión", "New meeting") + "</b><small>" + T("Zoom, calendario y confirmación", "Zoom, calendar and RSVP") + "</small></a></div>";
 
     var rows = [];
     function row(href, ic, label, sub, n, hot) { rows.push('<a class="kt-row k-' + ic + (hot && n ? " hot" : "") + '" href="' + href + '"><span class="ic">' + ti(ic) + "</span><span class=\"tx\"><b>" + label + "</b><small>" + sub + "</small></span>" + (n ? '<i class="kt-n">' + n + "</i>" : '<i class="kt-ok">' + ti("check") + "</i>") + '<span class="ch">' + ti("chev") + "</span></a>"); }
@@ -350,6 +600,7 @@
       return '<div class="kt-task"><a href="' + esc(href) + '"><b>' + esc(taskT(x.title)) + "</b><small>" + esc(ago(x.created_at)) + '</small></a><button data-a="tdone" data-id="' + x.id + '">' + T("Hecho", "Done") + "</button></div>";
     }).join("") + "</div>" : '<div class="kt-none">' + ti("check") + T("No tiene tareas pendientes.", "You have no pending tasks.") + "</div>";
 
+    h += sentHTML();
     var go = [];
     if (has("admin", "membership", "president", "care")) go.push(["/staff/apps", "doc", T("Aplicaciones", "Applications")]);
     go.push(["/staff/members", "users", T("Miembros", "Members")]);
@@ -392,6 +643,25 @@
     var k = a.dataset.a;
     if (k === "flip") { A.flip = !A.flip; paint(); return; }
     if (k === "qrfull") { qrFull(); return; }
+    if (k === "pushon") { a.disabled = true; await pushOn(); return; }
+    if (k === "readall") { (A.inbox.rows || []).forEach(function (n) { n.read = true; }); A.unread = 0; A.inbox.unread = 0; paint(); try { await sb().rpc("notice_read", { p_id: null }); } catch (x) {} return; }
+    if (k === "rsvp") {
+      var id = +a.dataset.id, v = a.dataset.v, n = (A.inbox.rows || []).filter(function (x) { return x.id === id; })[0];
+      if (n) { if (n.rsvp !== "yes" && v === "yes") n.yes = (n.yes || 0) + 1; if (n.rsvp === "yes" && v !== "yes") n.yes = Math.max(0, (n.yes || 0) - 1); n.rsvp = v; paint(); }
+      try { await sb().rpc("notice_rsvp", { p_id: id, p_ans: v }); } catch (x) {}
+      return;
+    }
+    if (k === "aud") { syncFields(); C().aud = a.dataset.v; paint(); return; }
+    if (k === "tpl") { var t = TPL[+a.dataset.i], cc = C(); cc.tpl = +a.dataset.i; cc.title = t[2] + (+a.dataset.i === 1 && A.events && A.events[0] ? evTitle(A.events[0]) : ""); cc.body = t[3]; paint(); return; }
+    if (k === "when") { syncFields(); C().when = a.dataset.v; paint(); return; }
+    if (k === "padd") { syncFields(); var pp = (A.cmpRes || [])[+a.dataset.i]; if (pp) C().people.push(pp); paint(); var qi = $("kc-q"); if (qi) qi.focus(); return; }
+    if (k === "pdel") { syncFields(); C().people.splice(+a.dataset.i, 1); paint(); return; }
+    if (k === "send") { await sendCompose(a); return; }
+    if (k === "cmpx") { A.cmp = null; return; }
+    if (k === "ncancel") {
+      if (!confirm(T("¿Cancelar este envío? A los invitados de una reunión les llegará el aviso de que se canceló.", "Cancel this? Meeting guests will be told it was cancelled."))) return;
+      a.disabled = true; try { await sb().rpc("staff_notice_cancel", { p_id: +a.dataset.id }); try { sb().functions.invoke("kai-push?kick=1", { body: {} }); } catch (x) {} } catch (x) {} loadSent(); return;
+    }
     if (k === "tretry") { A.team = { st: "load" }; paint(); loadTeam(); return; }
     if (k === "soon") { sheet(a.dataset.w); return; }
     if (k === "tdone") {
@@ -510,7 +780,8 @@
   /* Service worker (app instalable, sin internet y notificaciones) */
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function () { navigator.serviceWorker.register("/sw.js").catch(function () {}); });
-    navigator.serviceWorker.addEventListener("message", function (e) { if (e.data && e.data.kai === "go" && e.data.url) KGO(e.data.url); });
+    navigator.serviceWorker.addEventListener("message", function (e) { if (e.data && e.data.kai === "go" && e.data.url) { loadInbox(); KGO(e.data.url); } if (e.data && e.data.kai === "push") loadInbox(); });
+    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible" && A.booted && A.st === "in") { loadInbox(); if (A.roles.length && A.tab === "team") loadTeam(); } });
   }
 
   /* Si la sesión cambia en otra parte del sitio, refrescar */
