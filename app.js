@@ -849,7 +849,7 @@
       care: T("Cuéntenos con confianza lo que está viviendo…", "Tell us, in confidence, what you're going through…") }[kind];
     var h = ccBand(kind, k[1], kind === "care" ? T("Le acompañamos en lo que está viviendo.", "We walk with you in what you're going through.") : k[2], "/app/help");
     h += '<div class="cc-sheet">';
-    if (kind === "admin") h += '<p class="cc-note">' + T("Le orientamos y le decimos por dónde empezar; no hacemos el trámite por usted.", "We guide you and tell you where to start; we don't do the paperwork for you.") + "</p>";
+    if (kind === "admin") h += '<p class="cc-note">' + T("Ofrecemos orientación general y le referimos a recursos confiables. KAI no brinda asesoría legal, fiscal ni financiera; para decisiones en esas áreas, consulte a un profesional con licencia.", "We offer general guidance and point you to trusted resources. KAI does not provide legal, tax, or financial advice; for decisions in those areas, please consult a licensed professional.") + "</p>";
     if (kind === "care") h += '<p class="cc-note conf">' + cci("lock") + T("Confidencial: solo lo verá el equipo de cuidado pastoral. Las notificaciones no muestran su mensaje.", "Confidential: only the pastoral care team will see it. Notifications never show your message.") + "</p>";
     if (kind === "leader") {
       var tp = f.topics || (f.topics = []);
