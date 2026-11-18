@@ -994,7 +994,7 @@
   });
 
   /* ---------- Página kaie44.org/instalar ---------- */
-  function instPlat() { return A.instP || (isIOS() ? "ios" : isAndroid() ? "android" : "pc"); }
+  function instPlat() { return A.instP || (isAndroid() ? "android" : "ios"); }
   function instIOSBrowserOk() { var u = navigator.userAgent; return !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|FBAN|FBAV|Instagram|Line\//.test(u); }
   var KI = {
     share: '<path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/>',
@@ -1022,7 +1022,7 @@
       ["bell", T("Avisos al instante", "Instant notices"), T("Del equipo y recordatorios de reuniones", "From the team, plus meeting reminders")],
       ["svc", "Concierge", T("Pida mentor, orientación u oración", "Ask for mentoring, guidance or prayer")]].map(function (b) {
       return '<div><span class="ki-bic">' + ki(b[0]) + "</span><b>" + b[1] + "</b><small>" + b[2] + "</small></div>"; }).join("") + "</div>";
-    h += '<div class="ki-card"><h2>' + T("Cómo instalarla", "How to install it") + '</h2><div class="ki-seg" role="tablist">' + [["ios", "iPhone"], ["android", "Android"], ["pc", T("Computadora", "Computer")]].map(function (x) {
+    h += '<div class="ki-card"><h2>' + T("Cómo instalarla", "How to install it") + '</h2><div class="ki-seg" role="tablist">' + [["ios", "iPhone"], ["android", "Android"]].map(function (x) {
       return '<button data-ki="' + x[0] + '" role="tab" aria-selected="' + (p === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>";
     if (p === "ios") {
       if (isIOS() && !instIOSBrowserOk()) h += '<div class="ki-warn"><b>' + T("Ábrala en Safari", "Open it in Safari") + "</b>" + T("En iPhone, la app solo se instala desde Safari. Copie el enlace y péguelo en Safari.", "On iPhone the app only installs from Safari. Copy the link and paste it into Safari.") +
@@ -1042,10 +1042,6 @@
         instStep(2, "plus", T("Toque \"Instalar app\"", "Tap \"Install app\""), T("En algunos teléfonos dice \"Agregar a la pantalla principal\".", "On some phones it says \"Add to Home screen\".")) +
         instStep(3, "key", T("Abra KAI y entre", "Open KAI and sign in"), T("Con el mismo correo y contraseña de su Área de Miembros.", "With the same email and password as your Members Area.")) +
         instStep(4, "bell", T("Active los avisos", "Turn on notices"), T("En Avisos toque \"Activar avisos\" y luego \"Permitir\".", "In Notices tap \"Turn on notices\", then \"Allow\".")) + "</ol>";
-    } else {
-      var qr = ""; try { var q = window.qrcode(0, "M"); q.addData(base + "/instalar"); q.make(); qr = q.createSvgTag({ cellSize: 6, margin: 0, scalable: true }); } catch (e) { qr = ""; }
-      h += '<div class="ki-pc">' + (qr ? '<div class="ki-qr">' + qr + "</div>" : "") + "<div><b>" + T("Escanee con la cámara de su teléfono", "Scan with your phone's camera") + "</b><small>" +
-        T("Se abre esta misma página en su teléfono, con los pasos para iPhone o Android.", "This same page opens on your phone, with the steps for iPhone or Android.") + "</small><small>" + T("O escriba en su teléfono: ", "Or type on your phone: ") + "<b>kaie44.org/instalar</b></small></div></div>";
     }
     h += "</div>";
     h += '<div class="ki-help"><b>' + T("¿Necesita ayuda?", "Need help?") + "</b> " + T("Llame a Ismael ", "Call Ismael ") + '<a href="tel:+19092759909">(909) 275-9909</a> · <a href="/membership">' + T("¿Olvidó su contraseña?", "Forgot your password?") + "</a></div>";
