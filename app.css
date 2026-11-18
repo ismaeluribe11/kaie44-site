@@ -720,3 +720,65 @@ body.is-appteam .st-f{min-width:0}
 body.is-appteam .st-new .ft{flex-direction:column;align-items:stretch}
 body.is-appteam .st-new .ft .btn{width:100%}
 body.is-appteam .st-body,body.is-appteam .sx-main{overflow-x:clip}
+
+/* ===== Página kaie44.org/instalar ===== */
+.ki{max-width:620px;margin:0 auto;padding:0 16px 60px;font-family:var(--sans,Inter,system-ui,sans-serif);color:#14213d}
+.ki-hero{position:relative;overflow:hidden;margin:18px 0 0;padding:34px 24px 30px;border-radius:30px;text-align:center;color:#fff;
+  background:radial-gradient(90% 80% at 85% 0%,rgba(227,191,99,.32),rgba(227,191,99,0) 55%),linear-gradient(160deg,#1a3a7a 0%,#0b1f4b 55%,#06122f 100%);box-shadow:0 24px 50px rgba(11,31,75,.25)}
+.ki-hero .ki-g1,.ki-hero .ki-g2{position:absolute;border-radius:50%;border:22px solid rgba(227,191,99,.08);pointer-events:none}
+.ki-hero .ki-g1{right:-90px;top:-90px;width:260px;height:260px}.ki-hero .ki-g2{left:-70px;bottom:-110px;width:220px;height:220px;border-width:16px}
+.ki-icon{position:relative;width:96px;height:96px;border-radius:24px;box-shadow:0 18px 36px rgba(0,0,0,.35),0 0 0 6px rgba(255,255,255,.08)}
+.ki-hero small{position:relative;display:block;margin-top:18px;font-size:11.5px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#e3bf63}
+.ki-hero h1{position:relative;margin:6px 0 0;font-family:Fraunces,Georgia,serif;font-weight:600;font-size:36px;line-height:1.05;color:#fff}
+.ki-hero p{position:relative;max-width:440px;margin:12px auto 0;font-size:15px;line-height:1.55;color:#cdd7ee}
+.ki-ben{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.ki-ben div{background:#fff;border:1px solid #ece5d4;border-radius:20px;padding:14px;box-shadow:0 8px 20px rgba(11,31,75,.05)}
+.ki-ben .ki-bic{display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:linear-gradient(145deg,#f3d68a,#c2912f);margin-bottom:10px;box-shadow:0 8px 16px rgba(184,137,46,.28)}
+.ki-ben .ki-bic svg{width:21px;height:21px;fill:none;stroke:#0b1f4b;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ki-ben b{display:block;font-size:14.5px;color:#0b1f4b}
+.ki-ben small{display:block;font-size:12.5px;color:#5b6577;line-height:1.38;margin-top:2px}
+.ki-card{margin-top:16px;background:#fff;border:1px solid #ece5d4;border-radius:26px;padding:20px 16px;box-shadow:0 16px 36px rgba(11,31,75,.08)}
+.ki-card h2{margin:0 4px 14px;font-family:Fraunces,Georgia,serif;font-weight:600;font-size:24px;color:#0b1f4b}
+.ki-seg{display:flex;gap:4px;padding:4px;border-radius:16px;background:#f3efe4}
+.ki-seg button{flex:1;border:0;background:none;border-radius:12px;padding:11px 6px;font:700 14.5px var(--sans,Inter,sans-serif);color:#5b6577;cursor:pointer}
+.ki-seg button[aria-selected="true"]{background:linear-gradient(160deg,#16336f,#0b1f4b);color:#fff;box-shadow:0 6px 14px rgba(11,31,75,.25)}
+.ki-steps{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:4px}
+.ki-steps li{position:relative;display:flex;gap:12px;align-items:flex-start;padding:12px 4px}
+.ki-steps li+li{border-top:1px solid #f1ece0}
+.ki-n{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;color:#0b1f4b;background:linear-gradient(145deg,#f3d68a,#c2912f)}
+.ki-tx{flex:1;min-width:0}
+.ki-tx b{display:block;font-size:15.5px;color:#0b1f4b;line-height:1.3}
+.ki-tx small{display:block;font-size:13.5px;color:#5b6577;line-height:1.45;margin-top:3px}
+.ki-ic{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:#eef3fc}
+.ki-ic svg{width:20px;height:20px;fill:none;stroke:#1f56b8;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ki-demo{display:inline-flex;align-items:center;gap:8px;margin-top:8px;padding:8px 12px;border-radius:12px;background:#f3f6fb;border:1px solid #e3e9f4;font-size:13.5px;font-weight:600;color:#14213d}
+.ki-demo svg{width:20px;height:20px;fill:none;stroke:#2f6fd6;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ki-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:16px;padding:15px 22px;font:800 16px var(--sans,Inter,sans-serif);color:#0b1f4b;text-decoration:none;cursor:pointer;
+  background:linear-gradient(145deg,#f3d68a,#c2912f);box-shadow:0 12px 26px rgba(184,137,46,.32)}
+.ki-btn.wide{display:flex;width:100%;margin-top:16px}
+.ki-btn.ki-sm{margin-top:10px;padding:10px 14px;font-size:14px}
+.ki-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ki-or{margin:12px 0 0;text-align:center;font-size:13px;color:#8a93a3}
+.ki-warn{margin-top:14px;padding:14px;border-radius:16px;background:#fff6e5;border:1px solid #f1d9a6;font-size:13.5px;line-height:1.45;color:#5c4108}
+.ki-warn b{display:block;font-size:15px;margin-bottom:2px;color:#0b1f4b}
+.ki-pc{display:flex;gap:18px;align-items:center;margin-top:16px}
+.ki-qr{flex:none;width:150px;height:150px;padding:12px;border-radius:18px;background:#fff;border:1px solid #ece5d4;box-shadow:0 8px 20px rgba(11,31,75,.08)}
+.ki-qr svg{width:100%;height:100%;display:block}
+.ki-pc b{display:block;font-size:16px;color:#0b1f4b}
+.ki-pc small{display:block;font-size:13.5px;color:#5b6577;line-height:1.45;margin-top:6px}
+.ki-pc small b{display:inline;font-size:inherit}
+.ki-help{margin-top:18px;text-align:center;font-size:14px;color:#5b6577}
+.ki-help a{color:#b24e27;font-weight:700;text-decoration:none}
+.ki-done{text-align:center}
+.ki-done .ki-ok{display:inline-grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#e7f6ee;color:#1f7a4d;font-size:26px;font-weight:900}
+.ki-done h2{margin:10px 0 14px}
+@media (max-width:460px){.ki-pc{flex-direction:column;text-align:center}.ki-hero h1{font-size:32px}}
+.ki-ban{display:flex;align-items:center;gap:12px;margin:14px 16px 14px;padding:12px 12px 12px 12px;border-radius:20px;text-decoration:none;color:#fff;font-family:var(--sans,Inter,sans-serif);
+  background:radial-gradient(120% 160% at 100% 0%,rgba(227,191,99,.28),rgba(227,191,99,0) 50%),linear-gradient(150deg,#16336f,#0b1f4b);box-shadow:0 14px 28px rgba(11,31,75,.22)}
+.ki-ban img{flex:none;width:46px;height:46px;border-radius:12px;box-shadow:0 6px 14px rgba(0,0,0,.3)}
+.ki-ban span{flex:1;min-width:0}
+.ki-ban b{display:block;font-size:14.5px;line-height:1.25}
+.ki-ban small{display:block;font-size:12.5px;color:#cdd7ee;margin-top:2px}
+.ki-ban em{flex:none;font-style:normal;font-weight:800;font-size:13.5px;color:#0b1f4b;padding:9px 13px;border-radius:12px;background:linear-gradient(145deg,#f3d68a,#c2912f)}
+.ki-ban button{flex:none;width:28px;height:28px;margin-left:-4px;border:0;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:18px;line-height:1;cursor:pointer}
+@media (min-width:900px){.ki-ban{display:none}}

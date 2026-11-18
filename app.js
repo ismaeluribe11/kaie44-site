@@ -993,6 +993,82 @@
     catch (x) { s.disabled = false; var m = $("cc-m"); if (m) { m.textContent = T("No se pudo asignar.", "Couldn't assign."); m.className = "ka-msg err"; } }
   });
 
+  /* ---------- Página kaie44.org/instalar ---------- */
+  function instPlat() { return A.instP || (isIOS() ? "ios" : isAndroid() ? "android" : "pc"); }
+  function instIOSBrowserOk() { var u = navigator.userAgent; return !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|FBAN|FBAV|Instagram|Line\//.test(u); }
+  var KI = {
+    share: '<path d="M12 3v12M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/>',
+    plus: '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/>',
+    dots: '<circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/>',
+    tap: '<path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0 0V8.5a1.5 1.5 0 0 1 3 0V11m0 0v-1a1.5 1.5 0 0 1 3 0v5a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-2.7L3.6 15a1.5 1.5 0 0 1 2.4-1.8L9 16"/>',
+    key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/>',
+    bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/>',
+    qr: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7h-4M17 21v-1"/>',
+    cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    svc: '<path d="M3.5 17.5h17M5 17.5a7 7 0 0 1 14 0"/><path d="M12 10.5V8.5M10 8.5h4M2.5 20.5h19"/>',
+    link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>'
+  };
+  function ki(k) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + KI[k] + "</svg>"; }
+  function instStep(n, ic, t, d, demo) {
+    return '<li><span class="ki-n">' + n + '</span><div class="ki-tx"><b>' + t + "</b>" + (d ? "<small>" + d + "</small>" : "") + (demo || "") + '</div><span class="ki-ic">' + ki(ic) + "</span></li>";
+  }
+  function instHTML() {
+    var p = instPlat(), base = /(^|\.)kaie44\.org$/.test(location.hostname) ? "https://www.kaie44.org" : location.origin;
+    var h = '<div class="ki"><div class="ki-hero"><i class="ki-g1"></i><i class="ki-g2"></i><img class="ki-icon" src="apple-touch-icon.png" alt="KAI"><small>Kingdom Alliance International</small><h1>' + T("La app de KAI", "The KAI app") + "</h1><p>" +
+      T("Su credencial, los eventos, los avisos del equipo y el Concierge, siempre en su teléfono. Sin tiendas de apps: se instala desde aquí en un minuto.", "Your credential, events, team notices and Concierge, always on your phone. No app store: install it from here in a minute.") + "</p></div>";
+    if (standalone()) return h + '<div class="ki-card ki-done"><span class="ki-ok">✓</span><h2>' + T("Ya tiene la app instalada", "You already have the app") + '</h2><a class="ki-btn" href="/app">' + T("Abrir la app", "Open the app") + "</a></div></div>";
+    h += '<div class="ki-ben">' + [["qr", T("Credencial con QR", "Credential with QR"), T("Para mostrarla donde la pidan", "Show it wherever it's asked for")],
+      ["cal", T("Eventos", "Events"), T("Regístrese y agréguelos a su calendario", "Register and add them to your calendar")],
+      ["bell", T("Avisos al instante", "Instant notices"), T("Del equipo y recordatorios de reuniones", "From the team, plus meeting reminders")],
+      ["svc", "Concierge", T("Pida mentor, orientación u oración", "Ask for mentoring, guidance or prayer")]].map(function (b) {
+      return '<div><span class="ki-bic">' + ki(b[0]) + "</span><b>" + b[1] + "</b><small>" + b[2] + "</small></div>"; }).join("") + "</div>";
+    h += '<div class="ki-card"><h2>' + T("Cómo instalarla", "How to install it") + '</h2><div class="ki-seg" role="tablist">' + [["ios", "iPhone"], ["android", "Android"], ["pc", T("Computadora", "Computer")]].map(function (x) {
+      return '<button data-ki="' + x[0] + '" role="tab" aria-selected="' + (p === x[0]) + '">' + x[1] + "</button>"; }).join("") + "</div>";
+    if (p === "ios") {
+      if (isIOS() && !instIOSBrowserOk()) h += '<div class="ki-warn"><b>' + T("Ábrala en Safari", "Open it in Safari") + "</b>" + T("En iPhone, la app solo se instala desde Safari. Copie el enlace y péguelo en Safari.", "On iPhone the app only installs from Safari. Copy the link and paste it into Safari.") +
+        '<button class="ki-btn ki-sm" data-ki-copy="' + base + '/instalar">' + ki("link") + T("Copiar enlace", "Copy link") + "</button></div>";
+      h += '<ol class="ki-steps">' +
+        instStep(1, "share", T("Toque el botón Compartir", "Tap the Share button"), T("Es el cuadrito con flecha hacia arriba, abajo en Safari (o arriba, en iPad).", "It's the square with an up arrow at the bottom of Safari (top on iPad)."),
+          '<span class="ki-demo">' + ki("share") + "</span>") +
+        instStep(2, "plus", T("Toque \"Agregar a pantalla de inicio\"", "Tap \"Add to Home Screen\""), T("Si no lo ve, deslice la lista hacia arriba.", "If you don't see it, scroll the list up."),
+          '<span class="ki-demo ki-row">' + ki("plus") + T("Agregar a pantalla de inicio", "Add to Home Screen") + "</span>") +
+        instStep(3, "tap", T("Toque \"Agregar\"", "Tap \"Add\""), T("Arriba a la derecha. El ícono de KAI aparece en su pantalla.", "Top right. The KAI icon appears on your screen.")) +
+        instStep(4, "key", T("Abra KAI desde el ícono y entre", "Open KAI from the icon and sign in"), T("Con el mismo correo y contraseña de su Área de Miembros.", "With the same email and password as your Members Area.")) +
+        instStep(5, "bell", T("Active los avisos", "Turn on notices"), T("En Avisos toque \"Activar avisos\" y luego \"Permitir\".", "In Notices tap \"Turn on notices\", then \"Allow\".")) + "</ol>";
+    } else if (p === "android") {
+      if (A.deferred) h += '<button class="ki-btn wide" data-ki-install="1">' + T("Instalar la app de KAI", "Install the KAI app") + "</button><p class=\"ki-or\">" + T("o siga estos pasos", "or follow these steps") + "</p>";
+      h += '<ol class="ki-steps">' +
+        instStep(1, "dots", T("En Chrome, toque el menú ⋮", "In Chrome, tap the ⋮ menu"), T("Arriba a la derecha.", "Top right.")) +
+        instStep(2, "plus", T("Toque \"Instalar app\"", "Tap \"Install app\""), T("En algunos teléfonos dice \"Agregar a la pantalla principal\".", "On some phones it says \"Add to Home screen\".")) +
+        instStep(3, "key", T("Abra KAI y entre", "Open KAI and sign in"), T("Con el mismo correo y contraseña de su Área de Miembros.", "With the same email and password as your Members Area.")) +
+        instStep(4, "bell", T("Active los avisos", "Turn on notices"), T("En Avisos toque \"Activar avisos\" y luego \"Permitir\".", "In Notices tap \"Turn on notices\", then \"Allow\".")) + "</ol>";
+    } else {
+      var qr = ""; try { var q = window.qrcode(0, "M"); q.addData(base + "/instalar"); q.make(); qr = q.createSvgTag({ cellSize: 6, margin: 0, scalable: true }); } catch (e) { qr = ""; }
+      h += '<div class="ki-pc">' + (qr ? '<div class="ki-qr">' + qr + "</div>" : "") + "<div><b>" + T("Escanee con la cámara de su teléfono", "Scan with your phone's camera") + "</b><small>" +
+        T("Se abre esta misma página en su teléfono, con los pasos para iPhone o Android.", "This same page opens on your phone, with the steps for iPhone or Android.") + "</small><small>" + T("O escriba en su teléfono: ", "Or type on your phone: ") + "<b>kaie44.org/instalar</b></small></div></div>";
+    }
+    h += "</div>";
+    h += '<div class="ki-help"><b>' + T("¿Necesita ayuda?", "Need help?") + "</b> " + T("Llame a Ismael ", "Call Ismael ") + '<a href="tel:+19092759909">(909) 275-9909</a> · <a href="/membership">' + T("¿Olvidó su contraseña?", "Forgot your password?") + "</a></div>";
+    return h + "</div>";
+  }
+  function instBanner(v) {
+    var old = $("ki-ban"); if (old && v !== "membership") old.remove();
+    if (v !== "membership" || standalone() || !(isIOS() || isAndroid())) return;
+    try { if (localStorage.getItem("kai-inst-ban-x")) return; } catch (e) {}
+    var host = document.querySelector('.view[data-v="membership"]'); if (!host || $("ki-ban")) return;
+    var d = document.createElement("a"); d.id = "ki-ban"; d.className = "ki-ban"; d.href = "/instalar";
+    d.innerHTML = '<img src="apple-touch-icon.png" alt=""><span><b>' + T("Lleve su credencial en su teléfono", "Carry your credential on your phone") + "</b><small>" + T("Instale la app de KAI · 1 minuto", "Install the KAI app · 1 minute") + '</small></span><em>' + T("Instalar", "Install") + '</em><button type="button" aria-label="' + T("Cerrar", "Close") + '">×</button>';
+    d.querySelector("button").addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); try { localStorage.setItem("kai-inst-ban-x", "1"); } catch (x) {} d.remove(); });
+    host.insertBefore(d, host.firstChild);
+  }
+  function paintInst() { var r = $("kinst"); if (r) r.innerHTML = instHTML(); }
+  document.addEventListener("click", async function (e) {
+    var b = e.target.closest && e.target.closest("[data-ki],[data-ki-copy],[data-ki-install]"); if (!b || !$("kinst") || !$("kinst").contains(b)) return;
+    if (b.dataset.ki) { A.instP = b.dataset.ki; paintInst(); return; }
+    if (b.dataset.kiCopy) { try { await navigator.clipboard.writeText(b.dataset.kiCopy); b.lastChild.textContent = T("¡Copiado!", "Copied!"); } catch (x) { prompt(T("Copie este enlace:", "Copy this link:"), b.dataset.kiCopy); } return; }
+    if (b.dataset.kiInstall && A.deferred) { A.deferred.prompt(); try { await A.deferred.userChoice; } catch (x) {} A.deferred = null; paintInst(); }
+  });
+
   /* ---------- acciones ---------- */
   document.addEventListener("click", async function (e) {
     var root = $("kapp"); if (!root || !root.contains(e.target)) return;
@@ -1042,7 +1118,7 @@
     if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches('.ka-cred[data-a="flip"]')) { e.preventDefault(); A.flip = !A.flip; paint(); }
   });
 
-  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); A.deferred = e; if (A.tab === "home") paint(); });
+  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); A.deferred = e; if (A.tab === "home") paint(); if ($("kinst") && $("kinst").offsetParent) paintInst(); });
   window.addEventListener("appinstalled", function () { A.deferred = null; paint(); });
 
 
@@ -1127,6 +1203,8 @@
       if (teamMode) [250, 1200].forEach(function (ms) { setTimeout(function () { var on = document.querySelector(".sx-nav a.on"), nav = on && on.parentElement; if (nav && on) nav.scrollTo({ left: Math.max(0, on.offsetLeft - 14), behavior: "smooth" }); }, ms); });
       if (teamMode) { appBar(); var nt = $("ka-navw"); if (!nt) { nt = document.createElement("div"); nt.id = "ka-navw"; document.body.appendChild(nt); } nt.innerHTML = navHTML("team"); return; }
       var ab = $("ka-appbar"); if (ab) ab.remove();
+      instBanner(v);
+      if (v === "inst") { try { document.title = T("Instalar la app · KAI", "Install the app · KAI"); } catch (e) {} paintInst(); var nw0 = $("ka-navw"); if (nw0) nw0.innerHTML = ""; return; }
       if (v !== "app") { var nw = $("ka-navw"); if (nw) nw.innerHTML = ""; return; }
       try { document.title = "KAI"; } catch (e) {}
       if (!A.booted) { A.booted = true; load(); }

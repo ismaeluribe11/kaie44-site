@@ -25,6 +25,8 @@ const PAGES = {
                 en: ["Members Area · KAI", "Your credential, your info and your renewal in one place."] },
   events:     { es: ["Eventos · KAI", "Cenas, talleres y encuentros para pastores y sus cónyuges."],
                 en: ["Events · KAI", "Dinners, workshops and gatherings for pastors and their spouses."] },
+  instalar:   { es: ["Instale la app de KAI", "Su credencial, eventos, avisos y Concierge en su teléfono. Se instala en un minuto, sin tiendas de apps."],
+                en: ["Install the KAI app", "Your credential, events, notices and Concierge on your phone. Installs in a minute, no app store."] },
   contact:    { es: ["Contacto · KAI", "Escríbanos o llámenos. Con gusto le atendemos."],
                 en: ["Contact · KAI", "Write or call us. We are glad to help."] },
 };
@@ -106,5 +108,5 @@ export default async (request, context) => {
 };
 
 export const config = {
-  path: ["/", "/home", "/vision", "/leadership", "/faith", "/join", "/apply", "/membership", "/events", "/events/*", "/ev/*", "/contact"],
+  path: ["/", "/home", "/vision", "/leadership", "/faith", "/join", "/apply", "/membership", "/events", "/events/*", "/ev/*", "/contact", "/instalar"],
 };
