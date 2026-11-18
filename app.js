@@ -128,7 +128,7 @@
 
   function homeHTML() {
     var m = A.m;
-    var h = hero({ cls: "home", eb: greet(), title: esc(first(m) || T("Bienvenido", "Welcome")), sub: todayLong(), side: m ? '<a href="/app/profile" class="avl" aria-label="' + T("Mi perfil", "My profile") + '">' + avatar(m) + "</a>" : "" });
+    var h = hero({ cls: "home", eb: greet(), title: esc(first(m) || myName().split(/\s+/)[0] || T("Bienvenido", "Welcome")), sub: todayLong(), side: '<a href="/app/profile" class="avl" aria-label="' + T("Mi perfil", "My profile") + '">' + avatar(m || { full_name: myName() || (A.user && A.user.email) }) + "</a>" });
     if (m && window.KAI && window.KAI.cred) {
       var c = window.KAI.cred(m), st = state(m);
       h += '<div class="ka-credw"><div class="ka-cred' + (A.flip ? " back" : "") + '" data-a="flip" role="button" tabindex="0" aria-label="' + T("Voltear credencial", "Flip credential") + '"><div class="kc">' + (A.flip ? c.back : c.front) + "</div></div>" +
@@ -137,7 +137,7 @@
         '</span><button data-a="qrfull">' + svg("qr") + T("Mostrar QR", "Show QR") + "</button></div></div>";
     } else {
       h += '<div class="ka-credw"><div class="ka-card ka-nocred"><h3>' + T("Su credencial aún no está activa", "Your credential isn't active yet") + "</h3><p>" +
-        T("Cuando su membresía esté aprobada y pagada, su credencial aparecerá aquí.", "Once your membership is approved and paid, your credential will appear here.") + "</p></div></div>";
+        T("Se activa en cuanto se confirme su pago de membresía. Vea en qué paso va.", "It turns on as soon as your membership payment is confirmed. See which step you're on.") + '</p><a class="ka-btn tc wide" href="/app/profile" style="margin-top:14px">' + T("Ver mis pasos", "See my steps") + "</a></div></div>";
     }
     h += '<div class="ka-qa">' +
       qa("/app/events", "cal", "tc", T("Eventos", "Events")) +
@@ -445,7 +445,7 @@
 
   function profileHTML() {
     var m = A.m;
-    if (!m) return hero({ cls: "sm", title: T("Perfil", "Profile"), sub: esc(A.user && A.user.email) }) + outHTML();
+    if (!m) return noMemberProfile();
     var st = state(m), cls = st === "active" ? "" : st === "expired" ? "exp" : "ina";
     var h = hero({ cls: "prof", title: esc(m.full_name), sub: esc(m.title || ""), side: avatar(m, "lg"),
       extra: '<div class="pchips"><span class="ka-pill ' + cls + '">' + (st === "active" ? T("Credencial activa", "Active credential") : st === "expired" ? T("Vencida", "Expired") : T("Inactiva", "Inactive")) + "</span><span>" + esc(m.credential_no || "") + "</span></div>" });
@@ -455,6 +455,32 @@
     var l = L_();
     h += '<div class="ka-sec">' + T("Idioma de la app", "App language") + '</div><div class="ka-seg" role="group" aria-label="Language"><button data-l="es" aria-pressed="' + (l === "es") + '">Español</button><button data-l="en" aria-pressed="' + (l === "en") + '">English</button></div>';
     return h + '<a class="ka-btn line wide" href="/membership" style="margin-top:16px">' + T("Pedir un cambio de datos", "Request a change") + "</a>" + outHTML();
+  }
+  function myName() { return String((A.me && A.me.name) || (A.user && A.user.user_metadata && (A.user.user_metadata.full_name || A.user.user_metadata.name)) || "").trim(); }
+  function langHTML() {
+    var l = L_();
+    return '<div class="ka-sec">' + T("Idioma de la app", "App language") + '</div><div class="ka-seg" role="group" aria-label="Language"><button data-l="es" aria-pressed="' + (l === "es") + '">Español</button><button data-l="en" aria-pressed="' + (l === "en") + '">English</button></div>';
+  }
+  function stepsHTML() {
+    var st = [[T("Solicitud", "Application"), T("Llene su solicitud de membresía.", "Fill out your membership application.")],
+      [T("Conversación de bienvenida", "Welcome conversation"), T("Una plática con el Presidente y un miembro del Board.", "A talk with the President and a Board member.")],
+      [T("Pago de membresía", "Membership payment"), T("Le enviamos las instrucciones por correo.", "We email you the instructions.")],
+      [T("Su credencial", "Your credential"), T("Aparece aquí en la app, con su QR.", "It appears here in the app, with its QR.")]];
+    return '<div class="ka-card ka-steps"><h3>' + T("Su membresía está en proceso", "Your membership is in progress") + "</h3><p>" +
+      T("Su credencial se activa cuando se confirma el pago. Estos son los pasos:", "Your credential turns on once payment is confirmed. These are the steps:") + "</p><ol>" +
+      st.map(function (x, i) { return '<li><i>' + (i + 1) + "</i><span><b>" + x[0] + "</b><small>" + x[1] + "</small></span></li>"; }).join("") + "</ol>" +
+      '<p class="hl">' + T("¿Dudas? Llame a Ismael ", "Questions? Call Ismael ") + '<a href="tel:+19092759909">(909) 275-9909</a></p></div>';
+  }
+  function noMemberProfile() {
+    var nm = myName(), em = (A.user && A.user.email) || "";
+    var h = hero({ cls: "prof", title: esc(nm || T("Perfil", "Profile")), sub: esc(em), side: avatar({ full_name: nm || em }, "lg"),
+      extra: '<div class="pchips"><span class="ka-pill ina">' + T("Membresía en proceso", "Membership in progress") + "</span>" +
+        (A.roles.length ? "<span>" + A.roles.map(function (r) { return esc((ROLE_N[r] || [r, r])[L_() === "es" ? 0 : 1]); }).join(" · ") + "</span>" : "") + "</div>" });
+    h += stepsHTML();
+    h += '<div class="ka-sec">' + T("Mi cuenta", "My account") + '</div><dl class="ka-dl"><div><dt>' + svg("user") + T("Correo", "Email") + "</dt><dd>" + esc(em || "—") + "</dd></div>" +
+      (A.roles.length ? "<div><dt>" + svg("team") + T("Equipo KAI", "KAI team") + "</dt><dd>" + A.roles.map(function (r) { return esc((ROLE_N[r] || [r, r])[L_() === "es" ? 0 : 1]); }).join(", ") + "</dd></div>" : "") + "</dl>";
+    h += langHTML();
+    return h + '<a class="ka-btn line wide" href="/membership" style="margin-top:16px">' + T("Ver o llenar mi solicitud", "View or fill out my application") + "</a>" + outHTML();
   }
   function outHTML() { return '<button class="ka-btn line wide" data-a="out" style="margin-top:14px;border-color:#d0c7b2;color:#5b6577">' + T("Cerrar sesión", "Sign out") + "</button>"; }
 
