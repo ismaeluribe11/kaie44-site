@@ -6,42 +6,48 @@ window.KAIAPP_SCHEMA = (function () {
   var IMP = [["Poco", "Low"], ["Muy importante", "Very important"]];
   var WELL = [["Muy bien", "Very well"], ["Muy difícil", "Very hard"]];
 
+  // Campos de cada persona. Con who=pair se repiten para el cónyuge (claves sp_...), en una segunda columna.
+  function PERSON(sp) {
+    var L = [
+      { pp: 1, type: "cred" },
+      { pp: 1, k: "first_name", l: ["Nombre(s)", "First name(s)"], w: 3, req: 1 },
+      { pp: 1, k: "last_name", l: ["Apellidos", "Last name(s)"], w: 3, req: 1 },
+      { pp: 1, k: "birth", l: ["Fecha de nacimiento", "Date of birth"], w: 3, in: "date" },
+      { pp: 1, k: "phone", l: ["Teléfono", "Phone"], w: 3, in: "tel", req: 1 },
+      { pp: 1, k: "email", l: ["Correo electrónico", "Email"], w: 6, in: "email", req: 1 }
+    ];
+    if (!sp) return L;
+    return L.map(function (f) { var c = JSON.parse(JSON.stringify(f)); c.sp = 1; c.when = "who=pair"; if (c.k) c.k = "sp_" + c.k; return c; });
+  }
+
   var A = [
     { id: "a1", t: ["Tipo de membresía", "Membership type"], h: ["La cuota anual incluye su credencial ministerial y se paga una vez aprobada su aplicación.", "The annual fee includes your ministry credential and is paid once your application is approved."],
-      f: [{ k: "tier", type: "tier", req: 1 }] },
-    { id: "a2", t: ["Datos personales", "Personal information"], h: ["Su título y su nombre aparecerán en su credencial tal como los escriba aquí.", "Your title and name will appear on your credential exactly as you write them here."],
-      f: [
-        { type: "cred" },
-        { k: "first_name", l: ["Nombre(s)", "First name(s)"], w: 3, req: 1 },
-        { k: "last_name", l: ["Apellidos", "Last name(s)"], w: 3, req: 1 },
-        { k: "birth", l: ["Fecha de nacimiento", "Date of birth"], w: 3, in: "date" },
-        { k: "lang_pref", l: ["Idioma preferido", "Preferred language"], w: 3, type: "radio", o: [["es", "Español", "Español"], ["en", "English", "English"]] },
-        { k: "email", l: ["Correo electrónico", "Email"], w: 3, in: "email", req: 1 },
-        { k: "phone", l: ["Teléfono", "Phone"], w: 3, in: "tel", req: 1 },
-        { k: "address", l: ["Dirección postal · para enviarle su credencial impresa", "Mailing address · to send your printed credential"], w: 6, req: 1 },
+      f: [{ k: "who", type: "who", req: 1 }, { k: "tier", type: "tier", req: 1 }, { k: "sp_tier", type: "tier", req: 1, sp: 1, when: "who=pair" }] },
+    { id: "a2", t: ["Datos personales", "Personal information"], h: ["Su título y su nombre aparecerán en su credencial tal como los escriba aquí.", "Your title and name will appear on your credential exactly as you write them here."], hp: ["El título y el nombre de cada uno aparecerán en su credencial tal como los escriban aquí.", "Each person's title and name will appear on their credential exactly as written here."],
+      f: [].concat(PERSON(false), PERSON(true), [
+        { k: "lang_pref", l: ["Idioma preferido", "Preferred language"], lp: ["Idioma preferido de ambos", "Preferred language for both"], w: 3, type: "radio", o: [["es", "Español", "Español"], ["en", "English", "English"]] },
+        { k: "address", l: ["Dirección postal · para enviarle su credencial impresa", "Mailing address · to send your printed credential"], lp: ["Dirección postal · para enviarles sus credenciales impresas", "Mailing address · to send your printed credentials"], w: 6, req: 1 },
         { k: "city", l: ["Ciudad", "City"], w: 2, req: 1 },
         { k: "state", l: ["Estado", "State"], w: 2, req: 1 },
         { k: "zip", l: ["Código postal", "ZIP code"], w: 2, req: 1 }
-      ] },
+      ]) },
     { id: "a3", t: ["Familia", "Family"],
       f: [
-        { k: "marital", l: ["Estado civil", "Marital status"], type: "radio", req: 1, o: [["s", "Soltero(a)", "Single"], ["c", "Casado(a)", "Married"], ["v", "Viudo(a)", "Widowed"], ["d", "Divorciado(a)", "Divorced"]] },
+        { k: "marital", l: ["Estado civil", "Marital status"], type: "radio", req: 1, when: "who=solo", o: [["s", "Soltero(a)", "Single"], ["c", "Casado(a)", "Married"], ["v", "Viudo(a)", "Widowed"], ["d", "Divorciado(a)", "Divorced"]] },
         { k: "spouse_name", l: ["Nombre del cónyuge", "Spouse's name"], w: 3, when: "marital=c" },
         { k: "spouse_serves", l: ["¿Sirve en el ministerio?", "Does your spouse serve in ministry?"], w: 3, type: "radio", o: Y, when: "marital=c" },
-        { k: "spouse_cred", l: ["¿Su cónyuge también tendrá credencial de KAI?", "Will your spouse also hold a KAI credential?"], type: "radio", when: "marital=c",
-          o: [["y", "Sí, llenará su propia aplicación", "Yes, they will submit their own application"], ["m", "Ya es miembro de KAI", "Already a KAI member"], ["n", "No", "No"]] },
-        { k: "spouse_email", l: ["Correo electrónico de su cónyuge", "Spouse's email"], in: "email", when: "spouse_cred=y,m", s: ["Con este correo enlazamos sus dos membresías como matrimonio. Cada uno recibe su propia credencial.", "We use this email to link your two memberships as a married couple. Each of you receives your own credential."] },
         { k: "children", l: ["Hijos", "Children"], opt: 1, ph: ["Nombres y edades. Ej.: Ana 12, David 9", "Names and ages. E.g. Ana 12, David 9"] },
         { k: "dependents", l: ["Otros dependientes a su cargo", "Other dependents in your care"], opt: 1 }
       ] },
     { id: "a4", t: ["Declaración de Fe", "Statement of Faith"],
       f: [
         { k: "faith_ok", type: "faith", req: 1 },
+        { k: "sp_faith_ok", type: "faith", req: 1, sp: 1, when: "who=pair" },
         { k: "faith_diff", l: ["¿Hay algún punto en el que difiera?", "Is there any point on which you differ?"], opt: 1 }
       ] },
     { id: "a5", t: ["Ministerio actual", "Current ministry"],
       f: [
-        { k: "leads", l: ["¿Pastorea actualmente una congregación?", "Do you currently lead a congregation?"], type: "radio", req: 1, o: Y },
+        { k: "leads", l: ["¿Pastorea actualmente una congregación?", "Do you currently lead a congregation?"], lp: ["¿Pastorean actualmente una congregación?", "Do you currently lead a congregation?"], type: "radio", req: 1, o: Y },
         { k: "ministry_desc", type: "area", req: 1, when: "leads=n", l: ["Describa su ministerio", "Describe your ministry"],
           desc: [["Por ejemplo: itinerante, evangelismo, capellanía, enseñanza, misiones o en transición. Cuéntenos dónde y con quién sirve actualmente."],
                  ["For example: itinerant, evangelism, chaplaincy, teaching, missions, or in transition. Tell us where and with whom you currently serve."]] },
@@ -78,6 +84,8 @@ window.KAIAPP_SCHEMA = (function () {
         { k: "prev_min", l: ["Ministerios anteriores", "Previous ministries"], type: "area", opt: 1, ph: ["Iglesia, rol y años. Ej.: Iglesia Betel, pastor asociado, 2012–2018", "Church, role and years. E.g. Bethel Church, associate pastor, 2012–2018"] },
         { k: "ordained_by", l: ["¿Quién le ordenó?", "Who ordained you?"], w: 3, ph: ["Iglesia, concilio o pastor", "Church, council or pastor"] },
         { k: "ordained_year", l: ["Año de ordenación", "Year of ordination"], w: 3, in: "num" },
+        { k: "sp_ordained_by", l: ["¿Quién ordenó a su cónyuge?", "Who ordained your spouse?"], w: 3, ph: ["Iglesia, concilio o pastor", "Church, council or pastor"], sp: 1, when: "who=pair" },
+        { k: "sp_ordained_year", l: ["Año de ordenación de su cónyuge", "Spouse's year of ordination"], w: 3, in: "num", sp: 1, when: "who=pair" },
         { k: "creds", l: ["Credenciales actuales o anteriores", "Current or previous credentials"], opt: 1, ph: ["Organización y año", "Organization and year"] },
         { k: "revoked", l: ["¿Alguna credencial le fue retirada?", "Has a credential ever been revoked?"], type: "radio", o: [["n", "No", "No"], ["y", "Sí", "Yes"]] },
         { k: "revoked_why", l: ["Explique brevemente", "Please explain briefly"], type: "area", when: "revoked=y" },
@@ -99,44 +107,45 @@ window.KAIAPP_SCHEMA = (function () {
   for (var hh = 9; hh <= 20; hh++) { var h12 = hh > 12 ? hh - 12 : hh, ap = hh < 12 ? "AM" : "PM"; IVT.push([String(hh), h12 + ":00 " + ap, h12 + ":00 " + ap]); }
 
   var B = [
-    { id: "b1", t: ["Dónde está hoy", "Where you are today"], h: ["Una sola pregunta, la más importante.", "One question, the most important one."],
+    { id: "b1", t: ["Dónde está hoy", "Where you are today"], h: ["Una sola pregunta, la más importante.", "One question, the most important one."], hp: ["Una sola pregunta, la más importante. Respondan juntos.", "One question, the most important one. Answer together."],
       f: [
-        { k: "season", l: ["¿Cómo describiría la temporada que vive hoy?", "How would you describe the season you are in today?"], type: "radio", cards: 1, o: [["thriving", "Floreciendo", "Thriving"], ["stable", "Estable", "Stable"], ["tired", "En necesidad de renovación", "In need of renewal"], ["crisis", "Tiempos difíciles", "Challenging times"]] }
+        { k: "season", l: ["¿Cómo describiría la temporada que vive hoy?", "How would you describe the season you are in today?"], lp: ["¿Cómo describirían la temporada que viven hoy?", "How would you describe the season you are in today?"], type: "radio", cards: 1, o: [["thriving", "Floreciendo", "Thriving"], ["stable", "Estable", "Stable"], ["tired", "En necesidad de renovación", "In need of renewal"], ["crisis", "Tiempos difíciles", "Challenging times"]] }
       ] },
     { id: "b2", t: ["Prioridades y áreas de apoyo", "Priorities and areas of support"], h: ["Ayúdenos a entender sus prioridades y en qué áreas KAI puede servirle mejor.", "Help us understand your priorities and the areas in which KAI can best serve you."],
       f: [
-        { k: "priorities", type: "pick", l: ["¿Cuáles son sus necesidades más urgentes?", "What are your most pressing needs?"], s: ["Seleccione hasta 3, en orden de importancia.", "Select up to 3, in order of importance."] },
-        { k: "resources", l: ["¿Qué recursos adicionales le serían útiles?", "Which additional resources would be most helpful?"], type: "checks", other: 1, o: [["disc", "Discipulado", "Discipleship"], ["admin", "Administración", "Administration"], ["couns", "Consejería", "Counseling"], ["youth", "Jóvenes", "Youth"], ["kids", "Niños", "Children"]] },
-        { k: "orient", l: ["¿Necesita ayuda en alguna de estas áreas administrativas?", "Do you need assistance in any of these administrative areas?"], s2: ["marque los que apliquen", "check all that apply"], type: "checks", other: 1, o: [["incorp", "Incorporar la iglesia", "Incorporating the church"], ["501", "Obtener el 501(c)(3)", "Obtaining 501(c)(3) status"], ["bylaws", "Estatutos y junta directiva", "Bylaws and board"], ["structure", "Estructurar ministerios y liderazgo", "Structuring ministries and leadership"], ["done", "Mi iglesia ya está incorporada y tiene 501(c)(3)", "My church is already incorporated and has 501(c)(3)"]] }
+        { k: "priorities", type: "pick", l: ["¿Cuáles son sus necesidades más urgentes?", "What are your most pressing needs?"], lp: ["¿Cuáles son las necesidades más urgentes que ustedes ven en su iglesia?", "What are the most pressing needs you see in your church?"], s: ["Seleccione hasta 3, en orden de importancia.", "Select up to 3, in order of importance."], ls: ["Seleccionen hasta 3, en orden de importancia.", "Select up to 3, in order of importance."] },
+        { k: "resources", l: ["¿Qué recursos adicionales le serían útiles?", "Which additional resources would be most helpful?"], lp: ["¿Qué recursos adicionales les serían útiles?", "Which additional resources would be most helpful to you?"], type: "checks", other: 1, o: [["disc", "Discipulado", "Discipleship"], ["admin", "Administración", "Administration"], ["couns", "Consejería", "Counseling"], ["youth", "Jóvenes", "Youth"], ["kids", "Niños", "Children"]] },
+        { k: "orient", l: ["¿Necesita ayuda en alguna de estas áreas administrativas?", "Do you need assistance in any of these administrative areas?"], lp: ["¿Necesitan ayuda en alguna de estas áreas administrativas?", "Do you need assistance in any of these administrative areas?"], s2: ["marque los que apliquen", "check all that apply"], type: "checks", other: 1, o: [["incorp", "Incorporar la iglesia", "Incorporating the church"], ["501", "Obtener el 501(c)(3)", "Obtaining 501(c)(3) status"], ["bylaws", "Estatutos y junta directiva", "Bylaws and board"], ["structure", "Estructurar ministerios y liderazgo", "Structuring ministries and leadership"], ["done", "Mi iglesia ya está incorporada y tiene 501(c)(3)", "My church is already incorporated and has 501(c)(3)"]] }
       ] },
     { id: "b3", t: ["Formación de líderes", "Leader development"],
       f: [
         { k: "lt_process", l: ["Además del discipulado, ¿su iglesia tiene un proceso formal de desarrollo ministerial?", "Beyond discipleship, does your church have a formal process for ministry development?"], type: "radio", o: [["y", "Sí", "Yes"], ["n", "No", "No"]] },
         { k: "lt_character", l: ["¿Qué tan importante es que sus líderes sean formados desde el carácter y no solo desde las habilidades?", "How important is it that your leaders are formed in character, not only in skills?"], type: "scale", sc: IMP },
         { k: "lt_count", l: ["¿Cuántas personas podrían recibir formación?", "How many people could receive training?"], w: 3, type: "radio", o: [["1", "1–5", "1–5"], ["6", "6–15", "6–15"], ["16", "Más de 15", "More than 15"]] },
-        { k: "lt_self", l: ["¿Le interesa recibir formación formal para usted?", "Are you interested in formal training for yourself?"], w: 3, type: "radio", o: [["y", "Sí", "Yes"], ["n", "No por ahora", "Not now"]] },
+        { k: "lt_self", l: ["¿Le interesa recibir formación formal para usted?", "Are you interested in formal training for yourself?"], lp: ["¿Les interesa recibir formación formal para ustedes?", "Are you interested in formal training for yourselves?"], w: 3, type: "radio", o: [["y", "Sí", "Yes"], ["n", "No por ahora", "Not now"]] },
         { k: "morphe", type: "morphe", o: [["contact", "Sí, que me contacten", "Yes, please contact me"], ["no", "No por ahora", "Not now"]] }
       ] },
     { id: "b4", t: ["Su iglesia", "Your church"], h: ["El detalle solo aparece si contesta que sí.", "The details only appear if you answer yes."],
       f: [
-        { k: "youth_int", l: ["¿Le interesa que sus jóvenes convivan con otras iglesias?", "Would you like your youth to fellowship with other churches?"], type: "radio", o: Y },
+        { k: "youth_int", l: ["¿Le interesa que sus jóvenes convivan con otras iglesias?", "Would you like your youth to fellowship with other churches?"], lp: ["¿Les interesa que sus jóvenes convivan con otras iglesias?", "Would you like your youth to fellowship with other churches?"], type: "radio", o: Y },
         { k: "youth_acts", l: ["¿Qué actividades les interesarían?", "Which activities would interest them?"], type: "checks", when: "youth_int=y", other: 1, o: [["retreats", "Retiros y campamentos", "Retreats and camps"], ["sports", "Deportes", "Sports"], ["worship", "Noches de alabanza", "Worship nights"], ["service", "Misiones y servicio", "Missions and service"], ["conf", "Conferencias", "Conferences"]] },
-        { k: "ws", l: ["¿Puede ser anfitrión de un taller ministerial en su iglesia local?", "Are you able to host a ministry workshop at your local church?"], type: "radio", o: [["y", "Sí", "Yes"], ["n", "No", "No"]] },
+        { k: "ws", l: ["¿Puede ser anfitrión de un taller ministerial en su iglesia local?", "Are you able to host a ministry workshop at your local church?"], lp: ["¿Pueden ser anfitriones de un taller ministerial en su iglesia local?", "Are you able to host a ministry workshop at your local church?"], type: "radio", o: [["y", "Sí", "Yes"], ["n", "No", "No"]] },
         { k: "ws_topics", l: ["¿Sobre qué temas?", "Which topics?"], type: "checks", other: 1, when: "ws=y", o: [["couples", "Matrimonios", "Marriage"], ["parent", "Crianza", "Parenting"], ["fin", "Finanzas", "Finances"], ["lead", "Liderazgo", "Leadership"], ["evang", "Evangelismo", "Evangelism"], ["couns", "Consejería", "Counseling"], ["worship", "Alabanza", "Worship"], ["admin", "Administración", "Administration"]] }
       ] },
     { id: "b5", t: ["Para cerrar", "To finish"],
-      f: [{ k: "one_thing", l: ["Si KAI pudiera ayudarle con una sola cosa este año, ¿cuál sería?", "If KAI could help you with just one thing this year, what would it be?"], type: "area" }] },
+      f: [{ k: "one_thing", l: ["Si KAI pudiera ayudarle con una sola cosa este año, ¿cuál sería?", "If KAI could help you with just one thing this year, what would it be?"], lp: ["Si KAI pudiera ayudarles con una sola cosa este año, ¿cuál sería?", "If KAI could help you with just one thing this year, what would it be?"], type: "area" }] },
     { id: "b6", t: ["Su conversación de bienvenida", "Your welcome conversation"],
+      hp: ["El último paso es una conversación de bienvenida con el Presidente de KAI y un miembro de la Junta, para conocerles a ustedes y a su ministerio. Elijan el día y la hora que les funcionen; nosotros les confirmaremos.", "The last step is a welcome conversation with the KAI President and a Board member, so we can get to know you both and your ministry. Choose a day and time that work for you, and we'll confirm."],
       h: ["El último paso es una conversación de bienvenida con el Presidente de KAI y un miembro de la Junta, para conocerle a usted y a su ministerio. Elija el día y la hora que le funcionen; nosotros le confirmaremos.", "The last step is a welcome conversation with the KAI President and a Board member, so we can get to know you and your ministry. Choose a day and time that work for you, and we'll confirm."],
       f: [
-        { type: "note", when: "marital=c", l: ["Como usted es casado(a), ambos esposos deben estar presentes en la conversación de bienvenida.", "Since you are married, both spouses must be present at the welcome conversation."] },
+        { type: "note", when: "married=y", l: ["Como usted es casado(a), ambos esposos deben estar presentes en la conversación de bienvenida.", "Since you are married, both spouses must be present at the welcome conversation."] },
         { type: "sub", l: ["Primera opción", "First choice"] },
         { k: "iv_date1", l: ["Día", "Day"], w: 3, in: "date", future: 1, req: 1 },
         { k: "iv_time1", l: ["Hora (hora del Pacífico)", "Time (Pacific time)"], w: 3, type: "select", req: 1, o: IVT },
         { type: "sub", l: ["Segunda opción", "Second choice"], opt: 1 },
         { k: "iv_date2", l: ["Día", "Day"], w: 3, in: "date", future: 1 },
         { k: "iv_time2", l: ["Hora (hora del Pacífico)", "Time (Pacific time)"], w: 3, type: "select", o: IVT },
-        { k: "iv_spouse", when: "marital=c", type: "checks", req: 1,
+        { k: "iv_spouse", when: "married=y", type: "checks", req: 1,
           l: ["Su cónyuge", "Your spouse"],
           o: [["y", "Confirmo que mi cónyuge y yo estaremos presentes", "I confirm that my spouse and I will both be present"]] }
       ] }

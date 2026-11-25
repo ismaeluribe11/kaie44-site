@@ -18,7 +18,7 @@
   var LOCK = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
   /* ---------- state ---------- */
-  var GOTO = null, S = {}, FILES = {}, PREV = {}, SIG = { drawn: false }, CUR = null, LASTLANG = null, BUSY = false, DONE = null, PDFURL = null;
+  var GOTO = null, S = {}, FILES = {}, PREV = {}, SIG = { drawn: false }, SIG2 = { drawn: false }, CUR = null, LASTLANG = null, BUSY = false, DONE = null, PDFURL = null;
   try { S = JSON.parse(localStorage.getItem(DRAFT) || "{}") || {}; } catch (e) { S = {}; }
   if (!S.agree) S.agree = {};
   var saveT = null;
@@ -48,8 +48,8 @@
       if (!o) return;
       Object.keys(o).forEach(function (k) {
         var v = o[k]; if (!v) return;
-        if (k === "_orig") { ORIG.photo = v.blob || null; ORIG.pos = v.pos || { x: 0, y: 0, z: 1 }; return; }
-        if (!FILES[k]) { if (v.name == null && v.blob) { FILES[k] = v.blob; FILES[k].name = v.n || k; } else FILES[k] = v; if (k === "photo") PREV.photo = URL.createObjectURL(FILES[k]); }
+        if (k === "_orig" || k === "_orig_sp_photo") { var og = ORIG[k === "_orig" ? "photo" : "sp_photo"]; og.photo = v.blob || null; og.pos = v.pos || { x: 0, y: 0, z: 1 }; return; }
+        if (!FILES[k]) { if (v.name == null && v.blob) { FILES[k] = v.blob; FILES[k].name = v.n || k; } else FILES[k] = v; if (k === "photo" || k === "sp_photo") PREV[k] = URL.createObjectURL(FILES[k]); }
       });
     }).catch(function () {});
   }
@@ -126,8 +126,11 @@
     for (var i = 1; i <= 5; i++) h += '<label><input type="radio" name="' + f.k + '" value="' + i + '"><span>' + i + "</span></label>";
     return h + '</div><span class="hi">' + x(f.sc[1]) + "</span></div>";
   }
+  // Texto en singular y en plural: el plural se muestra cuando aplican los dos cónyuges (clase .pairmode)
+  function dual(sg, pl) { return pl ? '<span class="sg">' + sg + '</span><span class="pl">' + pl + "</span>" : sg; }
+  function xl(f) { return dual(x(f.l), f.lp ? x(f.lp) : ""); }
   function lab(f) {
-    var t = x(f.l);
+    var t = xl(f);
     if (f.opt) t += ' <span class="opt">(' + (f.optL ? x(f.optL) : xx("opcional", "optional")) + ")</span>";
     if (f.s2) t += ' <span class="opt">(' + x(f.s2) + ")</span>";
     return "<label>" + t + "</label>";
@@ -153,17 +156,27 @@
     if (t === "sub") return '<div class="ap-sub w6">' + x(f.l) + (f.opt ? ' <span class="opt">(' + xx("opcional", "optional") + ")</span>" : "") + "</div>";
     if (t === "offer") return '<div class="ap-offer w6">' + xx("KAI cuenta con un equipo de agentes con licencia estatal en planes de retiro, seguros de vida y educación financiera.", "KAI has a team of state-licensed agents in retirement plans, life insurance and financial education.") + "</div>";
     if (t === "care") return '<p class="ap-care w6">' + xx("KAI ofrece acompañamiento pastoral, no servicios clínicos. Cuando una situación lo requiera, podemos recomendarle ayuda profesional.", "KAI offers pastoral support, not clinical services. When a situation calls for it, we can recommend professional help.") + "</p>";
+    if (t === "who") {
+      return '<div ' + wrapAttr(f) + '><p class="ap-who-q">' + xx("¿Quién va a aplicar?", "Who is applying?") + '</p><div class="ap-tier ap-who">' +
+        '<label><input type="radio" name="who" value="solo"><b>' + xx("INDIVIDUAL", "INDIVIDUAL") + "</b><strong>" + xx("Solo yo", "Just me") + "</strong><span>" + xx("Una credencial a mi nombre.", "One credential in my name.") + "</span></label>" +
+        '<label><input type="radio" name="who" value="pair"><b>' + xx("MATRIMONIO", "COUPLE") + "</b><strong>" + xx("Mi cónyuge y yo", "My spouse and I") + "</strong><span>" + xx("Una sola solicitud y dos credenciales: una para cada uno.", "One application and two credentials: one for each of us.") + "</span></label></div></div>";
+    }
     if (t === "tier") {
-      return '<div ' + wrapAttr(f) + '><div class="ap-tier">' +
-        '<label><input type="radio" name="tier" value="pastor"><b>PASTOR</b><strong>$100<small> / ' + xx("año", "year") + "</small></strong><span>" + xx("Pastor(a) principal, Obispo, Apóstol", "Senior pastor, Bishop, Apostle") + "</span></label>" +
-        '<label><input type="radio" name="tier" value="ministro"><b>' + xx("MINISTRO", "MINISTER") + "</b><strong>$75<small> / " + xx("año", "year") + "</small></strong><span>" + xx("Pastor asociado, evangelista, misionero u otro ministro", "Associate pastor, evangelist, missionary or other minister") + "</span></label></div>" + payNote("sm") + "</div>";
+      var tk = k || "tier";
+      return '<div ' + wrapAttr(f) + '><p class="ap-tl pl">' + (f.sp ? xx("Membresía de su cónyuge", "Your spouse's membership") : xx("Su membresía", "Your membership")) + '</p><div class="ap-tier">' +
+        '<label><input type="radio" name="' + tk + '" value="pastor"><b>PASTOR</b><strong>$100<small> / ' + xx("año", "year") + "</small></strong><span>" + xx("Pastor(a) principal, Obispo, Apóstol", "Senior pastor, Bishop, Apostle") + "</span></label>" +
+        '<label><input type="radio" name="' + tk + '" value="ministro"><b>' + xx("MINISTRO", "MINISTER") + "</b><strong>$75<small> / " + xx("año", "year") + "</small></strong><span>" + xx("Pastor asociado, evangelista, misionero u otro ministro", "Associate pastor, evangelist, missionary or other minister") + "</span></label></div>" + (f.sp ? "" : payNote("sm")) + "</div>";
     }
     if (t === "cred") {
-      var img = PREV.photo ? '<img id="ap-ph" src="' + PREV.photo + '" alt="" title="' + xx("Clic para ajustar", "Click to adjust") + '">' : '<div class="ph0" id="ap-ph">' + xx("Su foto aparecerá aquí", "Your photo will appear here") + "</div>";
-      return '<div class="fld w6" data-k="photo"><div class="ap-cred"><div class="ap-ph-col"><div class="frame">' + img + '</div><div class="ap-phbtns"' + (PREV.photo ? "" : " hidden") + '><button type="button" class="ap-phb" id="ap-ph-adj">' + xx("Ajustar", "Adjust") + '</button><button type="button" class="ap-phb del" id="ap-ph-del">' + xx("Eliminar", "Delete") + '</button></div></div><div class="ap-cred-f">' +
-        '<div class="fld" data-k="title"><label>' + xx("Título en la credencial", "Title on credential") + '</label><select name="title"><option value="">' + xx("Elija su título…", "Choose your title…") + "</option>" + titlesSorted().map(function (o) { return '<option value="' + o[0] + '">' + (lang() === "es" ? o[1] : o[2]) + "</option>"; }).join("") + "</select></div>" +
-        '<div class="fld" data-k="cred_name"><label>' + xx("Nombre en la credencial", "Name on credential") + '</label><input name="cred_name" placeholder="Juan Carlos Pérez"><small>' + xx("Como desea que aparezca, sin el título", "As you would like it to appear, without the title") + "</small></div>" +
-        '<div class="ap-upl"><label class="ap-up">' + xx("Subir o tomar foto", "Upload or take photo") + '<input type="file" accept="image/*" data-file="photo"></label><small>' + xx("De frente, con fondo claro, sin lentes oscuros ni gorra.", "Facing forward, light background, no sunglasses or hat.") + '</small></div><div class="ap-errm" data-errfor="photo"></div></div></div></div>';
+      var pre = f.sp ? "sp_" : "", pk = pre + "photo", sfx = f.sp ? "-sp" : "";
+      var img = PREV[pk] ? '<img id="ap-ph' + sfx + '" src="' + PREV[pk] + '" alt="" title="' + xx("Clic para ajustar", "Click to adjust") + '">' : '<div class="ph0" id="ap-ph' + sfx + '">' + xx("Su foto aparecerá aquí", "Your photo will appear here") + "</div>";
+      return '<div class="fld w6" data-k="' + pk + '"><div class="ap-cred"><div class="ap-ph-col"><div class="frame">' + img + '</div><div class="ap-phbtns" id="ap-phbtns' + sfx + '"' + (PREV[pk] ? "" : " hidden") + '><button type="button" class="ap-phb" data-phadj="' + pk + '">' + xx("Ajustar", "Adjust") + '</button><button type="button" class="ap-phb del" data-phdel="' + pk + '">' + xx("Eliminar", "Delete") + '</button></div></div><div class="ap-cred-f">' +
+        '<div class="fld" data-k="' + pre + 'title"><label>' + xx("Título en la credencial", "Title on credential") + '</label><select name="' + pre + 'title"><option value="">' + xx("Elija el título…", "Choose the title…") + "</option>" + titlesSorted().map(function (o) { return '<option value="' + o[0] + '">' + (lang() === "es" ? o[1] : o[2]) + "</option>"; }).join("") + "</select></div>" +
+        '<div class="fld" data-k="' + pre + 'cred_name"><label>' + xx("Nombre en la credencial", "Name on credential") + '</label><input name="' + pre + 'cred_name" placeholder="' + (f.sp ? "María Elena Pérez" : "Juan Carlos Pérez") + '"><small>' + xx("Como desea que aparezca, sin el título", "As it should appear, without the title") + "</small></div>" +
+        '<div class="ap-upl"><label class="ap-up">' + xx("Subir o tomar foto", "Upload or take photo") + '<input type="file" accept="image/*" data-file="' + pk + '"></label><small>' + xx("De frente, con fondo claro, sin lentes oscuros ni gorra.", "Facing forward, light background, no sunglasses or hat.") + '</small></div><div class="ap-errm" data-errfor="' + pk + '"></div></div></div></div>';
+    }
+    if (t === "faith" && f.sp) {
+      return '<div ' + wrapAttr(f) + '><label class="chk"><input type="checkbox" name="' + k + '">' + xx("Mi cónyuge afirma la Declaración de Fe de Kingdom Alliance International.", "My spouse affirms the Statement of Faith of Kingdom Alliance International.") + "</label></div>";
     }
     if (t === "faith") {
       return '<div class="fld w6" data-k="faith_ok"><details class="ap-doc"><summary>' + xx("Leer la Declaración de Fe de KAI", "Read KAI's Statement of Faith") + "<span>" + xx("Leer", "Read") + '</span></summary><div class="dc-b">' + faithHTML() + '</div></details><label class="chk"><input type="checkbox" name="faith_ok">' + xx("Afirmo la Declaración de Fe de Kingdom Alliance International.", "I affirm the Statement of Faith of Kingdom Alliance International.") + "</label></div>";
@@ -173,7 +186,7 @@
       return '<div class="ap-file w6" data-k="' + k + '"><p>' + x(f.l) + (f.s ? "<small>" + x(f.s) + "</small>" : "") + fn + '</p><label class="ap-up">' + xx("Subir archivo", "Upload file") + '<input type="file" accept="image/*,.pdf" data-file="' + k + '"></label></div>';
     }
     if (t === "pick") {
-      return '<div class="fld w6" data-k="priorities">' + (f.l ? lab(f) : "") + (f.s ? '<small class="ap-pick-h">' + x(f.s) + "</small>" : "") + '<div class="ap-pick chips">' + SC.NEEDS.map(function (b) {
+      return '<div class="fld w6" data-k="priorities">' + (f.l ? lab(f) : "") + (f.s ? '<small class="ap-pick-h">' + dual(x(f.s), f.ls ? x(f.ls) : "") + "</small>" : "") + '<div class="ap-pick chips">' + SC.NEEDS.map(function (b) {
         return '<button type="button" data-b="' + b[0] + '"><em></em><b>' + (lang() === "es" ? b[1] : b[2]) + "</b></button>";
       }).join("") + '</div><div class="ap-pick-st"><i>1</i><i>2</i><i>3</i><span></span></div></div>';
     }
@@ -194,22 +207,27 @@
       inner = '<input name="' + k + '" type="' + ty + '"' + (f.in === "num" ? ' inputmode="numeric"' : "") + (f.future ? ' min="' + (function () { var d = new Date(Date.now() + 864e5); return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); })() + '"' : "") + (f.ph ? ' placeholder="' + esc(x(f.ph)) + '"' : "") + ">";
     }
     if (f.tag) {
-      return '<div ' + wrapAttr(f, "ap-q") + '><div class="qh"><span>' + x(f.tag) + "</span><p>" + x(f.l) + "</p></div>" + inner + "</div>";
+      return '<div ' + wrapAttr(f, "ap-q") + '><div class="qh"><span>' + x(f.tag) + "</span><p>" + xl(f) + "</p></div>" + inner + "</div>";
     }
-    if (f.desc) return '<div ' + wrapAttr(f, "ap-descf") + '><h4 class="ap-subt">' + x(f.l) + (f.req ? ' <span class="ap-req">' + xx("Obligatorio", "Required") + "</span>" : "") + '</h4><div class="ap-desc">' + (lang() === "es" ? f.desc[0] : f.desc[1]).map(function (pp) { return "<p>" + pp + "</p>"; }).join("") + "</div>" + inner + "</div>";
+    if (f.desc) return '<div ' + wrapAttr(f, "ap-descf") + '><h4 class="ap-subt">' + xl(f) + (f.req ? ' <span class="ap-req">' + xx("Obligatorio", "Required") + "</span>" : "") + '</h4><div class="ap-desc">' + (lang() === "es" ? f.desc[0] : f.desc[1]).map(function (pp) { return "<p>" + pp + "</p>"; }).join("") + "</div>" + inner + "</div>";
     return '<div ' + wrapAttr(f) + ">" + lab(f) + inner + (f.s ? "<small>" + x(f.s) + "</small>" : "") + "</div>";
   }
 
+  function pairHTML(sec) {
+    var L = sec.f.filter(function (f) { return f.pp && !f.sp; }).map(field).join(""), R = sec.f.filter(function (f) { return f.pp && f.sp; }).map(field).join("");
+    return '<div class="ap-pair w6"><div class="ap-pcol"><h4 class="ap-pt pl">' + xx("Usted", "You") + '</h4><div class="ap-g6">' + L + '</div></div><div class="ap-pcol ap-cond" data-when="who=pair"><h4 class="ap-pt">' + xx("Su cónyuge", "Your spouse") + '</h4><div class="ap-g6">' + R + "</div></div></div>";
+  }
   function section(sec, i) {
-    var h = "", box = null;
+    var h = "", box = null, paired = false;
     sec.f.forEach(function (f) {
+      if (f.pp) { if (!paired) { paired = true; h += pairHTML(sec); } return; }
       if (f.type === "finbox") { box = ""; return; }
       if (box !== null && f.box) { box += field(f); return; }
       if (box !== null && !f.box) { h += finBox(box); box = null; }
       h += field(f);
     });
     if (box !== null) h += finBox(box);
-    var hint = sec.h ? '<p class="hint' + (sec.skip ? " skip" : "") + '">' + x(sec.h) + "</p>" : "";
+    var hint = sec.h ? '<p class="hint' + (sec.skip ? " skip" : "") + '">' + dual(x(sec.h), sec.hp ? x(sec.hp) : "") + "</p>" : "";
     return '<div class="ap-blk" id="ap-' + sec.id + '"><h3><i>' + ("0" + (i + 1)).slice(-2) + "</i>" + x(sec.t) + "</h3>" + hint + '<div class="ap-g6">' + h + "</div></div>";
   }
   function finBox(inner) {
@@ -222,14 +240,14 @@
       ["A", xx("PARTE A", "PART A"), xx("Solicitud de membresía", "Membership application"), xx("Quién es usted, su familia y su ministerio.", "Who you are, your family and your ministry."), [xx("Datos personales y familia", "Personal information and family"), xx("Declaración de Fe", "Statement of Faith"), xx("Ministerio actual y trabajo", "Current ministry and work"), xx("Historial y formación", "Background and training"), xx("Foto para su credencial", "Photo for your credential")], "", xx("La revisa el Comité de Membresía", "Reviewed by the Membership Committee"), ""],
       ["B", xx("PARTE B", "PART B"), xx("¿En qué podemos servirle?", "How can we serve you?"), xx("Dónde está hoy y qué necesita.", "Where you are today and what you need."), [xx("Lo que más le urge", "What is most urgent"), xx("Formación de líderes", "Leader development"), xx("Su iglesia", "Your church")], "", xx("La revisa el liderazgo de KAI", "Reviewed by KAI's leadership"), ""]
     ];
-    var has = Object.keys(S).some(function (k) { return k !== "agree" && S[k] && (!Array.isArray(S[k]) || S[k].length); });
+    var has = Object.keys(S).some(function (k) { return k !== "agree" && k !== "married" && S[k] && (!Array.isArray(S[k]) || S[k].length); });
     return '<div class="hero sm"><div class="wrap"><div class="eyebrow">' + xx("Membresía · Kingdom Alliance International", "Membership · Kingdom Alliance International") + "</div><h1>" + xx("Aplicación de Membresía", "Membership Application") + '</h1><p class="lead ap">' + xx("El paquete de membresía tiene dos metas: conocer al pastor y descubrir qué necesita, para que KAI pueda servirle desde el primer día.", "The membership application has two goals: to get to know you and to discover what you need, so KAI can serve you from day one.") + '</p><p class="ap-meta">' + xx("Dos partes y una revisión final", "Two parts and a final review") + "</p></div></div>" +
       (window.KAIGUIDE ? KAIGUIDE("bar") : "") +
       '<section class="s alt"><div class="wrap"><div class="eyebrow" style="color:var(--gold)">' + xx("Cómo funciona", "How it works") + '</div><h2 style="margin:16px 0 0">' + xx("Dos partes, en este orden", "Two parts, in this order") + '</h2><button type="button" class="ap-privlink" id="ap-priv">' + PRIV_ICON + '<span>' + xx("Aviso de Privacidad y Confidencialidad de la Aplicación de Membresía", "Membership Application Privacy and Confidentiality Notice") + '</span><em>' + (S.agree && S.agree.priv_read ? xx("✓ Leído", "✓ Read") : xx("Leer", "Read")) + '</em></button><div class="ap-steps">' +
       parts.map(function (p) {
         return '<div class="card ' + p[7] + '"><span class="num"' + (p[7] ? ' style="color:rgba(11,31,75,.18)"' : "") + ">" + p[0] + '</span><div class="n">' + p[1] + '</div><div class="wrapc"><h3>' + p[2] + "</h3><p>" + p[3] + '</p><ul class="ap-list">' + p[4].map(function (z) { return "<li>" + z + "</li>"; }).join("") + '</ul><div class="ap-foot">' + (p[5] ? "<span><b>" + p[5] + "</b></span>" : "") + "<span>" + p[6] + "</span></div></div></div>";
       }).join("") + '</div><button type="button" class="ap-privlink ap-signlink" id="ap-sign">' + SIGN_ICON + '<span>' + xx("Instrucciones para la Revisión Final y Firma", "Final Review and Signature Instructions") + '</span><em>' + (S.agree && S.agree.sign_read ? xx("✓ Leído", "✓ Read") : xx("Leer", "Read")) + "</em></button></div></section>" +
-      '<section class="s"><div class="wrap ap-two"><div><div class="eyebrow" style="color:var(--gold)">' + xx("Antes de empezar", "Before you start") + "</div><h2>" + xx("Tenga a la mano", "Have these ready") + '</h2><ul class="ap-list"><li>' + xx("Una foto de frente, con fondo claro, para su credencial", "A front-facing photo with a light background for your credential") + "</li><li>" + xx("Quién le ordenó y en qué año", "Who ordained you and in what year") + '</li></ul></div><div><div class="eyebrow" style="color:var(--gold)">' + xx("Después de enviar", "After you submit") + "</div><h2>" + xx("Qué sigue", "What's next") + '</h2><div class="vals"><div><h3>' + xx("Revisión", "Review") + "</h3><p>" + xx("El Comité de Membresía revisará su aplicación.", "The Membership Committee will review your application.") + "</p></div><div><h3>" + xx("Una conversación con usted", "A conversation with you") + "</h3><p>" + xx("Alguien de nuestro equipo se comunicará con usted para conocerle mejor, en persona, por teléfono o por video. Es una plática sencilla sobre su ministerio y en qué podemos acompañarle.", "Someone from our team will reach out to get to know you better, in person, by phone or by video. It is a simple conversation about your ministry and how we can walk alongside you.") + "</p></div><div><h3>" + xx("Respuesta", "Response") + "</h3><p>" + xx("Al concluir la revisión de su aplicación, KAI le notificará por escrito el estado de su membresía. Si su aplicación es aprobada, la notificación incluirá las instrucciones para el pago de la cuota anual de membresía y cualquier otro paso necesario para completar su inscripción.", "Upon completion of the application review, KAI will notify you in writing of your membership status. If your application is approved, the notification will include instructions for payment of the annual membership fee and any remaining steps required to finalize your enrollment.") + "</p></div><div><h3>" + xx("Bienvenida", "Welcome") + "</h3><p>" + xx("Al completar el proceso de inscripción, recibirá acceso al Área de Miembros de KAI y se le emitirá su credencial ministerial.", "Upon completion of the enrollment process, you will receive access to the KAI Members Area and be issued your ministerial credential.") + "</p></div></div></div></div></section>" +
+      '<section class="s"><div class="wrap ap-two"><div><div class="eyebrow" style="color:var(--gold)">' + xx("Antes de empezar", "Before you start") + "</div><h2>" + xx("Tenga a la mano", "Have these ready") + '</h2><ul class="ap-list"><li>' + xx("Una foto de frente, con fondo claro, para su credencial", "A front-facing photo with a light background for your credential") + "</li><li>" + xx("Si son matrimonio, pueden aplicar juntos en una sola solicitud: tengan a la mano la foto y los datos de ambos", "If you are a married couple, you can apply together in one application: have both photos and details ready") + "</li><li>" + xx("Quién le ordenó y en qué año", "Who ordained you and in what year") + '</li></ul></div><div><div class="eyebrow" style="color:var(--gold)">' + xx("Después de enviar", "After you submit") + "</div><h2>" + xx("Qué sigue", "What's next") + '</h2><div class="vals"><div><h3>' + xx("Revisión", "Review") + "</h3><p>" + xx("El Comité de Membresía revisará su aplicación.", "The Membership Committee will review your application.") + "</p></div><div><h3>" + xx("Una conversación con usted", "A conversation with you") + "</h3><p>" + xx("Alguien de nuestro equipo se comunicará con usted para conocerle mejor, en persona, por teléfono o por video. Es una plática sencilla sobre su ministerio y en qué podemos acompañarle.", "Someone from our team will reach out to get to know you better, in person, by phone or by video. It is a simple conversation about your ministry and how we can walk alongside you.") + "</p></div><div><h3>" + xx("Respuesta", "Response") + "</h3><p>" + xx("Al concluir la revisión de su aplicación, KAI le notificará por escrito el estado de su membresía. Si su aplicación es aprobada, la notificación incluirá las instrucciones para el pago de la cuota anual de membresía y cualquier otro paso necesario para completar su inscripción.", "Upon completion of the application review, KAI will notify you in writing of your membership status. If your application is approved, the notification will include instructions for payment of the annual membership fee and any remaining steps required to finalize your enrollment.") + "</p></div><div><h3>" + xx("Bienvenida", "Welcome") + "</h3><p>" + xx("Al completar el proceso de inscripción, recibirá acceso al Área de Miembros de KAI y se le emitirá su credencial ministerial.", "Upon completion of the enrollment process, you will receive access to the KAI Members Area and be issued your ministerial credential.") + "</p></div></div></div></div></section>" +
       '<section class="s alt"><div class="wrap ap-fee"><div><div class="eyebrow" style="color:var(--gold)">' + xx("Cuota anual", "Annual fee") + '</div><h2>' + xx("Membresía con credencial", "Membership with credential") + '</h2><p class="sub">' + xx("La cuota anual cubre un año de membresía en KAI e incluye la emisión de su credencial ministerial.", "The annual fee covers one year of KAI membership and includes issuance of your ministerial credential.") + '</p>' + payNote() + '</div><div class="ap-tiers"><div class="card"><div class="n">PASTOR</div><p class="ap-price">$100<small> / ' + xx("año", "year") + "</small></p><p>" + xx("Pastor(a) principal, Obispo, Apóstol.", "Senior pastor, Bishop, Apostle.") + '</p></div><div class="card"><div class="n">' + xx("MINISTRO", "MINISTER") + '</div><p class="ap-price">$75<small> / ' + xx("año", "year") + "</small></p><p>" + xx("Pastor asociado, evangelista, misionero u otro ministro.", "Associate pastor, evangelist, missionary or other minister.") + "</p></div></div></div></section>" +
       '<section class="s band"><div class="wrap"><h2>' + (has ? xx("Continúe donde se quedó", "Pick up where you left off") : xx("¿Listo para empezar?", "Ready to begin?")) + "</h2><p>" + xx("Su avance se guarda en este dispositivo, así que puede pausar y continuar después.", "Your progress is saved on this device, so you can pause and continue later.") + '</p><a class="btn gold" href="#/apply/a">' + (has ? xx("Continuar aplicación", "Continue application") : xx("Iniciar aplicación", "Start application")) + "</a>" + (has ? ' <button type="button" class="btn line" id="ap-reset" style="margin-left:10px;background:transparent;cursor:pointer">' + xx("Empezar de nuevo", "Start over") + "</button>" : "") + "</div></section>";
   }
@@ -256,6 +274,7 @@
     if (t === "radio" || t === "select" || t === "morphe") return esc(optLabel(f, v));
     if (t === "checks") return esc((v || []).filter(function (z) { return z !== "other"; }).map(function (z) { return optLabel(f, z); }).concat((v || []).indexOf("other") >= 0 && S[f.k + "_other"] ? [S[f.k + "_other"]] : []).join(", "));
     if (t === "scale") { var d = ""; for (var i = 1; i <= 5; i++) d += '<i class="' + (i <= v ? "on" : "") + '"></i>'; return '<span class="rv-dots">' + d + "</span> <small>" + v + " / 5</small>"; }
+    if (t === "who") return v === "pair" ? xx("Matrimonio · dos credenciales", "Couple · two credentials") : xx("Individual", "Individual");
     if (t === "tier") return v === "ministro" ? xx("Ministro", "Minister") + " · $75 / " + xx("año", "year") : "Pastor · $100 / " + xx("año", "year");
     if (t === "consent") return v ? "✓ " + xx("Autorizado", "Authorized") : "";
     if (t === "faith") return v ? "✓ " + xx("Afirma la Declaración de Fe", "Affirms the Statement of Faith") : "";
@@ -269,12 +288,15 @@
       if (!f.k || !active(f) || f.type === "pick") return;
       if (f.type === "file") { files.push('<span class="' + (FILES[f.k] ? "" : "no") + '">' + x(f.l) + "</span>"); return; }
       if (!filled(f)) return;
-      var label = f.tag ? x(f.tag) : f.type === "tier" ? xx("Membresía", "Membership") : f.type === "faith" ? xx("Declaración de Fe", "Statement of Faith") : f.type === "consent" ? xx("Autorización", "Authorization") : f.type === "morphe" ? "Instituto Morphe" : x(f.l);
+      var label = f.tag ? x(f.tag) : f.type === "who" ? xx("Solicitud", "Application") : f.type === "tier" ? xx("Membresía", "Membership") : f.type === "faith" ? xx("Declaración de Fe", "Statement of Faith") : f.type === "consent" ? xx("Autorización", "Authorization") : f.type === "morphe" ? "Instituto Morphe" : x(f.l);
+      if (f.sp) label = xx("Cónyuge · ", "Spouse · ") + label;
       if (f.type === "area") quotes.push('<div class="w"><dt>' + label + '</dt><dd class="rv-quote">' + esc(S[f.k]).replace(/\n/g, "<br>") + "</dd></div>");
       else cells.push("<div" + ((label || "").length > 60 ? ' class="w"' : "") + "><dt>" + label + "</dt><dd>" + fmt(f) + "</dd></div>");
     });
     if (sec.f.some(function (f) { return f.type === "cred"; })) {
-      cells.unshift("<div><dt>" + xx("Título en credencial", "Title on credential") + "</dt><dd>" + esc(titleLabel()) + "</dd></div>", "<div><dt>" + xx("Nombre en credencial", "Name on credential") + "</dt><dd>" + esc(S.cred_name || "—") + "</dd></div>");
+      var cc = ["<div><dt>" + xx("Título en credencial", "Title on credential") + "</dt><dd>" + esc(titleLabel()) + "</dd></div>", "<div><dt>" + xx("Nombre en credencial", "Name on credential") + "</dt><dd>" + esc(S.cred_name || "—") + "</dd></div>"];
+      if (S.who === "pair") cc.push("<div><dt>" + xx("Cónyuge · Título en credencial", "Spouse · Title on credential") + "</dt><dd>" + esc(titleLabel("sp_")) + "</dd></div>", "<div><dt>" + xx("Cónyuge · Nombre en credencial", "Spouse · Name on credential") + "</dt><dd>" + esc(S.sp_cred_name || "—") + "</dd></div>");
+      cells = cc.concat(cells);
     }
     var body = "";
     if (sec.f.some(function (f) { return f.type === "pick"; })) {
@@ -286,23 +308,28 @@
     if (!body) body = '<p class="rv-empty">' + xx("Sin respuestas", "No answers") + "</p>";
     return '<div class="rv-grp"><h5>' + x(sec.t) + "</h5>" + body + "</div>";
   }
-  function titleLabel() { var t = S.title || "Pastor"; var o = SC.TITLES.filter(function (z) { return z[0] === t; })[0]; return o ? (lang() === "es" ? o[1] : o[2]) : t; }
+  function titleLabel(pre) { var t = S[(pre || "") + "title"] || "Pastor"; var o = SC.TITLES.filter(function (z) { return z[0] === t; })[0]; return o ? (lang() === "es" ? o[1] : o[2]) : t; }
   function titlesSorted() { var i = lang() === "es" ? 1 : 2; return SC.TITLES.slice().sort(function (a, b) { return a[i].localeCompare(b[i], lang()); }); }
   var OLD_TITLES = { "Pastora": "Pastor", "Reverendo": "Pastor", "Reverenda": "Pastor", "Apóstol": "Apostle", "Obispo": "Bishop", "Evangelista": "Evangelist", "Misionero": "Missionary", "Misionera": "Missionary", "Ministro": "Ordained Minister" };
-  function initials() { var a = (S.cred_name || ((S.first_name || "") + " " + (S.last_name || ""))).trim().split(/\s+/); return ((a[0] || "")[0] || "") + ((a.length > 1 ? a[a.length - 1] : "")[0] || ""); }
+  function initials(pre) { pre = pre || ""; var a = (S[pre + "cred_name"] || ((S[pre + "first_name"] || "") + " " + (S[pre + "last_name"] || ""))).trim().split(/\s+/); return ((a[0] || "")[0] || "") + ((a.length > 1 ? a[a.length - 1] : "")[0] || ""); }
   function partStatus(p) {
-    var secs = PARTS[p], n = secs.filter(function (s) { return s.f.some(function (f) { return f.k && active(f) && filled(f); }); }).length;
+    var secs = PARTS[p], n = secs.filter(function (s) { return (s.id === "a3" && S.who === "pair") || s.f.some(function (f) { return f.k && active(f) && filled(f); }); }).length;
     return [n, secs.length];
   }
   function review() {
-    var tier = S.tier || "pastor";
-    var photo = PREV.photo ? '<img src="' + PREV.photo + '" alt="">' : "<div>" + esc(initials().toUpperCase() || "KAI") + "</div>";
+    var P = S.who === "pair", tier = S.tier || "pastor";
+    function heroCard(pre) {
+      var tr = S[pre + "tier"] || "pastor", ph = PREV[pre + "photo"] ? '<img src="' + PREV[pre + "photo"] + '" alt="">' : "<div>" + esc(initials(pre).toUpperCase() || "KAI") + "</div>";
+      return '<div class="rv-cred"><div class="hd"><span>Kingdom Alliance International</span><span class="tier">' + (tr === "pastor" ? "PASTOR" : xx("MINISTRO", "MINISTER")) + '</span></div><div class="bd"><div class="phx">' + ph + "</div><div><small>" + esc(titleLabel(pre)) + "</small><b>" + esc(S[pre + "cred_name"] || ((S[pre + "first_name"] || "") + " " + (S[pre + "last_name"] || "")).trim() || "—") + '</b><div class="ch">' + esc([S.church, [S.city, S.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ")) + '</div></div></div><div class="ft"><div>' + xx("Membresía", "Membership") + "<strong>" + (tr === "pastor" ? "Pastor" : xx("Ministro", "Minister")) + " · $" + FEES[tr] + " / " + xx("año", "year") + '</strong></div><div style="text-align:right">' + xx("Idioma", "Language") + "<strong>" + (S.lang_pref === "en" ? "English" : "Español") + "</strong></div></div></div>";
+    }
+    var tier2 = S.sp_tier || "pastor", feeTotal = FEES[tier] + (P ? FEES[tier2] : 0);
     var a = partStatus("a"), b = partStatus("b");
-    var ag = [["fe", xx("Afirmo la Declaración de Fe de KAI.", "I affirm KAI's Statement of Faith.")], ["pacto", xx("Acepto el Pacto de Membresía.", "I accept the Membership Covenant.")], ["etica", xx("Acepto el Código de Ética Ministerial.", "I accept the Ministerial Code of Ethics.")], ["datos", xx("Acepto la política de Uso y Protección de Datos de KAI.", "I accept KAI's Data Use and Protection policy.")]];
+    var PL0 = S.who === "pair";
+    var ag = [["fe", PL0 ? xx("Afirmamos la Declaración de Fe de KAI.", "We affirm KAI's Statement of Faith.") : xx("Afirmo la Declaración de Fe de KAI.", "I affirm KAI's Statement of Faith.")], ["pacto", PL0 ? xx("Aceptamos el Pacto de Membresía.", "We accept the Membership Covenant.") : xx("Acepto el Pacto de Membresía.", "I accept the Membership Covenant.")], ["etica", PL0 ? xx("Aceptamos el Código de Ética Ministerial.", "We accept the Ministerial Code of Ethics.") : xx("Acepto el Código de Ética Ministerial.", "I accept the Ministerial Code of Ethics.")], ["datos", PL0 ? xx("Aceptamos la política de Uso y Protección de Datos de KAI.", "We accept KAI's Data Use and Protection policy.") : xx("Acepto la política de Uso y Protección de Datos de KAI.", "I accept KAI's Data Use and Protection policy.")]];
     var today = new Date().toLocaleDateString(lang() === "es" ? "es-MX" : "en-US", { year: "numeric", month: "long", day: "numeric" });
     return head("r", xx("Último paso", "Last step"), xx("Revisión final", "Final review"), xx("Revise sus respuestas. Puede corregir cualquier parte antes de firmar y enviar su aplicación.", "Review your answers. You can correct any part before signing and submitting your application."), [xx("Revise", "Review"), xx("Firme", "Sign"), xx("Envíe", "Submit")]) +
       '<section class="ap-body"><div class="wrap ap-grid">' + side(xx("Su aplicación", "Your application"), [["rv-s0", "✓", xx("Resumen", "Summary")], ["rv-s1", "A", xx("Solicitud", "Application")], ["rv-s2", "B", xx("Necesidades", "Needs")], ["rv-s4", "✎", xx("Firma y envío", "Sign and submit")]], "") + '<div class="ap-main">' +
-      '<div class="rv-hero" id="rv-s0"><div class="rv-cred"><div class="hd"><span>Kingdom Alliance International</span><span class="tier">' + (tier === "pastor" ? "PASTOR" : xx("MINISTRO", "MINISTER")) + '</span></div><div class="bd"><div class="phx">' + photo + "</div><div><small>" + esc(titleLabel()) + "</small><b>" + esc(S.cred_name || ((S.first_name || "") + " " + (S.last_name || "")).trim() || "—") + '</b><div class="ch">' + esc([S.church, [S.city, S.state].filter(Boolean).join(", ")].filter(Boolean).join(" · ")) + '</div></div></div><div class="ft"><div>' + xx("Membresía", "Membership") + "<strong>" + (tier === "pastor" ? "Pastor" : xx("Ministro", "Minister")) + " · $" + FEES[tier] + " / " + xx("año", "year") + '</strong></div><div style="text-align:right">' + xx("Idioma", "Language") + "<strong>" + (S.lang_pref === "en" ? "English" : "Español") + "</strong></div></div></div>" +
+      '<div class="rv-hero' + (P ? " pair" : "") + '" id="rv-s0">' + (P ? '<div class="rv-creds">' + heroCard("") + heroCard("sp_") + "</div>" : heroCard("")) +
       '<div class="rv-stat"><h4>' + xx("Estado de su aplicación", "Application status") + "</h4><ul>" +
       stat(xx("Parte A · Solicitud", "Part A · Application"), a[0] + " / " + a[1], a[0] === a[1]) + stat(xx("Parte B · Necesidades", "Part B · Needs"), b[0] + " / " + b[1], b[0] > 0) + "</ul></div></div>" +
       card("rv-s1", "A", xx("Solicitud de membresía", "Membership application"), xx("La revisa el Comité de Membresía", "Reviewed by the Membership Committee"), "a", PARTS.a.map(reviewSection).join("")) +
@@ -310,17 +337,22 @@
       '<div class="rv-card rv-sign" id="rv-s4"><div class="rv-top"><span class="lt">✎</span><div><h3>' + xx("Acuerdos y firma", "Agreements and signature") + "</h3><p>" + xx("Lea, acepte y firme con su dedo o con el mouse", "Read, accept and sign with your finger or mouse") + '</p></div></div><div class="rv-body"><div class="rv-agree">' +
       ag.map(function (g) { var read = g[0] !== "refs"; return '<label data-ag="' + g[0] + '"' + (g[0] === "refs" ? ' class="rv-agb"' : "") + '><input type="checkbox" name="agree_' + g[0] + '"' + (read && !S.agree[g[0] + "_read"] ? " disabled" : "") + ">" + g[1] + (read ? '<button type="button" class="rv-read' + (S.agree[g[0] + "_read"] ? " done" : "") + '" data-doc="' + g[0] + '">' + (S.agree[g[0] + "_read"] ? xx("Leído", "Read") : xx("Leer", "Read")) + "</button>" : "") + "</label>"; }).join("") +
       '</div><p class="rv-hintr">' + xx("Abra cada documento con “Leer” para poder aceptarlo.", "Open each document with “Read” to be able to accept it.") + '</p><div class="ap-errm" data-errfor="agree"></div>' +
-      '<div class="rv-pad"><div><div class="fld" style="margin:0 0 8px"><label>' + xx("Su firma", "Your signature") + '</label></div><div class="rv-canvas"><canvas id="rv-sig"></canvas><span class="x">×</span><span class="ln"></span><span class="sp">' + xx("Firme aquí con su dedo o con el mouse", "Sign here with your finger or mouse") + '</span><button type="button" class="rv-clear">' + xx("Borrar", "Clear") + '</button></div><div class="ap-errm" data-errfor="sig"></div></div><div><div class="fld" data-k="signed_name"><label>' + xx("Nombre completo", "Full name") + '</label><input name="signed_name"></div><div class="fld" style="margin:0"><label>' + xx("Fecha", "Date") + '</label><input value="' + today + '" readonly></div></div></div>' +
-      '<div class="rv-fee"><div><p><strong class="rv-feet">' + xx("Cuota anual", "Annual Fee") + "</strong>" + xx("Solo después de ser aprobado. Le enviaremos las instrucciones de pago por correo.", "Only after you are approved. We will send you the payment instructions by email.") + "</p><b>$" + FEES[tier] + ' <small style="font:500 14px var(--sans);color:var(--mut)">' + (tier === "pastor" ? "Pastor" : xx("Ministro", "Minister")) + '</small></b></div><div class="rv-tags"><span class="hl">' + xx("Incluye credencial ministerial", "Includes ministry credential") + "</span></div></div></div></div>" +
+      sigPad("", P) + (P ? sigPad("sp_", P) : "") +
+      '<div class="rv-fee"><div><p><strong class="rv-feet">' + (P ? xx("Cuotas anuales", "Annual Fees") : xx("Cuota anual", "Annual Fee")) + "</strong>" + xx("Solo después de ser aprobado. Le enviaremos las instrucciones de pago por correo.", "Only after you are approved. We will send you the payment instructions by email.") + "</p><b>$" + feeTotal + ' <small style="font:500 14px var(--sans);color:var(--mut)">' + (P ? (tier === "pastor" ? "Pastor $100" : xx("Ministro", "Minister") + " $75") + " + " + (tier2 === "pastor" ? "Pastor $100" : xx("Ministro", "Minister") + " $75") : (tier === "pastor" ? "Pastor" : xx("Ministro", "Minister"))) + '</small></b></div><div class="rv-tags"><span class="hl">' + (P ? xx("Incluye una credencial para cada uno", "Includes a credential for each of you") : xx("Incluye credencial ministerial", "Includes ministry credential")) + "</span></div></div></div></div>" +
       '<p class="hp" aria-hidden="true"><label>Leave empty <input name="hp_field" tabindex="-1" autocomplete="off"></label></p>' +
       '<div class="ap-nav"><p><b>' + xx("¿Todo listo?", "All set?") + "</b>" + xx("Al enviar, el Comité de Membresía recibirá su aplicación.", "When you submit, the Membership Committee will receive your application.") + '</p><div class="acts"><a class="btn ghost" href="#/apply/c">' + xx("Atrás", "Back") + '</a><button type="button" class="btn gold" id="rv-send">' + xx("Enviar aplicación", "Submit application") + '</button></div></div><p class="ap-sendmsg" id="rv-msg"></p>' + helpLine("below") + '</div></div></section>';
+  }
+  function sigPad(pre, P) {
+    var n = pre ? "2" : "", today = new Date().toLocaleDateString(lang() === "es" ? "es-MX" : "en-US", { year: "numeric", month: "long", day: "numeric" });
+    return (P ? '<p class="rv-whosig">' + (pre ? xx("Firma de su cónyuge", "Your spouse's signature") : xx("Su firma", "Your signature")) + "</p>" : "") +
+      '<div class="rv-pad"><div>' + (P ? "" : '<div class="fld" style="margin:0 0 8px"><label>' + xx("Su firma", "Your signature") + "</label></div>") + '<div class="rv-canvas"><canvas id="rv-sig' + n + '"></canvas><span class="x">×</span><span class="ln"></span><span class="sp">' + xx("Firme aquí con su dedo o con el mouse", "Sign here with your finger or mouse") + '</span><button type="button" class="rv-clear">' + xx("Borrar", "Clear") + '</button></div><div class="ap-errm" data-errfor="sig' + n + '"></div></div><div><div class="fld" data-k="' + pre + 'signed_name"><label>' + xx("Nombre completo", "Full name") + '</label><input name="' + pre + 'signed_name"></div><div class="fld" style="margin:0"><label>' + xx("Fecha", "Date") + '</label><input value="' + today + '" readonly></div></div></div>';
   }
   function stat(l, r, ok) { return '<li><i class="' + (ok ? "" : "no") + '">' + (ok ? "✓" : "–") + "</i>" + l + "<span>" + r + "</span></li>"; }
   function card(id, lt, t, sub, p, body) { return '<div class="rv-card" id="' + id + '"><div class="rv-top"><span class="lt">' + lt + "</span><div><h3>" + t + "</h3><p>" + sub + '</p></div><a class="rv-edit" href="#/apply/' + p + '">' + xx("Editar", "Edit") + '</a></div><div class="rv-body">' + body + "</div></div>"; }
   function countC() { var n = 0; PARTS.c.forEach(function (s) { s.f.forEach(function (f) { if (f.k && active(f) && filled(f)) n++; }); }); return n + " " + xx("preguntas respondidas · ocultas por privacidad", "questions answered · hidden for privacy"); }
   function doneScreen() {
     return head("r", xx("Aplicación enviada", "Application submitted"), xx("¡Gracias!", "Thank you!"), xx("Hemos recibido su aplicación.", "We have received your application."), [xx("Enviada", "Submitted")]) +
-      '<section class="ap-body"><div class="wrap" style="max-width:760px"><div class="rv-ok"><div class="ck">✓</div><h2>' + xx("¡Aplicación enviada!", "Application submitted!") + '</h2><div class="rv-no"><small>' + xx("Su número de aplicación", "Your application number") + "</small><b>" + esc(DONE) + "</b><span>" + xx("Guárdelo. Será también su número de cuenta con KAI.", "Keep it. It will also be your KAI account number.") + "</span></div>" + (PDFURL ? '<p style="margin:4px 0 22px"><a class="btn gold" id="ap-pdf" href="' + PDFURL + '" download="KAI-' + xx("Aplicacion", "Application") + "-" + esc(DONE) + '.pdf">' + xx("Descargar mi copia firmada (PDF)", "Download my signed copy (PDF)") + '</a><br><small style="color:var(--mut,#5b6577)">' + xx("Incluye todas sus respuestas, su firma y los documentos que aceptó. Guárdela en un lugar seguro.", "Includes all your answers, your signature and the documents you accepted. Keep it somewhere safe.") + "</small></p>" : "") + "<p>" + xx("El Comité de Membresía revisará su aplicación y alguien de nuestro equipo se comunicará con usted para una breve conversación y conocerle mejor.", "The Membership Committee will review your application, and someone from our team will reach out for a brief conversation to get to know you better.") + "</p>" + (window.KAIGUIDE ? KAIGUIDE("card") : "") + "<p>" + xx("Si tiene preguntas, escríbanos a info@kaie44.org e incluya su número de aplicación.", "If you have questions, write to info@kaie44.org and include your application number.") + '</p><p style="margin-top:22px"><a class="btn navy" href="#/home">' + xx("Volver al inicio", "Back to home") + "</a></p></div></div></section>";
+      '<section class="ap-body"><div class="wrap" style="max-width:760px"><div class="rv-ok"><div class="ck">✓</div><h2>' + xx("¡Aplicación enviada!", "Application submitted!") + '</h2><div class="rv-no"><small>' + (/·/.test(DONE) ? xx("Sus números de aplicación", "Your application numbers") : xx("Su número de aplicación", "Your application number")) + "</small><b>" + esc(DONE) + "</b><span>" + (/·/.test(DONE) ? xx("Guárdenlos. Cada uno será también su número de cuenta con KAI.", "Keep them. Each will also be your KAI account number.") : xx("Guárdelo. Será también su número de cuenta con KAI.", "Keep it. It will also be your KAI account number.")) + "</span></div>" + (PDFURL ? '<p style="margin:4px 0 22px"><a class="btn gold" id="ap-pdf" href="' + PDFURL + '" download="KAI-' + xx("Aplicacion", "Application") + "-" + esc(DONE) + '.pdf">' + xx("Descargar mi copia firmada (PDF)", "Download my signed copy (PDF)") + '</a><br><small style="color:var(--mut,#5b6577)">' + xx("Incluye todas sus respuestas, su firma y los documentos que aceptó. Guárdela en un lugar seguro.", "Includes all your answers, your signature and the documents you accepted. Keep it somewhere safe.") + "</small></p>" : "") + "<p>" + xx("El Comité de Membresía revisará su aplicación y alguien de nuestro equipo se comunicará con usted para una breve conversación y conocerle mejor.", "The Membership Committee will review your application, and someone from our team will reach out for a brief conversation to get to know you better.") + "</p>" + (window.KAIGUIDE ? KAIGUIDE("card") : "") + "<p>" + xx("Si tiene preguntas, escríbanos a info@kaie44.org e incluya su número de aplicación.", "If you have questions, write to info@kaie44.org and include your application number.") + '</p><p style="margin-top:22px"><a class="btn navy" href="#/home">' + xx("Volver al inicio", "Back to home") + "</a></p></div></div></section>";
   }
 
   /* ---------- binding ---------- */
@@ -335,7 +367,10 @@
     });
     conds(root); pickDraw(root); progress(root);
   }
+  function syncDerived() { S.married = (S.who === "pair" || S.marital === "c") ? "y" : "n"; }
   function conds(root) {
+    syncDerived();
+    if (CUR) CUR.classList.toggle("pairmode", S.who === "pair");
     $$(".ap-cond[data-when]", root).forEach(function (c) {
       var w = c.getAttribute("data-when").split("="), v = S[w[0]], vals = w[1].split(",");
       var srcF = ALL[w[0]];
@@ -389,7 +424,7 @@
     if (!k || !f) return;
     if (f.size > 10485760) { alertMsg(el, xx("El archivo pasa de 10 MB. Intente con uno más pequeño.", "The file is over 10 MB. Please try a smaller one.")); el.value = ""; return; }
     compress(f).then(function (b) {
-      if (k === "photo") { el.value = ""; ORIG.photo = b; ORIG.pos = { x: 0, y: 0, z: 1 }; return cropPhoto(b, ORIG.pos).then(function (c) { setPhoto(c); openCrop(); }); }
+      if (k === "photo" || k === "sp_photo") { el.value = ""; ORIG[k].photo = b; ORIG[k].pos = { x: 0, y: 0, z: 1 }; return cropPhoto(b, ORIG[k].pos).then(function (c) { setPhoto(k, c); openCrop(k); }); }
       FILES[k] = b; if (!FILES[k].name) FILES[k].name = f.name; fput(k, { blob: b, n: f.name });
       if (false) {}
       else { var row = $('.ap-file[data-k="' + k + '"] p', CUR); if (row) { var o = $(".fn", row); if (o) o.remove(); row.insertAdjacentHTML("beforeend", '<small class="fn">✓ ' + esc(f.name) + "</small>"); } }
@@ -397,20 +432,25 @@
     });
   }
   /* ---------- foto: ajustar (mover/acercar) y eliminar ---------- */
-  var ORIG = { photo: null, pos: { x: 0, y: 0, z: 1 } };
-  function setPhoto(blob) {
-    if (PREV.photo) try { URL.revokeObjectURL(PREV.photo); } catch (e) {}
-    if (!blob) { delete FILES.photo; PREV.photo = null; fput("photo", null); fput("_orig", null); } else { blob.name = "photo.jpg"; FILES.photo = blob; PREV.photo = URL.createObjectURL(blob); fput("photo", { blob: blob, n: "photo.jpg" }); fput("_orig", ORIG.photo ? { blob: ORIG.photo, pos: ORIG.pos } : null); }
-    var ph = $("#ap-ph", CUR);
-    if (ph) ph.outerHTML = PREV.photo ? '<img id="ap-ph" src="' + PREV.photo + '" alt="" title="' + xx("Clic para ajustar", "Click to adjust") + '">' : '<div class="ph0" id="ap-ph">' + xx("Su foto aparecerá aquí", "Your photo will appear here") + "</div>";
-    var bt = $(".ap-phbtns", CUR); if (bt) bt.hidden = !PREV.photo;
-    if (blob) { var em = $('[data-errfor="photo"]', CUR); if (em) em.textContent = ""; }
+  var ORIG = { photo: { photo: null, pos: { x: 0, y: 0, z: 1 } }, sp_photo: { photo: null, pos: { x: 0, y: 0, z: 1 } } };
+  function oKey(pk) { return pk === "photo" ? "_orig" : "_orig_sp_photo"; }
+  function resetOrig() { ORIG.photo.photo = null; ORIG.sp_photo.photo = null; ORIG.photo.pos = { x: 0, y: 0, z: 1 }; ORIG.sp_photo.pos = { x: 0, y: 0, z: 1 }; }
+  function setPhoto(pk, blob) {
+    var og = ORIG[pk], sfx = pk === "sp_photo" ? "-sp" : "";
+    if (PREV[pk]) try { URL.revokeObjectURL(PREV[pk]); } catch (e) {}
+    if (!blob) { delete FILES[pk]; PREV[pk] = null; fput(pk, null); fput(oKey(pk), null); } else { blob.name = "photo.jpg"; FILES[pk] = blob; PREV[pk] = URL.createObjectURL(blob); fput(pk, { blob: blob, n: "photo.jpg" }); fput(oKey(pk), og.photo ? { blob: og.photo, pos: og.pos } : null); }
+    var ph = $("#ap-ph" + sfx, CUR);
+    if (ph) ph.outerHTML = PREV[pk] ? '<img id="ap-ph' + sfx + '" src="' + PREV[pk] + '" alt="" title="' + xx("Clic para ajustar", "Click to adjust") + '">' : '<div class="ph0" id="ap-ph' + sfx + '">' + xx("Su foto aparecerá aquí", "Your photo will appear here") + "</div>";
+    var bt = $("#ap-phbtns" + sfx, CUR); if (bt) bt.hidden = !PREV[pk];
+    if (blob) { var em = $('[data-errfor="' + pk + '"]', CUR); if (em) em.textContent = ""; }
     credErrClear();
     progress(CUR);
   }
   function credErrClear() {
-    var pw = $('[data-k="photo"]', CUR); if (!pw) return;
-    if (S.title && (S.cred_name || "").trim() && FILES.photo) { pw.classList.remove("err"); $$(".ap-errm", pw).forEach(function (m) { m.textContent = ""; }); }
+    ["", "sp_"].forEach(function (pre) {
+      var pw = $('[data-k="' + pre + 'photo"]', CUR); if (!pw) return;
+      if (S[pre + "title"] && (S[pre + "cred_name"] || "").trim() && FILES[pre + "photo"]) { pw.classList.remove("err"); $$(".ap-errm", pw).forEach(function (m) { m.textContent = ""; }); }
+    });
   }
   function loadImg(blob) { return new Promise(function (res, rej) { var i = new Image(); i.onload = function () { res(i); }; i.onerror = rej; i.src = URL.createObjectURL(blob); }); }
   // Recorte 4:5. pos.x / pos.y de -1 a 1 (desplazamiento), pos.z = acercamiento (1 a 3)
@@ -423,14 +463,15 @@
       return new Promise(function (res) { c.toBlob(function (b) { res(b); }, "image/jpeg", 0.88); });
     }).catch(function () { return blob; });
   }
-  function openCrop() {
-    if (!ORIG.photo && FILES.photo) { ORIG.photo = FILES.photo; ORIG.pos = { x: 0, y: 0, z: 1 }; }
-    if (!ORIG.photo) return;
-    var pos = { x: ORIG.pos.x, y: ORIG.pos.y, z: ORIG.pos.z };
+  function openCrop(pk) {
+    pk = pk || "photo"; var og = ORIG[pk];
+    if (!og.photo && FILES[pk]) { og.photo = FILES[pk]; og.pos = { x: 0, y: 0, z: 1 }; }
+    if (!og.photo) return;
+    var pos = { x: og.pos.x, y: og.pos.y, z: og.pos.z };
     var M = document.createElement("div"); M.className = "rv-modal on ap-cropm";
-    M.innerHTML = '<div class="rv-mbox" role="dialog" aria-modal="true"><div class="rv-mhd"><div><small>' + xx("Foto de credencial", "Credential photo") + "</small><h3>" + xx("Ajuste su foto", "Adjust your photo") + '</h3></div><button class="rv-mx" type="button" aria-label="Close">×</button></div><div class="rv-mbd"><p class="ap-crophelp">' + xx("Arrastre la foto para centrar su rostro y use la barra para acercar o alejar.", "Drag the photo to center your face and use the slider to zoom in or out.") + '</p><div class="ap-crop"><div class="ap-cropbox"><img alt=""><i class="g1"></i><i class="g2"></i></div></div><label class="ap-zoom"><span>−</span><input type="range" min="1" max="3" step="0.01"><span>+</span></label></div><div class="rv-mft"><p><button type="button" class="btn navy ap-cropdel">' + xx("Eliminar foto", "Delete photo") + '</button></p><button type="button" class="btn gold ap-cropok">' + xx("Guardar", "Save") + "</button></div></div>";
+    M.innerHTML = '<div class="rv-mbox" role="dialog" aria-modal="true"><div class="rv-mhd"><div><small>' + xx("Foto de credencial", "Credential photo") + (pk === "sp_photo" ? " · " + xx("su cónyuge", "your spouse") : "") + "</small><h3>" + xx("Ajuste la foto", "Adjust the photo") + '</h3></div><button class="rv-mx" type="button" aria-label="Close">×</button></div><div class="rv-mbd"><p class="ap-crophelp">' + xx("Arrastre la foto para centrar su rostro y use la barra para acercar o alejar.", "Drag the photo to center your face and use the slider to zoom in or out.") + '</p><div class="ap-crop"><div class="ap-cropbox"><img alt=""><i class="g1"></i><i class="g2"></i></div></div><label class="ap-zoom"><span>−</span><input type="range" min="1" max="3" step="0.01"><span>+</span></label></div><div class="rv-mft"><p><button type="button" class="btn navy ap-cropdel">' + xx("Eliminar foto", "Delete photo") + '</button></p><button type="button" class="btn gold ap-cropok">' + xx("Guardar", "Save") + "</button></div></div>";
     document.body.appendChild(M); document.body.style.overflow = "hidden";
-    var box = $(".ap-cropbox", M), im = $("img", box), rg = $("input", M), url = URL.createObjectURL(ORIG.photo), nat = { w: 1, h: 1 };
+    var box = $(".ap-cropbox", M), im = $("img", box), rg = $("input", M), url = URL.createObjectURL(og.photo), nat = { w: 1, h: 1 };
     rg.value = pos.z;
     function draw() {
       var W = box.clientWidth, H = box.clientHeight, base = Math.max(W / nat.w, H / nat.h), sc = base * pos.z;
@@ -453,8 +494,8 @@
     rg.addEventListener("input", function () { pos.z = +rg.value; draw(); });
     function close() { URL.revokeObjectURL(url); M.remove(); document.body.style.overflow = ""; }
     M.addEventListener("click", function (e) { if (e.target === M || e.target.closest(".rv-mx")) close(); });
-    $(".ap-cropok", M).onclick = function () { ORIG.pos = pos; cropPhoto(ORIG.photo, pos).then(function (b) { setPhoto(b); close(); }); };
-    $(".ap-cropdel", M).onclick = function () { ORIG.photo = null; setPhoto(null); close(); };
+    $(".ap-cropok", M).onclick = function () { og.pos = pos; cropPhoto(og.photo, pos).then(function (b) { setPhoto(pk, b); close(); }); };
+    $(".ap-cropdel", M).onclick = function () { og.photo = null; setPhoto(pk, null); close(); };
   }
   function alertMsg(el, msg) { var w = el.closest(".fld,.ap-file"); if (!w) return; var m = $(".ap-errm", w) || (w.insertAdjacentHTML("beforeend", '<div class="ap-errm"></div>'), $(".ap-errm:last-child", w)); m.textContent = msg; w.classList.add("err"); }
 
@@ -464,15 +505,21 @@
     photo: ["Foto para la credencial", "Credential photo"], tier: ["Tipo de membresía", "Membership type"],
     faith_ok: ["Aceptar la Declaración de Fe", "Accept the Statement of Faith"],
     iv_date1: ["Día de la conversación de bienvenida", "Welcome conversation day"], iv_time1: ["Hora de la conversación de bienvenida", "Welcome conversation time"],
-    iv_spouse: ["Confirmar que su cónyuge estará presente", "Confirm that your spouse will be present"]
+    iv_spouse: ["Confirmar que su cónyuge estará presente", "Confirm that your spouse will be present"],
+    who: ["Quién va a aplicar (individual o matrimonio)", "Who is applying (individual or couple)"],
+    sp_title: ["Cónyuge · Título en la credencial", "Spouse · Title on the credential"], sp_cred_name: ["Cónyuge · Nombre en la credencial", "Spouse · Name on the credential"],
+    sp_photo: ["Cónyuge · Foto para la credencial", "Spouse · Credential photo"], sp_tier: ["Cónyuge · Tipo de membresía", "Spouse · Membership type"],
+    sp_faith_ok: ["Cónyuge · Aceptar la Declaración de Fe", "Spouse · Accept the Statement of Faith"],
+    signed_name: ["Su nombre completo debajo de la firma", "Your full name below the signature"], sp_signed_name: ["Cónyuge · Nombre completo debajo de la firma", "Spouse · Full name below the signature"]
   };
   function secOf(k) {
     var r = null;
-    ["a", "b", "c"].forEach(function (p) { PARTS[p].forEach(function (sec, i) { sec.f.forEach(function (f) { if (f.k === k || (f.type === "cred" && /^(title|cred_name|photo)$/.test(k))) r = r || [p, i, sec]; }); }); });
+    ["a", "b", "c"].forEach(function (p) { PARTS[p].forEach(function (sec, i) { sec.f.forEach(function (f) { if (f.k === k || (f.type === "cred" && /^(sp_)?(title|cred_name|photo)$/.test(k))) r = r || [p, i, sec]; }); }); });
     return r;
   }
   function missName(k) {
     var f = ALL[k], nm = MISS_NAMES[k] ? x(MISS_NAMES[k]) : (f && f.l ? x(f.l) : k);
+    if (!MISS_NAMES[k] && f && f.sp) nm = xx("Cónyuge · ", "Spouse · ") + nm;
     if (f && f.in === "email" && filled(f)) nm += " " + xx("(revise que esté bien escrito)", "(check that it is typed correctly)");
     return nm;
   }
@@ -496,13 +543,16 @@
     PARTS[p].forEach(function (sec) {
       sec.f.forEach(function (f) {
         if (f.type === "cred") {
-          if (!S.title) miss.push("title");
-          if (!(S.cred_name || "").trim()) miss.push("cred_name");
-          if (!FILES.photo) miss.push("photo");
+          var pre = f.sp ? "sp_" : "";
+          if (f.sp && S.who !== "pair") return;
+          if (!S[pre + "title"]) miss.push(pre + "title");
+          if (!(S[pre + "cred_name"] || "").trim()) miss.push(pre + "cred_name");
+          if (!FILES[pre + "photo"]) miss.push(pre + "photo");
           return;
         }
         if (f.req && active(f) && !filled(f)) miss.push(f.k);
         if (f.in === "email" && filled(f) && active(f) && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(S[f.k].trim())) miss.push(f.k);
+        if (f.k === "sp_email" && active(f) && filled(f) && S.email && S.sp_email.trim().toLowerCase() === S.email.trim().toLowerCase() && miss.indexOf("sp_email") < 0) miss.push("sp_email");
       });
     });
     $$(".err", CUR).forEach(function (z) { z.classList.remove("err"); });
@@ -511,7 +561,7 @@
       w.classList.add("err");
       var m = $(":scope > .ap-errm", w) || $('[data-errfor="' + k + '"]', w);
       if (!m) { w.insertAdjacentHTML("beforeend", '<div class="ap-errm"></div>'); m = w.lastElementChild; }
-      m.textContent = k === "photo" ? xx("Suba una foto para su credencial.", "Please upload a photo for your credential.") : (ALL[k] && ALL[k].in === "email" && filled(ALL[k])) ? xx("Revise el correo electrónico.", "Please check the email address.") : xx("Este dato es necesario.", "This information is required.");
+      m.textContent = (k === "photo" || k === "sp_photo") ? xx("Suba una foto para la credencial.", "Please upload a photo for the credential.") : (k === "sp_email" && S.email && (S.sp_email || "").trim().toLowerCase() === S.email.trim().toLowerCase()) ? xx("El correo de su cónyuge debe ser distinto al suyo.", "Your spouse's email must be different from yours.") : (ALL[k] && ALL[k].in === "email" && filled(ALL[k])) ? xx("Revise el correo electrónico.", "Please check the email address.") : xx("Este dato es necesario.", "This information is required.");
     });
     var box = $("#ap-miss", CUR);
     showMiss(box, miss, miss.length === 1 ? xx("Falta 1 dato para continuar:", "1 item is missing before you can continue:") : xx("Faltan " + miss.length + " datos para continuar:", miss.length + " items are missing before you can continue:"), false);
@@ -574,16 +624,18 @@
 
   /* ---------- signature ---------- */
   function sigInit() {
-    var cv = $("#rv-sig", CUR); if (!cv) return;
-    var ctx = cv.getContext("2d"), d = false;
-    function fit() { var r = cv.getBoundingClientRect(); if (r.width < 10) return; cv.width = r.width * 2; cv.height = r.height * 2; ctx.setTransform(2, 0, 0, 2, 0, 0); ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#0b1f4b"; SIG.drawn = false; $(".sp", CUR).style.opacity = 1; }
-    function pt(e) { var r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
-    setTimeout(fit, 60);
-    cv.addEventListener("pointerdown", function (e) { d = true; cv.setPointerCapture(e.pointerId); var p = pt(e); ctx.beginPath(); ctx.moveTo(p[0], p[1]); $(".sp", CUR).style.opacity = 0; });
-    cv.addEventListener("pointermove", function (e) { if (!d) return; var p = pt(e); ctx.lineTo(p[0], p[1]); ctx.stroke(); SIG.drawn = true; $('[data-errfor="sig"]', CUR).textContent = ""; });
-    cv.addEventListener("pointerup", function () { d = false; });
-    $(".rv-clear", CUR).addEventListener("click", fit);
-    SIG.canvas = cv;
+    $$(".rv-canvas", CUR).forEach(function (wrap) {
+      var cv = $("canvas", wrap), st = cv.id === "rv-sig2" ? SIG2 : SIG, er = $('[data-errfor="' + (cv.id === "rv-sig2" ? "sig2" : "sig") + '"]', CUR);
+      var ctx = cv.getContext("2d"), d = false;
+      function fit() { var r = cv.getBoundingClientRect(); if (r.width < 10) return; cv.width = r.width * 2; cv.height = r.height * 2; ctx.setTransform(2, 0, 0, 2, 0, 0); ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#0b1f4b"; st.drawn = false; $(".sp", wrap).style.opacity = 1; }
+      function pt(e) { var r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+      setTimeout(fit, 60);
+      cv.addEventListener("pointerdown", function (e) { d = true; cv.setPointerCapture(e.pointerId); var p = pt(e); ctx.beginPath(); ctx.moveTo(p[0], p[1]); $(".sp", wrap).style.opacity = 0; });
+      cv.addEventListener("pointermove", function (e) { if (!d) return; var p = pt(e); ctx.lineTo(p[0], p[1]); ctx.stroke(); st.drawn = true; if (er) er.textContent = ""; });
+      cv.addEventListener("pointerup", function () { d = false; });
+      $(".rv-clear", wrap).addEventListener("click", fit);
+      st.canvas = cv;
+    });
   }
 
 
@@ -598,6 +650,7 @@
     if (t === "radio" || t === "select" || t === "morphe") return optLabel(f, v);
     if (t === "checks") return (v || []).filter(function (z) { return z !== "other"; }).map(function (z) { return optLabel(f, z); }).concat((v || []).indexOf("other") >= 0 && S[f.k + "_other"] ? [S[f.k + "_other"]] : []).join(", ");
     if (t === "scale") return v + " / 5  (" + x(f.sc[0]) + " a " + x(f.sc[1]) + ")";
+    if (t === "who") return v === "pair" ? xx("Matrimonio · dos credenciales", "Couple · two credentials") : xx("Individual", "Individual");
     if (t === "tier") return v === "ministro" ? xx("Ministro", "Minister") + " · $75 / " + xx("año", "year") : "Pastor · $100 / " + xx("año", "year");
     if (t === "consent") return v ? xx("Autorizado", "Authorized") : "";
     if (t === "faith") return v ? xx("Afirma la Declaración de Fe", "Affirms the Statement of Faith") : "";
@@ -611,12 +664,15 @@
       if (!f.k || !active(f) || f.type === "pick") return;
       if (f.type === "file") { files.push(x(f.l) + ": " + (FILES[f.k] ? xx("adjunto", "attached") : xx("no adjunto", "not attached"))); return; }
       if (!filled(f)) return;
-      var label = f.tag ? x(f.tag) : f.type === "tier" ? xx("Membresía", "Membership") : f.type === "faith" ? xx("Declaración de Fe", "Statement of Faith") : f.type === "consent" ? xx("Autorización", "Authorization") : f.type === "morphe" ? "Instituto Morphe" : x(f.l);
+      var label = f.tag ? x(f.tag) : f.type === "who" ? xx("Solicitud", "Application") : f.type === "tier" ? xx("Membresía", "Membership") : f.type === "faith" ? xx("Declaración de Fe", "Statement of Faith") : f.type === "consent" ? xx("Autorización", "Authorization") : f.type === "morphe" ? "Instituto Morphe" : x(f.l);
+      if (f.sp) label = xx("Cónyuge · ", "Spouse · ") + label;
       var cell = { stack: [{ text: label.toUpperCase(), style: "lab" }, { text: txt(f), style: "val" }], margin: [0, 2, 0, 2] };
       if (f.type === "area" || label.length > 60) wide.push(cell); else cells.push(cell);
     });
     if (sec.f.some(function (f) { return f.type === "cred"; })) {
-      cells.unshift({ stack: [{ text: xx("TÍTULO EN CREDENCIAL", "TITLE ON CREDENTIAL"), style: "lab" }, { text: titleLabel(), style: "val" }] }, { stack: [{ text: xx("NOMBRE EN CREDENCIAL", "NAME ON CREDENTIAL"), style: "lab" }, { text: S.cred_name || "—", style: "val" }] });
+      var cc = [{ stack: [{ text: xx("TÍTULO EN CREDENCIAL", "TITLE ON CREDENTIAL"), style: "lab" }, { text: titleLabel(), style: "val" }] }, { stack: [{ text: xx("NOMBRE EN CREDENCIAL", "NAME ON CREDENTIAL"), style: "lab" }, { text: S.cred_name || "—", style: "val" }] }];
+      if (S.who === "pair") cc.push({ stack: [{ text: xx("CÓNYUGE · TÍTULO EN CREDENCIAL", "SPOUSE · TITLE ON CREDENTIAL"), style: "lab" }, { text: titleLabel("sp_"), style: "val" }] }, { stack: [{ text: xx("CÓNYUGE · NOMBRE EN CREDENCIAL", "SPOUSE · NAME ON CREDENTIAL"), style: "lab" }, { text: S.sp_cred_name || "—", style: "val" }] });
+      cells = cc.concat(cells);
     }
     out.push({ columns: [{ canvas: [{ type: "rect", x: 0, y: 3, w: 6, h: 6, color: GOLD }], width: 12 }, { text: x(sec.t).toUpperCase(), style: "grp" }], margin: [0, 10, 0, 5], headlineLevel: 1 });
     if (sec.f.some(function (f) { return f.type === "pick"; }) && (S.priorities || []).length) {
@@ -654,13 +710,17 @@
     return out;
   }
   function buildPdf(appNo, withC, img) {
-    var tier = S.tier || "pastor";
+    var tier = S.tier || "pastor", P = S.who === "pair", tier2 = S.sp_tier || "pastor";
     var dateS = new Date().toLocaleString(lang() === "es" ? "es-MX" : "en-US", { year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" });
-    var name = S.cred_name || ((S.first_name || "") + " " + (S.last_name || "")).trim();
-    var heroLeft = { table: { widths: [img.photo ? 64 : 0, "*"], body: [[img.photo ? { image: img.photo, width: 56, height: 70, margin: [4, 4, 0, 4] } : "", { stack: [{ text: titleLabel().toUpperCase(), color: GOLD2, fontSize: 8, bold: true, characterSpacing: 1.2 }, { text: name, color: "#fff", fontSize: 17, bold: true, margin: [0, 2, 0, 3] }, { text: [S.church, [S.city, S.state].filter(Boolean).join(", ")].filter(Boolean).join(" · "), color: "#d6e0f7", fontSize: 9 }], margin: [8, 10, 6, 6] }]] }, layout: { fillColor: function () { return "#0b2c6e"; }, hLineWidth: function () { return 0; }, vLineWidth: function () { return 0; } } };
+    function heroOf(pre, photo) {
+      var name = S[pre + "cred_name"] || ((S[pre + "first_name"] || "") + " " + (S[pre + "last_name"] || "")).trim();
+      return { table: { widths: [photo ? 64 : 0, "*"], body: [[photo ? { image: photo, width: 56, height: 70, margin: [4, 4, 0, 4] } : "", { stack: [{ text: titleLabel(pre).toUpperCase(), color: GOLD2, fontSize: 8, bold: true, characterSpacing: 1.2 }, { text: name, color: "#fff", fontSize: P ? 14 : 17, bold: true, margin: [0, 2, 0, 3] }, { text: [S.church, [S.city, S.state].filter(Boolean).join(", ")].filter(Boolean).join(" · "), color: "#d6e0f7", fontSize: 9 }], margin: [8, 10, 6, 6] }]] }, layout: { fillColor: function () { return "#0b2c6e"; }, hLineWidth: function () { return 0; }, vLineWidth: function () { return 0; } }, margin: [0, 0, 0, P ? 6 : 0] };
+    }
+    var heroLeft = P ? { stack: [heroOf("", img.photo), heroOf("sp_", img.photo2)] } : heroOf("", img.photo);
+    var feeTxt = function (tr) { return (tr === "pastor" ? "Pastor" : xx("Ministro", "Minister")) + " · $" + FEES[tr] + " / " + xx("año", "year"); };
     var heroRight = { table: { widths: ["*"], body: [
-      [{ stack: [{ text: xx("NÚMERO DE APLICACIÓN", "APPLICATION NUMBER"), style: "lab" }, { text: appNo, fontSize: 18, bold: true, color: NAVY }] }],
-      [{ stack: [{ text: xx("MEMBRESÍA", "MEMBERSHIP"), style: "lab" }, { text: (tier === "pastor" ? "Pastor" : xx("Ministro", "Minister")) + " · $" + FEES[tier] + " / " + xx("año", "year"), style: "val" }] }],
+      [{ stack: [{ text: P ? xx("NÚMEROS DE APLICACIÓN", "APPLICATION NUMBERS") : xx("NÚMERO DE APLICACIÓN", "APPLICATION NUMBER"), style: "lab" }, { text: appNo, fontSize: P ? 13 : 18, bold: true, color: NAVY }] }],
+      [{ stack: [{ text: xx("MEMBRESÍA", "MEMBERSHIP"), style: "lab" }, { text: P ? feeTxt(tier) + "\n" + feeTxt(tier2) : feeTxt(tier), style: "val" }] }],
       [{ stack: [{ text: xx("ENVIADA", "SUBMITTED"), style: "lab" }, { text: dateS, style: "val" }] }]
     ] }, layout: { hLineColor: function () { return LINE; }, vLineColor: function () { return LINE; }, hLineWidth: function () { return 0.6; }, vLineWidth: function () { return 0.6; }, paddingLeft: function () { return 8; }, paddingTop: function () { return 4; }, paddingBottom: function () { return 4; } } };
     var content = [
@@ -674,10 +734,14 @@
     content.push(partHead("§", xx("Acuerdos y firma", "Agreements and signature"), xx("Aceptados y firmados electrónicamente en kaie44.org", "Accepted and signed electronically at kaie44.org")));
     var agl = [xx("Declaración de Fe de KAI", "KAI Statement of Faith"), xx("Pacto de Membresía", "Membership Covenant"), xx("Código de Ética Ministerial", "Ministerial Code of Ethics"), xx("Uso y Protección de Datos", "Data Use and Protection")];
     content.push({ ul: agl.map(function (a) { return { text: [a + "  ", { text: "— " + xx("aceptado", "accepted"), color: MUT }], fontSize: 9.5 }; }), markerColor: GOLD, margin: [0, 8, 0, 10] });
-    content.push({ columns: [
-      { width: 240, stack: [{ text: xx("FIRMA", "SIGNATURE"), style: "lab" }, { table: { widths: [230], body: [[img.sig ? { image: img.sig, width: 220, height: 70, margin: [4, 2, 4, 2] } : { text: " ", margin: [0, 30] }]] }, layout: { hLineColor: function () { return "#c3ccdc"; }, vLineColor: function () { return "#c3ccdc"; } } }] },
-      { width: "*", stack: [{ text: xx("NOMBRE COMPLETO", "FULL NAME"), style: "lab" }, { text: S.signed_name || "", style: "val", margin: [0, 0, 0, 8] }, { text: xx("FECHA Y HORA", "DATE AND TIME"), style: "lab" }, { text: dateS, style: "val", margin: [0, 0, 0, 8] }, { text: xx("CUOTA ANUAL", "ANNUAL FEE"), style: "lab" }, { text: "$" + FEES[tier] + " · " + xx("se paga una vez aprobada la aplicación", "paid once the application is approved"), style: "val" }] }
-    ], columnGap: 18 });
+    function sigBlock(pre, sigImg) {
+      return { columns: [
+        { width: 240, stack: [{ text: (P ? (pre ? xx("FIRMA · CÓNYUGE", "SIGNATURE · SPOUSE") : xx("FIRMA", "SIGNATURE")) : xx("FIRMA", "SIGNATURE")), style: "lab" }, { table: { widths: [230], body: [[sigImg ? { image: sigImg, width: 220, height: 70, margin: [4, 2, 4, 2] } : { text: " ", margin: [0, 30] }]] }, layout: { hLineColor: function () { return "#c3ccdc"; }, vLineColor: function () { return "#c3ccdc"; } } }] },
+        { width: "*", stack: [{ text: xx("NOMBRE COMPLETO", "FULL NAME"), style: "lab" }, { text: S[pre + "signed_name"] || "", style: "val", margin: [0, 0, 0, 8] }, { text: xx("FECHA Y HORA", "DATE AND TIME"), style: "lab" }, { text: dateS, style: "val", margin: [0, 0, 0, 8] }, { text: xx("CUOTA ANUAL", "ANNUAL FEE"), style: "lab" }, { text: "$" + FEES[S[pre + "tier"] || "pastor"] + " · " + xx("se paga una vez aprobada la aplicación", "paid once the application is approved"), style: "val" }] }
+      ], columnGap: 18, margin: [0, 0, 0, P ? 12 : 0] };
+    }
+    content.push(sigBlock("", img.sig));
+    if (P) content.push(sigBlock("sp_", img.sig2));
     content.push({ text: xx("ANEXOS · DOCUMENTOS ACEPTADOS", "APPENDIX · ACCEPTED DOCUMENTS"), style: "lab", pageBreak: "before" });
     content.push({ text: xx("Copia de los documentos que el solicitante leyó y aceptó al firmar esta aplicación.", "Copy of the documents the applicant read and accepted when signing this application."), style: "doc" });
     ["pacto", "etica", "datos", "fe"].forEach(function (k, i) { var b = docBlock(k); if (i === 0) delete b[0].pageBreak; content = content.concat(b); });
@@ -693,10 +757,10 @@
     };
   }
   function makePdfs(appNo) {
-    var sigURL = null; try { sigURL = SIG.canvas.toDataURL("image/png"); } catch (e) {}
-    var ph = FILES.photo && /jpe?g|png/.test(FILES.photo.type || "") ? FILES.photo : null;
-    return Promise.all([loadPdf(), toDataURL(ph), fetch("images/logo.png").then(function (r) { return r.ok ? r.blob() : null; }).then(toDataURL).catch(function () { return null; })]).then(function (r) {
-      var img = { photo: r[1], logo: r[2], sig: sigURL };
+    var sigURL = null, sigURL2 = null; try { sigURL = SIG.canvas.toDataURL("image/png"); } catch (e) {} try { if (S.who === "pair") sigURL2 = SIG2.canvas.toDataURL("image/png"); } catch (e) {}
+    function okPh(b) { return b && /jpe?g|png/.test(b.type || "") ? b : null; }
+    return Promise.all([loadPdf(), toDataURL(okPh(FILES.photo)), fetch("images/logo.png").then(function (r) { return r.ok ? r.blob() : null; }).then(toDataURL).catch(function () { return null; }), toDataURL(S.who === "pair" ? okPh(FILES.sp_photo) : null)]).then(function (r) {
+      var img = { photo: r[1], logo: r[2], sig: sigURL, sig2: sigURL2, photo2: r[3] };
       function blob(dd) { return new Promise(function (res) { window.pdfMake.createPdf(dd).getBlob(res); }); }
       return Promise.all([blob(buildPdf(appNo, true, img)), blob(buildPdf(appNo, false, img))]);
     });
@@ -706,7 +770,7 @@
   function pick(keys) { var o = {}; keys.forEach(function (k) { if (S[k] != null && S[k] !== "") o[k] = S[k]; }); return o; }
   function partData(p) {
     var o = {};
-    PARTS[p].forEach(function (sec) { sec.f.forEach(function (f) { if (!f.k || f.type === "file" || !active(f) || !filled(f)) return; o[f.k] = S[f.k]; if (f.other && (S[f.k] || []).indexOf("other") >= 0) o[f.k + "_other"] = S[f.k + "_other"] || ""; }); });
+    PARTS[p].forEach(function (sec) { sec.f.forEach(function (f) { if (!f.k || f.type === "file" || f.sp || !active(f) || !filled(f)) return; o[f.k] = S[f.k]; if (f.other && (S[f.k] || []).indexOf("other") >= 0) o[f.k + "_other"] = S[f.k + "_other"] || ""; }); });
     return o;
   }
   function send() {
@@ -717,18 +781,26 @@
     var bad = false;
     $('[data-errfor="agree"]', CUR).textContent = okA ? "" : xx("Acepte los cinco acuerdos para continuar.", "Please accept all five agreements to continue.");
     if (!okA) bad = true;
+    var P = S.who === "pair";
     if (!SIG.drawn) { $('[data-errfor="sig"]', CUR).textContent = xx("Firme en el recuadro.", "Please sign in the box."); bad = true; }
     var nm = $('[data-k="signed_name"]', CUR);
     if (!(S.signed_name || "").trim()) { nm.classList.add("err"); bad = true; }
+    if (P) {
+      if (!SIG2.drawn) { $('[data-errfor="sig2"]', CUR).textContent = xx("Su cónyuge debe firmar en el recuadro.", "Your spouse must sign in the box."); bad = true; }
+      var nm2 = $('[data-k="sp_signed_name"]', CUR);
+      if (!(S.sp_signed_name || "").trim()) { nm2.classList.add("err"); bad = true; }
+    }
     var missA = [];
     ["a", "b"].forEach(function (pp) { PARTS[pp].forEach(function (sec) { sec.f.forEach(function (f) {
-      if (f.type === "cred") { if (!(S.cred_name || "").trim()) missA.push("cred_name"); if (!FILES.photo) missA.push("photo"); return; }
+      if (f.type === "cred") { var pre = f.sp ? "sp_" : ""; if (f.sp && !P) return; if (!(S[pre + "cred_name"] || "").trim()) missA.push(pre + "cred_name"); if (!FILES[pre + "photo"]) missA.push(pre + "photo"); return; }
       if (f.req && active(f) && !filled(f)) missA.push(f.k);
     }); }); });
     var here = [];
     if (!okA) here.push(xx("Aceptar los cinco acuerdos (abra cada uno con “Leer”)", "Accept all five agreements (open each one with “Read”)"));
-    if (!SIG.drawn) here.push(xx("Su firma en el recuadro", "Your signature in the box"));
+    if (!SIG.drawn) here.push(P ? xx("Su firma en el recuadro", "Your signature in the box") : xx("Su firma en el recuadro", "Your signature in the box"));
     if (!(S.signed_name || "").trim()) here.push(xx("Su nombre completo debajo de la firma", "Your full name below the signature"));
+    if (P && !SIG2.drawn) here.push(xx("Firma de su cónyuge en el recuadro", "Your spouse's signature in the box"));
+    if (P && !(S.sp_signed_name || "").trim()) here.push(xx("Nombre completo de su cónyuge debajo de su firma", "Your spouse's full name below their signature"));
     if (missA.length || here.length) {
       var n = missA.length + here.length;
       msg.innerHTML = '<p><b>' + (n === 1 ? xx("Falta 1 dato para poder enviar:", "1 item is missing before you can submit:") : xx("Faltan " + n + " datos para poder enviar:", n + " items are missing before you can submit:")) + "</b></p>" +
@@ -741,33 +813,55 @@
     var cl = window.supabase && window.supabase.createClient ? window.supabase.createClient(SB_URL, SB_KEY, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "kai-apply-auth" } }) : null;
     if (!cl) { msg.textContent = xx("No pudimos conectar. Intente de nuevo en unos minutos.", "We could not connect. Please try again in a few minutes."); msg.classList.add("err"); return; }
     BUSY = true; var btn = $("#rv-send", CUR); btn.disabled = true; btn.textContent = xx("Enviando…", "Submitting…");
-    var id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) { var r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 3 | 8)).toString(16); });
-    var uploads = [], files = {};
+    function newId() { return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) { var r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 3 | 8)).toString(16); }); }
+    var id = newId(), id2 = P ? newId() : null;
+    var uploads = [], files = {}, files2 = {};
     function ext(b) { var n = (b.name || "").toLowerCase(); var m = n.match(/\.(jpe?g|png|webp|heic|heif|pdf)$/); if (m) return m[1]; return b.type === "application/pdf" ? "pdf" : b.type === "image/png" ? "png" : "jpg"; }
-    Object.keys(FILES).forEach(function (k) { var b = FILES[k], path = id + "/" + k + "." + ext(b); files[k] = path; uploads.push(cl.storage.from(BUCKET).upload(path, b, { contentType: b.type || "application/octet-stream", upsert: false })); });
-    var sigP = new Promise(function (res) { SIG.canvas.toBlob(function (b) { res(b); }, "image/png"); }).then(function (b) { files.signature = id + "/signature.png"; return cl.storage.from(BUCKET).upload(files.signature, b, { contentType: "image/png", upsert: false }); });
-    uploads.push(sigP);
+    // Cada persona sube sus archivos a su propia carpeta (su aplicación). La foto del cónyuge se guarda como "photo" en la carpeta de él o ella.
+    Object.keys(FILES).forEach(function (k) {
+      var b = FILES[k], isSp = k === "sp_photo"; if (isSp && !P) return;
+      var own = isSp ? id2 : id, nm = isSp ? "photo" : k, path = own + "/" + nm + "." + ext(b);
+      (isSp ? files2 : files)[nm] = path; uploads.push(cl.storage.from(BUCKET).upload(path, b, { contentType: b.type || "application/octet-stream", upsert: false }));
+    });
+    function sigUp(st, own, into) { return new Promise(function (res) { st.canvas.toBlob(function (b) { res(b); }, "image/png"); }).then(function (b) { into.signature = own + "/signature.png"; return cl.storage.from(BUCKET).upload(into.signature, b, { contentType: "image/png", upsert: false }); }); }
+    uploads.push(sigUp(SIG, id, files));
+    if (P) uploads.push(sigUp(SIG2, id2, files2));
     Promise.all(uploads).then(function (rs) {
       var err = rs.filter(function (r) { return r && r.error; })[0]; if (err) throw err.error;
       var a = partData("a"); a.title = S.title || "Pastor"; a.cred_name = S.cred_name;
       var b = partData("b"); b.priorities = S.priorities || [];
       var c = {};   // la Parte C (cuidado pastoral) ahora se pregunta en la entrevista
-      var meta = { lang: lang(), signed_name: S.signed_name, files: files, ua: navigator.userAgent, agreements: { fe: true, pacto: true, etica: true, datos: true, privacy_notice_read: (S.agree && S.agree.priv_read) || null, signature_notice_read: (S.agree && S.agree.sign_read) || null, at: new Date().toISOString() } };
-      return cl.rpc("submit_application", { p_id: id, p_a: a, p_b: b, p_c: c, p_meta: meta });
+      var agr = { fe: true, pacto: true, etica: true, datos: true, privacy_notice_read: (S.agree && S.agree.priv_read) || null, signature_notice_read: (S.agree && S.agree.sign_read) || null, at: new Date().toISOString() };
+      var meta = { lang: lang(), signed_name: S.signed_name, files: files, ua: navigator.userAgent, agreements: agr };
+      var args = { p_id: id, p_a: a, p_b: b, p_c: c, p_meta: meta };
+      if (P) {
+        // Solicitud del cónyuge: los datos compartidos (iglesia, dirección, necesidades...) se copian; lo personal viene de sus propios campos.
+        var a2 = JSON.parse(JSON.stringify(a));
+        ["first_name", "last_name", "birth", "phone", "email", "title", "cred_name", "tier", "faith_ok", "ordained_by", "ordained_year"].forEach(function (k) { delete a2[k]; if (S["sp_" + k] != null && S["sp_" + k] !== "") a2[k] = S["sp_" + k]; });
+        a2.title = S.sp_title || "Pastor";
+        a.marital = a2.marital = "c"; a.couple = a2.couple = true;
+        a.spouse_name = ((S.sp_first_name || "") + " " + (S.sp_last_name || "")).trim(); a.spouse_email = (S.sp_email || "").trim();
+        a2.spouse_name = ((S.first_name || "") + " " + (S.last_name || "")).trim(); a2.spouse_email = (S.email || "").trim();
+        ["spouse_serves", "ordained_by_primary"].forEach(function (k) { delete a[k]; delete a2[k]; });
+        args.p_sp_id = id2; args.p_sp_a = a2; args.p_sp_meta = { lang: lang(), signed_name: S.sp_signed_name, files: files2, ua: navigator.userAgent, agreements: agr };
+      }
+      return cl.rpc("submit_application", args);
     }).then(function (r) {
       if (r.error) throw r.error;
-      DONE = r.data;
-      try { var fd = new URLSearchParams({ "form-name": "application", app_no: DONE, name: ((S.first_name || "") + " " + (S.last_name || "")).trim(), church: S.church || "", city: [S.city, S.state].filter(Boolean).join(", "), email: S.email || "", tier: S.tier || "", language: lang() }); fetch("/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: fd.toString() }); } catch (e) {}
+      DONE = String(r.data || "").split("|").join(" · ");   // pareja: "2026-0011|2026-0012"
+      try { var fd = new URLSearchParams({ "form-name": "application", app_no: DONE, name: ((S.first_name || "") + " " + (S.last_name || "")).trim() + (P ? " + " + ((S.sp_first_name || "") + " " + (S.sp_last_name || "")).trim() : ""), church: S.church || "", city: [S.city, S.state].filter(Boolean).join(", "), email: (S.email || "") + (P ? ", " + (S.sp_email || "") : ""), tier: (S.tier || "") + (P ? " + " + (S.sp_tier || "") : ""), language: lang() }); fetch("/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: fd.toString() }); } catch (e) {}
       btn.textContent = xx("Preparando su copia…", "Preparing your copy…");
       var pdfP = makePdfs(DONE).then(function (pd) {
         if (PDFURL) try { URL.revokeObjectURL(PDFURL); } catch (e) {}
         PDFURL = URL.createObjectURL(pd[0]);
-        return cl.storage.from(BUCKET).upload(id + "/application.pdf", pd[1], { contentType: "application/pdf", upsert: false });
+        var ups = [cl.storage.from(BUCKET).upload(id + "/application.pdf", pd[1], { contentType: "application/pdf", upsert: false })];
+        if (P) ups.push(cl.storage.from(BUCKET).upload(id2 + "/application.pdf", pd[1], { contentType: "application/pdf", upsert: false }));   // misma copia firmada en la carpeta de cada solicitud
+        return Promise.all(ups);
       }).catch(function (e) { if (window.console) console.warn("KAI apply pdf:", e); });
       return Promise.race([pdfP, new Promise(function (res) { setTimeout(res, 25000); })]);
     }).then(function () {
       try { localStorage.removeItem(DRAFT); } catch (e) {}
-      S = { agree: {} }; FILES = {}; PREV = {}; ORIG.photo = null; BUSY = false; fclear();
+      S = { agree: {} }; FILES = {}; PREV = {}; resetOrig(); BUSY = false; fclear();
       KGO("/apply/done");
     }).catch(function (e) {
       BUSY = false; btn.disabled = false; btn.textContent = xx("Enviar aplicación", "Submit application");
@@ -799,11 +893,12 @@
     if (scr === "r") sigInit();
     if (GOTO && (scr === "a" || scr === "b")) { var gk = GOTO; GOTO = null; setTimeout(function () { validate(scr); var w = $('[data-k="' + gk + '"]', CUR); if (w) w.scrollIntoView({ behavior: "smooth", block: "center" }); }, 60); }
     if (!CUR.__phBound) { CUR.__phBound = true; CUR.addEventListener("click", function (e) {
-      if (e.target.closest("#ap-ph-del")) { ORIG.photo = null; setPhoto(null); return; }
-      if (e.target.closest("#ap-ph-adj") || (e.target.id === "ap-ph" && e.target.tagName === "IMG")) openCrop();
+      var pd = e.target.closest("[data-phdel]"); if (pd) { var kd = pd.getAttribute("data-phdel"); ORIG[kd].photo = null; setPhoto(kd, null); return; }
+      var pa = e.target.closest("[data-phadj]"); if (pa) { openCrop(pa.getAttribute("data-phadj")); return; }
+      if (e.target.tagName === "IMG" && (e.target.id === "ap-ph" || e.target.id === "ap-ph-sp")) openCrop(e.target.id === "ap-ph-sp" ? "sp_photo" : "photo");
     }); }
     ["priv", "sign"].forEach(function (k) { var pv = $("#ap-" + k, CUR); if (pv) { if (S.agree && S.agree[k + "_read"]) pv.classList.add("done"); pv.addEventListener("click", function () { openDoc(k); }); } });
-    var rs = $("#ap-reset", CUR); if (rs) rs.addEventListener("click", function () { if (confirm(xx("¿Borrar sus respuestas guardadas y empezar de nuevo?", "Delete your saved answers and start over?"))) { S = { agree: {} }; FILES = {}; PREV = {}; ORIG.photo = null; fclear(); try { localStorage.removeItem(DRAFT); } catch (e) {} CUR = null; render(); } });
+    var rs = $("#ap-reset", CUR); if (rs) rs.addEventListener("click", function () { if (confirm(xx("¿Borrar sus respuestas guardadas y empezar de nuevo?", "Delete your saved answers and start over?"))) { S = { agree: {} }; FILES = {}; PREV = {}; resetOrig(); fclear(); try { localStorage.removeItem(DRAFT); } catch (e) {} CUR = null; render(); } });
   }
   document.addEventListener("input", function (e) { if (CUR && CUR.contains(e.target)) onInput(e); });
   document.addEventListener("change", function (e) { if (!CUR || !CUR.contains(e.target)) return; if (e.target.hasAttribute("data-file")) onFile(e); else onInput(e); });
