@@ -163,6 +163,9 @@
       ["l_valid", esc(fdate(m.valid_through, lg))],
       ["l_cred", esc(m.credential_no)],
       ["l_church", esc(m.church)],
+      ["l_caddr", esc(m.church_address)],
+      ["l_csvc", esc(m.service_times)],
+      ["m_spouse", esc(m.spouse_name)],
       ["l_city", esc(loc)],
       ["l_phone", m.phone ? '<a href="tel:' + esc(String(m.phone).replace(/[^\d+]/g, "")) + '">' + esc(KPH(m.phone)) + "</a>" : ""],
       ["l_email", m.email ? '<a href="mailto:' + esc(m.email) + '">' + esc(m.email) + "</a>" : ""],
@@ -253,12 +256,13 @@
   }
 
   /* ---------- change requests ---------- */
-  var FIELDS = [["full_name", "m_name"], ["church", "l_church"], ["city", "m_city2"], ["state", "m_state"], ["phone", "l_phone"], ["website", "l_web"]];
+  var FIELDS = [["full_name", "m_name"], ["church", "l_church"], ["church_address", "l_caddr"], ["service_times", "l_csvc"], ["spouse_name", "m_spouse"], ["city", "m_city2"], ["state", "m_state"], ["phone", "l_phone"], ["website", "l_web"]];
 
   function chgOpen() {
     var f = $("m-chg"), m = S.member;
     FIELDS.forEach(function (x) { f.elements[x[0]].value = m[x[0]] || ""; });
     f.elements.comments.value = "";
+    Array.prototype.forEach.call(f.querySelectorAll("[data-ph]"), function (el) { el.placeholder = T(el.getAttribute("data-ph")); });
     say($("mc-msg"), ""); say($("m-sent"), "");
     f.hidden = false; $("m-rev").hidden = true; $("m-chg-open").hidden = true;
     f.scrollIntoView({ behavior: "smooth", block: "start" });
