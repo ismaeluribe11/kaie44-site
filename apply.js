@@ -149,6 +149,7 @@
     } catch (e) { return ""; }
   }
 
+  var TIMES = (function () { var a = []; for (var h = 6; h <= 22; h++) { ["00", "30"].forEach(function (m) { if (h === 22 && m === "30") return; a.push((h > 12 ? h - 12 : h) + ":" + m + (h >= 12 ? " PM" : " AM")); }); } return a; })();
   /* ---------- field renderer ---------- */
   function field(f) {
     var t = f.type || "text", k = f.k;
@@ -174,6 +175,13 @@
         '<div class="fld" data-k="' + pre + 'title"><label>' + xx("Título en la credencial", "Title on credential") + '</label><select name="' + pre + 'title"><option value="">' + xx("Elija el título…", "Choose the title…") + "</option>" + titlesSorted().map(function (o) { return '<option value="' + o[0] + '">' + (lang() === "es" ? o[1] : o[2]) + "</option>"; }).join("") + "</select></div>" +
         '<div class="fld" data-k="' + pre + 'cred_name"><label>' + xx("Nombre en la credencial", "Name on credential") + '</label><input name="' + pre + 'cred_name" placeholder="' + (f.sp ? "María Elena Pérez" : "Juan Carlos Pérez") + '"><small>' + xx("Como desea que aparezca, sin el título", "As it should appear, without the title") + "</small></div>" +
         '<div class="ap-upl"><label class="ap-up">' + xx("Subir o tomar foto", "Upload or take photo") + '<input type="file" accept="image/*" data-file="' + pk + '"></label><small>' + xx("De frente, con fondo claro, sin lentes oscuros ni gorra.", "Facing forward, light background, no sunglasses or hat.") + '</small></div><div class="ap-errm" data-errfor="' + pk + '"></div></div></div></div>';
+    }
+    if (t === "samead") {
+      return '<div ' + wrapAttr(f) + '><label class="chk"><input type="checkbox" name="' + k + '">' + x(f.l) + "</label></div>";
+    }
+    if (t === "svc") {
+      var top = '<option value="">' + xx("Hora…", "Time…") + "</option>" + TIMES.map(function (o) { return "<option>" + o + "</option>"; }).join("");
+      return '<div ' + wrapAttr(f, "ap-svc") + "><label>" + x(f.l) + '</label><div class="svc-row"><select name="' + k + '">' + top + '</select></div><div class="svc-row svc2"><select name="' + k + '_2">' + top + '</select><button type="button" class="svc-x" data-svc-rm="' + k + '" aria-label="' + xx("Quitar horario", "Remove time") + '">×</button></div><button type="button" class="svc-add" data-svc-add="' + k + '">+ ' + xx("Otro horario", "Another time") + "</button></div>";
     }
     if (t === "faith" && f.sp) {
       return '<div ' + wrapAttr(f) + '><label class="chk"><input type="checkbox" name="' + k + '">' + xx("Mi cónyuge afirma la Declaración de Fe de Kingdom Alliance International.", "My spouse affirms the Statement of Faith of Kingdom Alliance International.") + "</label></div>";
@@ -274,6 +282,7 @@
     if (t === "radio" || t === "select" || t === "morphe") return esc(optLabel(f, v));
     if (t === "checks") return esc((v || []).filter(function (z) { return z !== "other"; }).map(function (z) { return optLabel(f, z); }).concat((v || []).indexOf("other") >= 0 && S[f.k + "_other"] ? [S[f.k + "_other"]] : []).join(", "));
     if (t === "scale") { var d = ""; for (var i = 1; i <= 5; i++) d += '<i class="' + (i <= v ? "on" : "") + '"></i>'; return '<span class="rv-dots">' + d + "</span> <small>" + v + " / 5</small>"; }
+    if (t === "svc") return esc([v, S[f.k + "_2"]].filter(Boolean).join(" · "));
     if (t === "who") return v === "pair" ? xx("Matrimonio · dos credenciales", "Couple · two credentials") : xx("Individual", "Individual");
     if (t === "tier") return v === "ministro" ? xx("Ministro", "Minister") + " · $75 / " + xx("año", "year") : "Pastor · $100 / " + xx("año", "year");
     if (t === "consent") return v ? "✓ " + xx("Autorizado", "Authorized") : "";
@@ -285,11 +294,12 @@
   function reviewSection(sec) {
     var cells = [], quotes = [], files = [];
     sec.f.forEach(function (f) {
-      if (!f.k || !active(f) || f.type === "pick") return;
+      if (!f.k || !active(f) || f.type === "pick" || f.nr) return;
       if (f.type === "file") { files.push('<span class="' + (FILES[f.k] ? "" : "no") + '">' + x(f.l) + "</span>"); return; }
       if (!filled(f)) return;
       var label = f.tag ? x(f.tag) : f.type === "who" ? xx("Solicitud", "Application") : f.type === "tier" ? xx("Membresía", "Membership") : f.type === "faith" ? xx("Declaración de Fe", "Statement of Faith") : f.type === "consent" ? xx("Autorización", "Authorization") : f.type === "morphe" ? "Instituto Morphe" : x(f.l);
       if (f.sp) label = xx("Cónyuge · ", "Spouse · ") + label;
+      if (f.type === "svc") label = xx("Servicio · ", "Service · ") + label;
       if (f.type === "area") quotes.push('<div class="w"><dt>' + label + '</dt><dd class="rv-quote">' + esc(S[f.k]).replace(/\n/g, "<br>") + "</dd></div>");
       else cells.push("<div" + ((label || "").length > 60 ? ' class="w"' : "") + "><dt>" + label + "</dt><dd>" + fmt(f) + "</dd></div>");
     });
@@ -377,6 +387,11 @@
       var ok = (Array.isArray(v) ? v.some(function (z) { return vals.indexOf(z) >= 0; }) : vals.indexOf(v) >= 0) && (!srcF || active(srcF));
       c.classList.toggle("show", ok);
     });
+    $$(".ap-svc", root).forEach(function (w) { var kk = w.getAttribute("data-k"); if (S[kk + "_2"]) w.classList.add("has2"); });
+  }
+  function sameAddr(on) {
+    var m = { church_addr: "address", church_city: "city", church_state: "state", church_zip: "zip" };
+    Object.keys(m).forEach(function (k) { var v = on ? (S[m[k]] || "") : ""; S[k] = v; var el = $('[name="' + k + '"]', CUR); if (el) el.value = v; });
   }
   function onInput(e) {
     var el = e.target, k = el.name;
@@ -387,6 +402,7 @@
     } else if (el.type === "checkbox") S[k] = el.checked;
     else if (el.type === "radio") { if (el.checked) S[k] = el.value; }
     else S[k] = el.value;
+    if (k === "church_same") sameAddr(el.checked);
     var w = el.closest(".fld,.ap-file,.ap-q"); if (w) { w.classList.remove("err"); var em = $(":scope > .ap-errm", w); if (em) em.textContent = ""; }
     credErrClear();
     conds(CUR); progress(CUR); save();
@@ -518,7 +534,7 @@
     return r;
   }
   function missName(k) {
-    var f = ALL[k], nm = MISS_NAMES[k] ? x(MISS_NAMES[k]) : (f && f.l ? x(f.l) : k);
+    var f = ALL[k], nm = MISS_NAMES[k] ? x(MISS_NAMES[k]) : (f && f.ml ? x(f.ml) : f && f.l ? x(f.l) : k);
     if (!MISS_NAMES[k] && f && f.sp) nm = xx("Cónyuge · ", "Spouse · ") + nm;
     if (f && f.in === "email" && filled(f)) nm += " " + xx("(revise que esté bien escrito)", "(check that it is typed correctly)");
     return nm;
@@ -650,6 +666,7 @@
     if (t === "radio" || t === "select" || t === "morphe") return optLabel(f, v);
     if (t === "checks") return (v || []).filter(function (z) { return z !== "other"; }).map(function (z) { return optLabel(f, z); }).concat((v || []).indexOf("other") >= 0 && S[f.k + "_other"] ? [S[f.k + "_other"]] : []).join(", ");
     if (t === "scale") return v + " / 5  (" + x(f.sc[0]) + " a " + x(f.sc[1]) + ")";
+    if (t === "svc") return [v, S[f.k + "_2"]].filter(Boolean).join(" · ");
     if (t === "who") return v === "pair" ? xx("Matrimonio · dos credenciales", "Couple · two credentials") : xx("Individual", "Individual");
     if (t === "tier") return v === "ministro" ? xx("Ministro", "Minister") + " · $75 / " + xx("año", "year") : "Pastor · $100 / " + xx("año", "year");
     if (t === "consent") return v ? xx("Autorizado", "Authorized") : "";
@@ -661,11 +678,12 @@
   function pdfSection(sec) {
     var cells = [], wide = [], files = [], out = [];
     sec.f.forEach(function (f) {
-      if (!f.k || !active(f) || f.type === "pick") return;
+      if (!f.k || !active(f) || f.type === "pick" || f.nr) return;
       if (f.type === "file") { files.push(x(f.l) + ": " + (FILES[f.k] ? xx("adjunto", "attached") : xx("no adjunto", "not attached"))); return; }
       if (!filled(f)) return;
       var label = f.tag ? x(f.tag) : f.type === "who" ? xx("Solicitud", "Application") : f.type === "tier" ? xx("Membresía", "Membership") : f.type === "faith" ? xx("Declaración de Fe", "Statement of Faith") : f.type === "consent" ? xx("Autorización", "Authorization") : f.type === "morphe" ? "Instituto Morphe" : x(f.l);
       if (f.sp) label = xx("Cónyuge · ", "Spouse · ") + label;
+      if (f.type === "svc") label = xx("Servicio · ", "Service · ") + label;
       var cell = { stack: [{ text: label.toUpperCase(), style: "lab" }, { text: txt(f), style: "val" }], margin: [0, 2, 0, 2] };
       if (f.type === "area" || label.length > 60) wide.push(cell); else cells.push(cell);
     });
@@ -770,7 +788,7 @@
   function pick(keys) { var o = {}; keys.forEach(function (k) { if (S[k] != null && S[k] !== "") o[k] = S[k]; }); return o; }
   function partData(p) {
     var o = {};
-    PARTS[p].forEach(function (sec) { sec.f.forEach(function (f) { if (!f.k || f.type === "file" || f.sp || !active(f) || !filled(f)) return; o[f.k] = S[f.k]; if (f.other && (S[f.k] || []).indexOf("other") >= 0) o[f.k + "_other"] = S[f.k + "_other"] || ""; }); });
+    PARTS[p].forEach(function (sec) { sec.f.forEach(function (f) { if (!f.k || f.type === "file" || f.sp || !active(f) || !filled(f)) return; o[f.k] = S[f.k]; if (f.type === "svc" && S[f.k + "_2"]) o[f.k + "_2"] = S[f.k + "_2"]; if (f.other && (S[f.k] || []).indexOf("other") >= 0) o[f.k + "_other"] = S[f.k + "_other"] || ""; }); });
     return o;
   }
   function send() {
@@ -904,6 +922,8 @@
   document.addEventListener("change", function (e) { if (!CUR || !CUR.contains(e.target)) return; if (e.target.hasAttribute("data-file")) onFile(e); else onInput(e); });
   document.addEventListener("click", function (e) {
     if (!CUR || !CUR.contains(e.target)) return;
+    var sa = e.target.closest("[data-svc-add]"); if (sa) { var wa = sa.closest(".ap-svc"); wa.classList.add("has2"); var s2 = $("select", $(".svc2", wa)); if (s2) s2.focus(); return; }
+    var sr = e.target.closest("[data-svc-rm]"); if (sr) { var kr = sr.getAttribute("data-svc-rm"), wr = sr.closest(".ap-svc"); wr.classList.remove("has2"); S[kr + "_2"] = ""; var s3 = $("select", $(".svc2", wr)); if (s3) s3.value = ""; save(); return; }
     var gt = e.target.closest("[data-goto]"); if (gt) GOTO = gt.getAttribute("data-goto");
     var j = e.target.closest("[data-jump]"); if (j) { e.preventDefault(); var t = $("#" + j.getAttribute("data-jump"), CUR); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
     var ml = e.target.closest("[data-miss],[data-sign]");

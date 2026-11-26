@@ -525,3 +525,12 @@ button.btn{cursor:pointer;font-family:var(--sans)}button.btn:disabled{opacity:.6
 .rv-hero.pair .rv-cred b{font-size:1.3rem}
 .rv-whosig{font:700 12px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--navy);margin:22px 0 -6px}
 @media(max-width:900px){.pairmode .ap-pair,.rv-creds{grid-template-columns:1fr}}
+
+/* Días de servicio de la iglesia */
+.ap-svc{background:#fbfcfe;border:1px solid #d9e0ec;border-radius:12px;padding:10px 12px}
+.ap-svc>label{display:block;margin:0 0 6px;font-size:13px;font-weight:600}
+.ap-svc .svc-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.ap-svc .svc-row select{flex:1;min-width:0}
+.ap-svc .svc2{display:none}.ap-svc.has2 .svc2{display:flex}.ap-svc.has2 .svc-add{display:none}
+.svc-add{border:0;background:none;color:var(--navy);font:500 13px var(--sans);cursor:pointer;padding:2px 0;text-decoration:underline}
+.svc-x{border:0;background:none;color:var(--mut,#5b6577);font-size:20px;line-height:1;cursor:pointer;padding:0 6px}
