@@ -28,8 +28,9 @@ window.KAIAPP_SCHEMA = (function () {
         { k: "lang_pref", l: ["Idioma preferido", "Preferred language"], lp: ["Idioma preferido de ambos", "Preferred language for both"], w: 3, type: "radio", o: [["es", "Español", "Español"], ["en", "English", "English"]] },
         { k: "address", l: ["Dirección postal · para enviarle su credencial impresa", "Mailing address · to send your printed credential"], lp: ["Dirección postal · para enviarles sus credenciales impresas", "Mailing address · to send your printed credentials"], w: 6, req: 1 },
         { k: "city", l: ["Ciudad", "City"], w: 2, req: 1 },
-        { k: "state", l: ["Estado", "State"], w: 2, req: 1 },
-        { k: "zip", l: ["Código postal", "ZIP code"], w: 2, req: 1 }
+        { k: "state", l: ["Estado / Provincia", "State / Province"], w: 2, req: 1 },
+        { k: "zip", l: ["Código postal", "Postal / ZIP code"], w: 2, req: 1 },
+        { k: "country", type: "country", l: ["País", "Country"], w: 3, req: 1 }
       ]) },
     { id: "a3", t: ["Familia", "Family"],
       f: [
@@ -56,8 +57,9 @@ window.KAIAPP_SCHEMA = (function () {
         { k: "role_other", l: ["Especifique su rol", "Please specify your role"], w: 6, req: 1, when: "role=other" },
         { k: "church_addr", when: "leads=y", l: ["Dirección de la iglesia", "Church address"], ml: ["Dirección de la iglesia", "Church address"], req: 1 },
         { k: "church_city", when: "leads=y", l: ["Ciudad", "City"], ml: ["Ciudad de la iglesia", "Church city"], w: 2, req: 1 },
-        { k: "church_state", when: "leads=y", l: ["Estado", "State"], ml: ["Estado de la iglesia", "Church state"], w: 2, req: 1 },
-        { k: "church_zip", when: "leads=y", l: ["Código postal", "ZIP code"], ml: ["Código postal de la iglesia", "Church ZIP code"], w: 2, req: 1 },
+        { k: "church_state", when: "leads=y", l: ["Estado / Provincia", "State / Province"], ml: ["Estado de la iglesia", "Church state"], w: 2, req: 1 },
+        { k: "church_zip", when: "leads=y", l: ["Código postal", "Postal / ZIP code"], ml: ["Código postal de la iglesia", "Church ZIP code"], w: 2, req: 1 },
+        { k: "church_country", type: "country", when: "leads=y", l: ["País", "Country"], ml: ["País de la iglesia", "Church country"], w: 3, req: 1 },
         { k: "church_same", type: "samead", when: "leads=y", nr: 1, l: ["Es la misma que mi dirección postal", "Same as my mailing address"] },
         { k: "founded", when: "leads=y", l: ["Año de fundación", "Year founded"], w: 2, in: "num" },
         { k: "website", l: ["Sitio web", "Website"], w: 6, opt: 1 },

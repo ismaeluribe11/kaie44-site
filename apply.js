@@ -150,6 +150,12 @@
   }
 
   var TIMES = (function () { var a = []; for (var h = 6; h <= 22; h++) { ["00", "30"].forEach(function (m) { if (h === 22 && m === "30") return; a.push((h > 12 ? h - 12 : h) + ":" + m + (h >= 12 ? " PM" : " AM")); }); } return a; })();
+  var CC = "AF AX AL DZ AS AD AO AI AQ AG AR AM AW AU AT AZ BS BH BD BB BY BE BZ BJ BM BT BO BQ BA BW BV BR IO BN BG BF BI CV KH CM CA KY CF TD CL CN CX CC CO KM CG CD CK CR CI HR CU CW CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FK FO FJ FI FR GF PF TF GA GM GE DE GH GI GR GL GD GP GU GT GG GN GW GY HT HM VA HN HK HU IS IN ID IR IQ IE IM IL IT JM JP JE JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MO MG MW MY MV ML MT MH MQ MR MU YT FM MD MC MN ME MS MA MZ MM NA NR NP NL NC NZ NI NE NG NU NF MK MP NO OM PK PW PS PA PG PY PE PH PN PL PT PR QA RE RO RU RW BL SH KN LC MF PM VC WS SM ST SA SN RS SC SL SG SX SK SI SB SO ZA GS SS ES LK SD SR SJ SE CH SY TW TJ TZ TH TL TG TK TO TT TN TR TM TC TV UG UA AE GB UM UY UZ VU VE VN VG VI WF EH YE ZM ZW".split(" ");
+  function countryName(c) { try { return new Intl.DisplayNames([lang()], { type: "region" }).of(c) || c; } catch (e) { return c; } }
+  function countryOpts() {
+    var top = ["US", "MX"], rest = CC.map(function (c) { return [c, countryName(c)]; }).sort(function (a, b) { return a[1].localeCompare(b[1], lang()); });
+    return top.map(function (c) { return '<option value="' + c + '">' + esc(countryName(c)) + "</option>"; }).join("") + '<option disabled>──────────</option>' + rest.map(function (o) { return '<option value="' + o[0] + '">' + esc(o[1]) + "</option>"; }).join("");
+  }
   /* ---------- field renderer ---------- */
   function field(f) {
     var t = f.type || "text", k = f.k;
@@ -175,6 +181,9 @@
         '<div class="fld" data-k="' + pre + 'title"><label>' + xx("Título en la credencial", "Title on credential") + '</label><select name="' + pre + 'title"><option value="">' + xx("Elija el título…", "Choose the title…") + "</option>" + titlesSorted().map(function (o) { return '<option value="' + o[0] + '">' + (lang() === "es" ? o[1] : o[2]) + "</option>"; }).join("") + "</select></div>" +
         '<div class="fld" data-k="' + pre + 'cred_name"><label>' + xx("Nombre en la credencial", "Name on credential") + '</label><input name="' + pre + 'cred_name" placeholder="' + (f.sp ? "María Elena Pérez" : "Juan Carlos Pérez") + '"><small>' + xx("Como desea que aparezca, sin el título", "As it should appear, without the title") + "</small></div>" +
         '<div class="ap-upl"><label class="ap-up">' + xx("Subir o tomar foto", "Upload or take photo") + '<input type="file" accept="image/*" data-file="' + pk + '"></label><small>' + xx("De frente, con fondo claro, sin lentes oscuros ni gorra.", "Facing forward, light background, no sunglasses or hat.") + '</small></div><div class="ap-errm" data-errfor="' + pk + '"></div></div></div></div>';
+    }
+    if (t === "country") {
+      return '<div ' + wrapAttr(f) + ">" + lab(f) + '<select name="' + k + '" autocomplete="country">' + countryOpts() + "</select></div>";
     }
     if (t === "samead") {
       return '<div ' + wrapAttr(f) + '><label class="chk"><input type="checkbox" name="' + k + '">' + x(f.l) + "</label></div>";
@@ -282,6 +291,7 @@
     if (t === "radio" || t === "select" || t === "morphe") return esc(optLabel(f, v));
     if (t === "checks") return esc((v || []).filter(function (z) { return z !== "other"; }).map(function (z) { return optLabel(f, z); }).concat((v || []).indexOf("other") >= 0 && S[f.k + "_other"] ? [S[f.k + "_other"]] : []).join(", "));
     if (t === "scale") { var d = ""; for (var i = 1; i <= 5; i++) d += '<i class="' + (i <= v ? "on" : "") + '"></i>'; return '<span class="rv-dots">' + d + "</span> <small>" + v + " / 5</small>"; }
+    if (t === "country") return esc(countryName(v));
     if (t === "svc") return esc([v, S[f.k + "_2"]].filter(Boolean).join(" · "));
     if (t === "who") return v === "pair" ? xx("Matrimonio · dos credenciales", "Couple · two credentials") : xx("Individual", "Individual");
     if (t === "tier") return v === "ministro" ? xx("Ministro", "Minister") + " · $75 / " + xx("año", "year") : "Pastor · $100 / " + xx("año", "year");
@@ -390,8 +400,8 @@
     $$(".ap-svc", root).forEach(function (w) { var kk = w.getAttribute("data-k"); if (S[kk + "_2"]) w.classList.add("has2"); });
   }
   function sameAddr(on) {
-    var m = { church_addr: "address", church_city: "city", church_state: "state", church_zip: "zip" };
-    Object.keys(m).forEach(function (k) { var v = on ? (S[m[k]] || "") : ""; S[k] = v; var el = $('[name="' + k + '"]', CUR); if (el) el.value = v; });
+    var m = { church_addr: "address", church_city: "city", church_state: "state", church_zip: "zip", church_country: "country" };
+    Object.keys(m).forEach(function (k) { var v = on ? (S[m[k]] || "") : (k === "church_country" ? "US" : ""); S[k] = v; var el = $('[name="' + k + '"]', CUR); if (el) el.value = v; });
   }
   function onInput(e) {
     var el = e.target, k = el.name;
@@ -666,6 +676,7 @@
     if (t === "radio" || t === "select" || t === "morphe") return optLabel(f, v);
     if (t === "checks") return (v || []).filter(function (z) { return z !== "other"; }).map(function (z) { return optLabel(f, z); }).concat((v || []).indexOf("other") >= 0 && S[f.k + "_other"] ? [S[f.k + "_other"]] : []).join(", ");
     if (t === "scale") return v + " / 5  (" + x(f.sc[0]) + " a " + x(f.sc[1]) + ")";
+    if (t === "country") return countryName(v);
     if (t === "svc") return [v, S[f.k + "_2"]].filter(Boolean).join(" · ");
     if (t === "who") return v === "pair" ? xx("Matrimonio · dos credenciales", "Couple · two credentials") : xx("Individual", "Individual");
     if (t === "tier") return v === "ministro" ? xx("Ministro", "Minister") + " · $75 / " + xx("año", "year") : "Pastor · $100 / " + xx("año", "year");
