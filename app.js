@@ -99,6 +99,7 @@
       else if (tab === "profile") html += profileHTML();
       else if (tab === "help") html += helpHTML();
       else if (tab === "team" && sub2() === "cc" && A.team && A.team.st === "ok") html += ccTeamHTML();
+      else if (tab === "team" && sub2() === "visita" && A.team && A.team.st === "ok") html += visitNewHTML();
       else if (tab === "team") html += sub2() === "aviso" ? composeHTML("notice") : sub2() === "reunion" ? composeHTML("meeting") : teamHTML();
       else html += homeHTML();
     }
@@ -740,6 +741,8 @@
     leader: '<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c2 2 10 2 12 0v-5M22 9v6"/>',
     prayer: '<path d="M12 21.5c3.9 0 6.8-2.6 6.8-6.4 0-3-1.9-5.2-3.5-6.9-.4 1.7-1.4 2.9-2.5 3.3.4-3.3-1-6.4-3.7-8.5.2 3.1-1.4 5.1-2.9 7.1-1.2 1.6-1.9 3.2-1.9 5 0 3.8 2.9 6.4 7.7 6.4z"/><path d="M12 21.5c-1.7 0-3-1.2-3-2.9 0-1.6 1.3-2.7 2.2-3.8.3 1 .9 1.6 1.6 1.8.2-.9.1-1.8-.2-2.7 1.4 1.1 2.4 2.7 2.4 4.6 0 1.8-1.3 3-3 3z"/>',
     care: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+    visit: '<path d="M12 2.5v4M10 4.5h4"/><path d="M5 21V11l7-4.5 7 4.5v10"/><path d="M3 21h18M10 21v-4.5a2 2 0 0 1 4 0V21"/>',
+    cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
     chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h7M8.5 14.5h4.5"/>',
     lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
@@ -756,7 +759,8 @@
       ["admin", T("Orientación administrativa", "Administrative guidance"), T("Non-profit, impuestos, seguros y temas legales: le orientamos.", "Non-profit, taxes, insurance and legal topics: we guide you.")],
       ["leader", T("Desarrollo de liderazgo", "Leadership development"), T("Instituto Morphē y talleres para su iglesia.", "Instituto Morphē and workshops for your church.")],
       ["prayer", T("Oración", "Prayer"), T("Comparta su petición y el equipo orará por usted.", "Share your request and the team will pray for you.")],
-      ["care", T("Cuidado pastoral", "Pastoral care"), T("Confidencial. Solo lo ve el equipo de cuidado pastoral.", "Confidential. Only the pastoral care team sees it.")]
+      ["care", T("Cuidado pastoral", "Pastoral care"), T("Confidencial. Solo lo ve el equipo de cuidado pastoral.", "Confidential. Only the pastoral care team sees it.")],
+      ["visit", T("Visita a la iglesia", "Church visit"), T("El equipo de KAI le visita en un servicio de su iglesia.", "The KAI team visits your church at one of your services.")]
     ];
   }
   function LEADT() {
@@ -805,6 +809,7 @@
   function helpHTML() {
     var p = helpPath();
     if (p.id) return ccThreadHTML(p.id);
+    if (p.kind === "visit") return visitFormHTML();
     if (p.kind) return ccFormHTML(p.kind);
     var nm = String((A.m && A.m.full_name) || myName() || "").split(" ")[0];
     var h = '<div class="ka-hero cc-hero">' + rings() + '<i class="glow"></i><div class="hb"><img class="lw" src="images/logo.png" alt="Kingdom Alliance International"></div>' +
@@ -822,6 +827,9 @@
         T("Alguien del equipo", "Someone from the team") + '</span></div><div><i>3</i><b>' + T("Acompañamos", "We follow up") + "</b><span>" + T("Aquí en la app", "Right here in the app") + "</span></div></div>";
     }
     var K = KINDS();
+    var vOpen = rows.filter(function (r) { return r.kind === "visit" && r.status !== "done"; })[0];
+    h += '<a class="cc-vis" href="' + (vOpen ? "/app/help/" + vOpen.id : "/app/help/new/visit") + '"><i class="o1"></i><span class="gi">' + cci("visit") + '</span><span class="tx"><em>' + T("Nuevo", "New") + "</em><b>" + T("Quiero que me visiten en mi iglesia", "I'd like a visit to my church") + "</b><small>" +
+      (vOpen ? T("Tiene una visita en curso. Toque para verla.", "You have a visit in progress. Tap to see it.") : T("Escoja dos fechas y el equipo de KAI le acompaña en un servicio.", "Pick two dates and the KAI team joins you at a service.")) + '</small></span><span class="cc-ar">' + cci("arrow") + "</span></a>";
     h += '<div class="ka-sec">' + T("¿Qué necesita?", "What do you need?") + '</div><div class="cc-grid">' + K.slice(0, 4).map(function (k, i) {
       return '<a class="cc-t k-' + k[0] + '" href="/app/help/new/' + k[0] + '" style="--i:' + i + '"><span class="gi">' + cci(k[0]) + "</span><b>" + k[1] + "</b><small>" + k[2] + '</small><span class="cc-ar">' + cci("arrow") + "</span></a>";
     }).join("") + "</div>";
@@ -880,6 +888,7 @@
     var d = A.ccOne;
     if (!d || d.id !== id) { loadCCOne(id); return '<div class="kn-top"><a href="/app/help" class="bk">' + svg("back") + 'Concierge</a></div><div class="ka-load"><div class="ka-sp"></div></div>'; }
     if (d.err) return '<div class="kn-top"><a href="/app/help" class="bk">' + svg("back") + "Concierge</a></div>" + emptyHTML("bell", T("No encontramos esta petición", "We couldn't find this request"), T("Vuelva a Concierge e intente de nuevo.", "Go back to Concierge and try again."));
+    if (d.kind === "visit") return visitThreadHTML(d);
     var h = ccBand(d.kind, esc(kindName(d.kind)), d.who ? T("Le atiende ", "With ") + "<b>" + esc(d.who) + "</b>" : T("El equipo de KAI ya recibió su petición", "The KAI team has received your request"), "/app/help", ccSteps(d.status));
     h += '<div class="cc-chat">' + bubbles(d.msgs, false);
     if (!d.msgs.some(function (m) { return m.team; })) h += '<div class="cc-wait"><span class="dots"><i></i><i></i><i></i></span>' + T("El equipo está revisando su petición. Le avisaremos aquí cuando respondan.", "The team is reviewing your request. We'll let you know here when they answer.") + "</div>";
@@ -898,6 +907,327 @@
     requestAnimationFrame(function () { d.classList.add("show"); });
     d.addEventListener("click", function (e) { if (e.target.dataset.x || e.target === d) { d.classList.remove("show"); setTimeout(function () { d.remove(); }, 250); } });
   }
+
+  /* ---------- Visitas a la iglesia (Concierge) ---------- */
+  var VDAYS = [["sun", "Dom", "Sun"], ["mon", "Lun", "Mon"], ["tue", "Mar", "Tue"], ["wed", "Mié", "Wed"], ["thu", "Jue", "Thu"], ["fri", "Vie", "Fri"], ["sat", "Sáb", "Sat"]];
+  var VCOUNTRY = [["US", "Estados Unidos", "United States"], ["MX", "México", "Mexico"], ["GT", "Guatemala", "Guatemala"], ["SV", "El Salvador", "El Salvador"], ["HN", "Honduras", "Honduras"], ["NI", "Nicaragua", "Nicaragua"],
+    ["CR", "Costa Rica", "Costa Rica"], ["PA", "Panamá", "Panama"], ["CO", "Colombia", "Colombia"], ["VE", "Venezuela", "Venezuela"], ["PE", "Perú", "Peru"], ["EC", "Ecuador", "Ecuador"], ["CL", "Chile", "Chile"],
+    ["AR", "Argentina", "Argentina"], ["DO", "República Dominicana", "Dominican Republic"], ["PR", "Puerto Rico", "Puerto Rico"], ["CU", "Cuba", "Cuba"], ["CA", "Canadá", "Canada"], ["ES", "España", "Spain"]];
+  function dayName(d) { var x = VDAYS.filter(function (r) { return r[0] === d; })[0]; return x ? x[L_() === "es" ? 1 : 2] : d; }
+  function svcText(svc) {
+    var by = {}; (svc || []).forEach(function (s) { if (s && s.t) (by[s.d] = by[s.d] || []).push(s.t); });
+    return VDAYS.filter(function (d) { return by[d[0]]; }).map(function (d) { return dayName(d[0]) + " " + by[d[0]].join(", "); }).join(" · ");
+  }
+  function addrText(c) {
+    c = c || {}; var co = c.country && c.country !== "US" ? (VCOUNTRY.filter(function (x) { return x[0] === c.country; })[0] || [0, c.country, c.country])[L_() === "es" ? 1 : 2] : "";
+    return [c.street, c.city, [c.state, c.zip].filter(Boolean).join(" "), co].filter(Boolean).join(", ");
+  }
+  function whenText(w) {
+    if (!w || !w.date) return "";
+    var d = new Date(w.date + "T12:00:00");
+    return cap(d.toLocaleDateString(L_() === "es" ? "es-MX" : "en-US", { weekday: "long", day: "numeric", month: "long" })) + (w.time ? " · " + w.time : "");
+  }
+  function vTimes(svc) {
+    var seen = {}, out = [];
+    (svc || []).forEach(function (s) { if (s.t && !seen[s.t]) { seen[s.t] = 1; out.push(s.t); } });
+    var all = []; for (var h = 6; h <= 21; h++) [0, 30].forEach(function (mi) { var hh = h % 12 || 12; all.push(hh + ":" + (mi ? "30" : "00") + " " + (h < 12 ? "AM" : "PM")); });
+    return { mine: out, all: all };
+  }
+  function timeSel(id, val, svc) {
+    var t = vTimes(svc), o = '<option value="">' + T("Hora…", "Time…") + "</option>";
+    if (t.mine.length) o += '<optgroup label="' + T("Sus horarios", "Your service times") + '">' + t.mine.map(function (x) { return '<option' + (x === val ? " selected" : "") + ">" + esc(x) + "</option>"; }).join("") + "</optgroup>";
+    o += '<optgroup label="' + T("Otra hora", "Other time") + '">' + t.all.filter(function (x) { return t.mine.indexOf(x) < 0; }).map(function (x) { return '<option' + (x === val ? " selected" : "") + ">" + esc(x) + "</option>"; }).join("") + "</optgroup>";
+    return '<select class="vz-in" id="' + id + '">' + o + "</select>";
+  }
+  function todayISO() { var d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
+  function whenEdit(p, w, svc) {
+    w = w || {};
+    return '<div class="vz-two"><input class="vz-in" type="date" id="' + p + '-d" min="' + todayISO() + '" value="' + esc(w.date || "") + '">' + timeSel(p + "-t", w.time || "", svc) + "</div>";
+  }
+  function readWhen(p) { var d = $(p + "-d"), t = $(p + "-t"); if (!d) return null; return d.value ? { date: d.value, time: t ? t.value : "" } : null; }
+  function churchView(c) {
+    c = c || {}; var a = addrText(c);
+    return '<div class="vz-addr">' + (c.name ? "<b>" + esc(c.name) + "</b>" : "") + "<span>" + (a ? esc(a) : '<em>' + T("Falta la dirección", "Address missing") + "</em>") + "</span></div>";
+  }
+  function churchEdit(c) {
+    c = c || {};
+    return '<div class="vz-form"><label>' + T("Nombre de la iglesia", "Church name") + '</label><input class="vz-in" id="vzc-n" value="' + esc(c.name || "") + '" autocomplete="organization">' +
+      "<label>" + T("Dirección", "Street address") + '</label><input class="vz-in" id="vzc-st" value="' + esc(c.street || "") + '" autocomplete="street-address">' +
+      '<div class="vz-three"><div><label>' + T("Ciudad", "City") + '</label><input class="vz-in" id="vzc-ci" value="' + esc(c.city || "") + '"></div><div><label>' + T("Estado", "State") + '</label><input class="vz-in" id="vzc-sa" value="' + esc(c.state || "") + '"></div><div><label>' + T("Código postal", "ZIP") + '</label><input class="vz-in" id="vzc-zp" inputmode="numeric" value="' + esc(c.zip || "") + '"></div></div>' +
+      "<label>" + T("País", "Country") + '</label><select class="vz-in" id="vzc-co">' + VCOUNTRY.map(function (x) { return '<option value="' + x[0] + '"' + ((c.country || "US") === x[0] ? " selected" : "") + ">" + x[L_() === "es" ? 1 : 2] + "</option>"; }).join("") + "</select></div>";
+  }
+  function readChurch(prev) {
+    if (!$("vzc-st")) return prev;
+    return { name: $("vzc-n").value.trim(), street: $("vzc-st").value.trim(), city: $("vzc-ci").value.trim(), state: $("vzc-sa").value.trim(), zip: $("vzc-zp").value.trim(), country: $("vzc-co").value };
+  }
+  function svcView(svc) {
+    return (svc && svc.length) ? '<div class="vz-svc">' + VDAYS.map(function (d) { return (svc || []).filter(function (s) { return s.d === d[0]; }).map(function (s) { return "<span><b>" + dayName(s.d) + "</b> " + esc(s.t) + "</span>"; }).join(""); }).join("") + "</div>"
+      : '<p class="vz-miss">' + T("Aún no tenemos sus horarios de servicio.", "We don't have your service times yet.") + "</p>";
+  }
+  function svcEdit(svc) {
+    var rows = (svc && svc.length ? svc : [{ d: "sun", t: "" }]);
+    return '<div class="vz-rows">' + rows.map(function (s, i) {
+      return '<div class="vz-row"><select class="vz-in" id="vzs-d' + i + '">' + VDAYS.map(function (d) { return '<option value="' + d[0] + '"' + (s.d === d[0] ? " selected" : "") + ">" + dayName(d[0]) + "</option>"; }).join("") + "</select>" +
+        timeSel("vzs-t" + i, s.t || "", []) + '<button type="button" class="vz-x" data-a="vzsdel" data-n="' + i + '" aria-label="' + T("Quitar", "Remove") + '">×</button></div>';
+    }).join("") + '<button type="button" class="vz-add" data-a="vzsadd">+ ' + T("Agregar horario", "Add a service time") + "</button></div>";
+  }
+  function readSvc(prev) {
+    if (!$("vzs-d0")) return prev;
+    var out = []; for (var i = 0; $("vzs-d" + i); i++) out.push({ d: $("vzs-d" + i).value, t: $("vzs-t" + i).value });
+    return out;
+  }
+  function vzSync(S) {
+    if (!S) return;
+    S.church = readChurch(S.church); S.svc = readSvc(S.svc);
+    var w1 = readWhen("vzw1"), w2 = readWhen("vzw2"); if ($("vzw1-d")) S.d1 = w1; if ($("vzw2-d")) S.d2 = w2;
+    if ($("vzd0-d")) { S.dates = []; for (var i = 0; $("vzd" + i + "-d"); i++) S.dates.push(readWhen("vzd" + i) || {}); }
+    var b = $("vzb"); if (b) S.body = b.value; var su = $("vzsum"); if (su) S.sum = su.value;
+  }
+  function vSteps(v) {
+    var st = v.status, i = st === "done" ? 2 : st === "confirmed" ? 1 : 0;
+    if (st === "cancelled") return '<div class="cc-trk"><span class="cc-s-now">' + T("Cancelada", "Cancelled") + "</span></div>";
+    return '<div class="cc-trk">' + [T("Solicitada", "Requested"), T("Confirmada", "Confirmed"), T("Realizada", "Done")].map(function (t, j) {
+      return '<span class="' + (j < i ? "cc-s-ok" : j === i ? "cc-s-now" : "") + '"><i></i>' + t + "</span>"; }).join("") + "</div>";
+  }
+  function vKV(k, val) { return val ? '<div class="vz-kv"><i>' + k + "</i><span>" + val + "</span></div>" : ""; }
+  function vMsg(id) { return '<p class="ka-msg" id="' + (id || "vz-m") + '"></p>'; }
+  function vErr(e) {
+    var m = String((e && e.message) || e || "");
+    if (/address_required/.test(m)) return T("Escriba la dirección y la ciudad de su iglesia.", "Enter your church's street address and city.");
+    if (/svc_required/.test(m)) return T("Agregue al menos un horario de servicio.", "Add at least one service time.");
+    if (/date_past/.test(m)) return T("La fecha ya pasó. Escoja una fecha futura.", "That date has passed. Choose a future date.");
+    if (/date_required/.test(m)) return T("Escoja una fecha.", "Choose a date.");
+    if (/team_required/.test(m)) return T("Escoja quién va.", "Choose who is going.");
+    if (/visit_open/.test(m)) return T("Ya hay una visita en curso. Ábrala desde Concierge.", "There's already a visit in progress. Open it from Concierge.");
+    if (/visit_closed/.test(m)) return T("Esta visita ya se cerró.", "This visit is already closed.");
+    if (/waiting_pastor/.test(m)) return T("Estamos esperando la respuesta del pastor.", "We're waiting for the pastor's answer.");
+    if (/members_only/.test(m)) return T("Las visitas son para miembros activos de KAI.", "Visits are for active KAI members.");
+    if (/not_found/.test(m)) return T("No encontramos esta visita. El enlace pudo haber vencido.", "We couldn't find this visit. The link may have expired.");
+    return T("No se pudo guardar. Revise su internet e intente de nuevo.", "Couldn't save. Check your internet and try again.");
+  }
+  function vBad(t, id) { var m = $(id || "vz-m"); if (m) { m.textContent = t; m.className = "ka-msg err"; m.scrollIntoView({ block: "center", behavior: "smooth" }); } }
+
+  /* El pastor pide la visita */
+  async function loadVInfo() {
+    if (A.vzBusy) return; A.vzBusy = 1;
+    try { var r = await sb().rpc("cc_visit_info"); if (r.error) throw r.error; var d = r.data || {};
+      A.vz = { church: d.church || {}, svc: d.svc || [], editC: !(d.church && d.church.street), editS: !(d.svc && d.svc.length), allowed: d.allowed, loaded: 1, d1: null, d2: null, body: "" };
+    } catch (e) { A.vz = { church: {}, svc: [], editC: true, editS: true, loaded: 1, err: 1 }; }
+    A.vzBusy = 0; paint();
+  }
+  function visitFormHTML() {
+    var S = A.vz;
+    var h = ccBand("visit", T("Quiero que me visiten en mi iglesia", "I'd like a visit to my church"), T("Confirme sus datos y díganos qué fechas le funcionan.", "Confirm your details and tell us which dates work for you."), "/app/help");
+    if (!S || !S.loaded) { loadVInfo(); return h + '<div class="ka-load"><div class="ka-sp"></div></div>'; }
+    A.vzCur = S;
+    h += '<div class="vz-wrap">';
+    h += '<div class="vz-card"><p class="vz-lb">' + T("Su iglesia", "Your church") + (S.editC ? "" : ' <button class="vz-lk" data-a="vzeditc">' + T("Corregir", "Edit") + "</button>") + "</p>" + (S.editC ? churchEdit(S.church) : churchView(S.church)) + "</div>";
+    h += '<div class="vz-card"><p class="vz-lb">' + T("Horarios de servicio", "Service times") + (S.editS ? "" : ' <button class="vz-lk" data-a="vzedits">' + T("Corregir", "Edit") + "</button>") + "</p>" + (S.editS ? svcEdit(S.svc) : svcView(S.svc)) + "</div>";
+    h += '<div class="vz-card"><p class="vz-lb">' + T("Fecha principal", "First choice") + "</p>" + whenEdit("vzw1", S.d1, S.svc) +
+      '<p class="vz-lb" style="margin-top:14px">' + T("Fecha alternativa", "Second choice") + "</p>" + whenEdit("vzw2", S.d2, S.svc) +
+      '<p class="vz-note">' + T("Escoja la hora de entre sus horarios de servicio.", "Pick the time from your service times.") + "</p></div>";
+    h += '<div class="vz-card"><p class="vz-lb">' + T("Mensaje (opcional)", "Message (optional)") + '</p><textarea class="cc-ta" id="vzb" rows="3" maxlength="1500" placeholder="' + T("Ej. Tenemos aniversario y nos encantaría que nos acompañaran…", "E.g. It's our anniversary and we'd love for you to join us…") + '">' + esc(S.body || "") + "</textarea></div>";
+    h += vMsg() + '<button class="cc-send k-visit" data-a="vzsend">' + T("Pedir visita", "Request a visit") + cci("arrow") + "</button>";
+    h += '<p class="cc-help">' + T("Al equipo le llega un aviso y le responde aquí y por correo.", "The team gets a notice and answers you here and by email.") + "</p></div>";
+    return h;
+  }
+
+  /* Hilo de la visita (app del pastor y página del correo) */
+  function visitCard(v, pub) {
+    var S = A.vzT || (A.vzT = {}); A.vzCur = S;
+    if (S.vid !== (v._id || 0)) { A.vzT = S = { vid: v._id || 0, pick: 0, mode: null, church: v.church || {}, svc: v.svc || [], dates: [{}, {}], body: "" }; A.vzCur = S; }
+    var who = (v.team_names || []).join(", "), h = "";
+    if (S.mode === "fix") {
+      h += '<div class="vz-card"><p class="vz-lb">' + T("Su iglesia", "Your church") + "</p>" + churchEdit(S.church) + '</div><div class="vz-card"><p class="vz-lb">' + T("Horarios de servicio", "Service times") + "</p>" + svcEdit(S.svc) + "</div>" +
+        vMsg() + '<button class="cc-send k-visit" data-a="vzfix">' + T("Guardar cambios", "Save changes") + '</button><button class="vz-btn line" data-a="vzmode" data-v="">' + T("Cancelar", "Cancel") + "</button>";
+      return h;
+    }
+    if (S.mode === "propose") {
+      h += '<div class="vz-card"><p class="vz-lb">' + T("Fecha principal", "First choice") + "</p>" + whenEdit("vzd0", S.dates[0], S.svc) + '<p class="vz-lb" style="margin-top:14px">' + T("Fecha alternativa", "Second choice") + "</p>" + whenEdit("vzd1", S.dates[1], S.svc) +
+        '<p class="vz-lb" style="margin-top:14px">' + T("Mensaje (opcional)", "Message (optional)") + '</p><textarea class="cc-ta" id="vzb" rows="2" maxlength="1500">' + esc(S.body || "") + "</textarea></div>" +
+        vMsg() + '<button class="cc-send k-visit" data-a="vzprop">' + T("Enviar otra fecha", "Send another date") + '</button><button class="vz-btn line" data-a="vzmode" data-v="">' + T("Cancelar", "Cancel") + "</button>";
+      return h;
+    }
+    var place = churchView(v.church) , svcT = svcText(v.svc);
+    if (v.status === "requested" && v.wait === "pastor") {
+      var ps = v.proposed || [];
+      h += '<div class="vz-hi"><h3>' + T("Queremos visitarle", "We'd like to visit you") + " 🙌</h3>" +
+        (ps.length > 1 ? '<p class="vz-lb">' + T("Escoja la fecha que le funcione", "Choose the date that works for you") + "</p>" : "") +
+        '<div class="vz-opts">' + ps.map(function (w, i) { return '<button class="vz-opt' + (S.pick === i ? " on" : "") + '" data-a="vzpick" data-n="' + i + '"><span class="ck">' + (S.pick === i ? "✓" : "") + "</span>" + esc(whenText(w)) + "</button>"; }).join("") + "</div>" +
+        vKV(T("Van", "Who"), esc(who)) + vKV(T("Dónde", "Where"), place) + vKV(T("Servicio", "Services"), esc(svcT)) +
+        '<p class="vz-note">' + T("¿Están bien su dirección y sus horarios? Si no, corríjalos antes de confirmar.", "Are your address and service times right? If not, fix them before confirming.") + "</p>" +
+        vMsg() + '<button class="cc-send k-visit" data-a="vzok">' + T("Confirmar visita", "Confirm visit") + '</button><button class="vz-btn line" data-a="vzmode" data-v="fix">' + T("Corregir dirección u horarios", "Fix address or service times") + '</button><button class="vz-btn line" data-a="vzmode" data-v="propose">' + T("Proponer otra fecha", "Suggest another date") + "</button></div>";
+    } else if (v.status === "requested") {
+      h += '<div class="vz-hi soft"><h3>' + T("Su solicitud", "Your request") + "</h3>" + vKV(T("Principal", "1st choice"), esc(whenText(v.d1))) + vKV(T("Alternativa", "2nd choice"), esc(whenText(v.d2))) + vKV(T("Dónde", "Where"), place) +
+        '<div class="cc-wait"><span class="dots"><i></i><i></i><i></i></span>' + T("El equipo está revisando las fechas. Le avisaremos aquí y por correo.", "The team is reviewing the dates. We'll let you know here and by email.") + "</div>" +
+        '<button class="vz-btn line" data-a="vzmode" data-v="fix">' + T("Corregir dirección u horarios", "Fix address or service times") + "</button></div>";
+    } else if (v.status === "confirmed") {
+      var w = v.when || {}, iso = w.date ? new Date(w.date + "T12:00:00") : null;
+      h += '<div class="vz-hi ok"><h3>' + T("¡Visita confirmada!", "Visit confirmed!") + "</h3>" + vKV(T("Fecha", "Date"), "<b>" + esc(whenText(w)) + "</b>") + vKV(T("Van", "Who"), esc(who)) + vKV(T("Dónde", "Where"), place) +
+        (iso ? '<a class="vz-btn line" data-ext="1" href="' + calUrl({ t: T("Visita del equipo de KAI", "KAI team visit"), s: iso, e: new Date(iso.getTime() + 2 * 36e5), l: addrText(v.church), d: who, id: "visit-" + (v._id || "") }) + '">' + cci("cal") + T("Agregar a mi calendario", "Add to my calendar") + "</a>" : "") +
+        '<button class="vz-btn line" data-a="vzmode" data-v="propose">' + T("Necesito cambiar la fecha", "I need to change the date") + "</button></div>";
+    } else if (v.status === "done") {
+      h += '<div class="vz-hi ok"><h3>' + T("Visita realizada", "Visit completed") + "</h3><p>" + T("¡Gracias por recibirnos! Fue una bendición acompañarle.", "Thank you for welcoming us! It was a blessing to be with you.") + "</p>" + vKV(T("Fecha", "Date"), esc(whenText(v.when))) + "</div>";
+    } else {
+      h += '<div class="vz-hi soft"><h3>' + T("Visita cancelada", "Visit cancelled") + "</h3><p>" + T("Si desea, puede pedir una nueva desde el Concierge.", "If you'd like, you can request a new one from Concierge.") + "</p></div>";
+    }
+    return h;
+  }
+  function visitThreadHTML(d) {
+    var v = Object.assign({ _id: d.id }, d.visit || {});
+    var h = ccBand("visit", T("Visita a su iglesia", "Visit to your church"), d.who ? T("Le atiende ", "With ") + "<b>" + esc(d.who) + "</b>" : T("El equipo de KAI ya recibió su solicitud", "The KAI team has received your request"), "/app/help", vSteps(v));
+    h += '<div class="vz-wrap">' + visitCard(v, false) + "</div>";
+    h += '<div class="cc-chat"><div class="kc-sec">' + T("Conversación", "Conversation") + "</div>" + bubbles(d.msgs, false);
+    h += '<div class="cc-reply"><textarea class="cc-ta" id="cc-r" rows="1" maxlength="2000" placeholder="' + T("Escriba un mensaje…", "Write a message…") + '"></textarea><button class="cc-go k-visit" data-a="ccrep" data-id="' + d.id + '" aria-label="' + T("Enviar", "Send") + '">' + svg("send") + '</button></div><p class="ka-msg" id="cc-m"></p></div>';
+    return h;
+  }
+  async function vReply(action, extra) {
+    var S = A.vzCur, P = A.vzP && A.vzP.on ? A.vzP : null;
+    var args = Object.assign({ p_action: action, p_pick: S.pick || 0, p_dates: null, p_church: null, p_svc: null, p_body: (S.body || "").trim() || null }, extra || {});
+    var r = P ? await sb().rpc("cc_visit_public_act", Object.assign({ p_token: P.token }, args)) : await sb().rpc("cc_visit_reply", Object.assign({ p_id: S.vid }, args));
+    if (r.error) throw r.error;
+    kick(); A.vzT = null;
+    if (P) { P.data = null; loadVPublic(); } else { A.ccOne = null; loadCC(); paint(); }
+  }
+
+  /* Equipo: panel de la visita dentro del hilo */
+  function visitTeamHTML(d) {
+    var v = d.visit || {}, S = A.vzTm;
+    if (!S || S.id !== d.id) { S = A.vzTm = { id: d.id, pick: 0, mode: null, team: (v.team || []).slice(), dates: [{}, {}, {}], body: "", sum: "" }; }
+    A.vzCur = S;
+    var who = (v.team_names || []).join(", "), svc = v.svc || [];
+    var chips = function () { return '<div class="kc-chips vz-team">' + (d.all_team || []).map(function (p) { return '<button data-a="vztm" data-v="' + esc(p.email) + '" class="' + (S.team.indexOf(p.email) >= 0 ? "on" : "") + '">' + esc(p.name) + "</button>"; }).join("") + "</div>"; };
+    var h = '<div class="vz-tcard"><div class="vz-th"><span class="gi gi-sm k-visit">' + cci("visit") + "</span><div><b>" + T("Visita a la iglesia", "Church visit") + "</b><small>" + (d.origin === "team" ? T("La pidió el equipo", "Requested by the team") : T("La pidió el pastor", "Requested by the pastor")) + "</small></div></div>" + vSteps(v).replace("cc-trk", "cc-trk vz-trk") +
+      vKV(T("Dónde", "Where"), churchView(v.church)) + vKV(T("Servicio", "Services"), esc(svcText(svc)) || '<em class="vz-miss">' + T("Sin horarios", "No service times") + "</em>");
+    if (S.mode === "propose") {
+      h += '<p class="vz-lb">' + T("Proponer fechas al pastor (hasta 3)", "Suggest dates to the pastor (up to 3)") + "</p>" + [0, 1, 2].map(function (i) { return whenEdit("vzd" + i, S.dates[i], svc); }).join("") +
+        '<p class="vz-lb">' + T("¿Quién iría?", "Who would go?") + "</p>" + chips() + '<p class="vz-lb">' + T("Mensaje al pastor (opcional)", "Message to the pastor (optional)") + '</p><textarea class="cc-ta" id="vzb" rows="2">' + esc(S.body) + "</textarea>" +
+        vMsg() + '<button class="vz-btn navy" data-a="vztprop">' + T("Enviar propuesta al pastor", "Send suggestion to the pastor") + '</button><button class="vz-btn line" data-a="vztmode" data-v="">' + T("Cancelar", "Cancel") + "</button>";
+    } else if (v.status === "requested" && v.wait === "team") {
+      var opts = [v.d1, v.d2].map(function (w, i) { return w ? '<button class="vz-opt' + (S.pick === i ? " on" : "") + '" data-a="vzpick" data-n="' + i + '"><span class="ck">' + (S.pick === i ? "✓" : "") + "</span><span><small>" + (i ? T("Alternativa", "2nd choice") : T("Principal", "1st choice")) + "</small>" + esc(whenText(w)) + "</span></button>" : ""; }).join("");
+      h += '<p class="vz-lb">' + T("Fechas del pastor", "Pastor's dates") + '</p><div class="vz-opts">' + opts + '</div><p class="vz-lb">' + T("¿Quién va?", "Who's going?") + "</p>" + chips() +
+        '<p class="vz-lb">' + T("Mensaje al pastor (opcional)", "Message to the pastor (optional)") + '</p><textarea class="cc-ta" id="vzb" rows="2">' + esc(S.body) + "</textarea>" +
+        vMsg() + '<button class="vz-btn navy" data-a="vztok">' + T("Confirmar visita", "Confirm visit") + '</button><button class="vz-btn line" data-a="vztmode" data-v="propose">' + T("No podemos esas fechas", "We can't make those dates") + "</button>";
+    } else if (v.status === "requested") {
+      h += '<div class="cc-wait"><span class="dots"><i></i><i></i><i></i></span>' + T("Esperando la respuesta del pastor a estas fechas:", "Waiting for the pastor to answer these dates:") + "</div><ul class=\"vz-ul\">" + (v.proposed || []).map(function (w) { return "<li>" + esc(whenText(w)) + "</li>"; }).join("") + "</ul>" + vKV(T("Van", "Who"), esc(who)) +
+        '<button class="vz-btn line" data-a="vztmode" data-v="propose">' + T("Cambiar la propuesta", "Change the suggestion") + "</button>";
+    } else if (v.status === "confirmed") {
+      h += vKV(T("Fecha", "Date"), "<b>" + esc(whenText(v.when)) + "</b>") + vKV(T("Van", "Who"), esc(who)) +
+        '<p class="vz-lb">' + T("¿Cómo les fue? (queda en la bitácora)", "How did it go? (saved to the care log)") + '</p><textarea class="cc-ta" id="vzsum" rows="2" placeholder="' + T("Ej. Predicó Alan; unas 80 personas; oramos por la familia pastoral.", "E.g. Alan preached; about 80 people; we prayed for the pastor's family.") + '">' + esc(S.sum) + "</textarea>" +
+        vMsg() + '<button class="vz-btn navy" data-a="vztdone">' + T("Marcar como realizada", "Mark as done") + '</button><button class="vz-btn line" data-a="vztmode" data-v="propose">' + T("Proponer otra fecha", "Suggest another date") + '</button><button class="vz-lk danger" data-a="vztcancel">' + T("Cancelar la visita", "Cancel the visit") + "</button>";
+    } else if (v.status === "done") {
+      h += vKV(T("Fecha", "Date"), esc(whenText(v.when))) + vKV(T("Fueron", "Went"), esc(who)) + '<p class="vz-note">' + T("Quedó anotada en el registro de acompañamiento.", "It's saved in the care log.") + "</p>";
+    } else h += '<p class="vz-note">' + T("Visita cancelada.", "Visit cancelled.") + "</p>";
+    return h + "</div>";
+  }
+
+  /* Equipo: pedir la visita desde la ficha del pastor */
+  function visitNewKid() { var m = location.pathname.match(/^\/app\/team\/visita\/([0-9a-f-]{36})/); return m ? m[1] : ""; }
+  async function loadVPrep(kid) {
+    if (A.vzBusy) return; A.vzBusy = 1;
+    try { var r = await sb().rpc("staff_visit_prep", { p_kid: kid }); if (r.error) throw r.error; var d = r.data || {};
+      A.vzN = { kid: kid, prep: d, church: d.church || {}, svc: d.svc || [], editC: false, editS: false, team: A.me && A.me.email ? [String(A.me.email).toLowerCase()] : [], d1: null, body: "" };
+    } catch (e) { A.vzN = { kid: kid, err: 1 }; }
+    A.vzBusy = 0; paint();
+  }
+  function visitNewHTML() {
+    var kid = visitNewKid(), S = A.vzN;
+    var h = '<div class="kn-top"><a href="/staff/member/' + kid + '" class="bk">' + svg("back") + T("Ficha del pastor", "Pastor's record") + "</a></div>";
+    if (!S || S.kid !== kid) { loadVPrep(kid); return h + '<div class="ka-load"><div class="ka-sp"></div></div>'; }
+    if (S.err) return h + emptyHTML("bell", T("No se pudo abrir", "Couldn't open"), T("Puede que este miembro no exista o que su rol no permita pedir visitas.", "This member may not exist, or your role can't request visits."));
+    A.vzCur = S; var p = S.prep;
+    h += '<div class="kc-h"><span class="ic vz-ic">' + cci("visit") + "</span><div><h1>" + T("Solicitar visita", "Request a visit") + "</h1><p>" + esc(p.name || "") + T(" · al pastor le llega un aviso para confirmar.", " · the pastor gets a notice to confirm.") + "</p></div></div>";
+    if (p.open) return h + '<div class="vz-hi soft"><h3>' + T("Ya hay una visita en curso", "There's already a visit in progress") + '</h3><a class="vz-btn navy" href="/app/team/cc/' + p.open + '">' + T("Abrir la visita", "Open the visit") + "</a></div>";
+    if (!p.member) h += '<p class="vz-note">' + T("Este contacto no tiene ficha de miembro activa.", "This contact has no active member record.") + "</p>";
+    h += '<div class="vz-card"><p class="vz-lb">' + T("Fecha y hora", "Date and time") + "</p>" + whenEdit("vzw1", S.d1, S.svc) + (S.svc.length ? '<p class="vz-note">' + T("Sus horarios: ", "Their services: ") + esc(svcText(S.svc)) + "</p>" : "") + "</div>";
+    h += '<div class="vz-card"><p class="vz-lb">' + T("¿Quién va?", "Who's going?") + '</p><div class="kc-chips vz-team">' + (p.team || []).map(function (t) { return '<button data-a="vztm" data-v="' + esc(t.email) + '" class="' + (S.team.indexOf(t.email) >= 0 ? "on" : "") + '">' + esc(t.name) + "</button>"; }).join("") + "</div></div>";
+    h += '<div class="vz-card"><p class="vz-lb">' + T("Iglesia", "Church") + (S.editC ? "" : ' <button class="vz-lk" data-a="vzeditc">' + T("Editar", "Edit") + "</button>") + "</p>" + (S.editC ? churchEdit(S.church) : churchView(S.church)) + "</div>";
+    h += '<div class="vz-card"><p class="vz-lb">' + T("Horarios de servicio", "Service times") + (S.editS ? "" : ' <button class="vz-lk" data-a="vzedits">' + T("Editar", "Edit") + "</button>") + "</p>" + (S.editS ? svcEdit(S.svc) : svcView(S.svc)) + "</div>";
+    h += '<div class="vz-card"><p class="vz-lb">' + T("Mensaje al pastor (opcional)", "Message to the pastor (optional)") + '</p><textarea class="cc-ta" id="vzb" rows="3">' + esc(S.body || "") + "</textarea></div>";
+    h += vMsg() + '<button class="vz-btn navy big" data-a="vznew">' + T("Enviar al pastor", "Send to the pastor") + "</button>";
+    return '<div class="kc">' + h + "</div>";
+  }
+
+  /* Página pública del correo: kaie44.org/visita/<código> */
+  async function loadVPublic() {
+    var P = A.vzP; if (!P || P.busy) return; P.busy = 1;
+    try { var r = await sb().rpc("cc_visit_public", { p_token: P.token }); if (r.error) throw r.error; P.data = r.data; P.err = 0; } catch (e) { P.data = null; P.err = 1; }
+    P.busy = 0; paintVPublic();
+  }
+  function paintVPublic() {
+    var root = $("kvis"); if (!root) return; var P = A.vzP;
+    var h = '<div class="vzp">';
+    if (!P.data && !P.err) h += '<div class="ka-load"><div class="ka-sp"></div></div>';
+    else if (P.err) h += '<div class="vz-hi soft"><h3>' + T("Enlace no válido", "Invalid link") + "</h3><p>" + T("Este enlace venció o no es correcto. Abra la app de KAI o escriba a info@kaie44.org.", "This link has expired or isn't valid. Open the KAI app or write to info@kaie44.org.") + "</p></div>";
+    else {
+      var d = P.data, v = Object.assign({ _id: d.id, team_names: d.team_names }, d.visit || {});
+      h += ccBand("visit", T("Visita a su iglesia", "Visit to your church"), (d.name ? esc(d.name) + " · " : "") + (d.who ? T("Le atiende ", "With ") + "<b>" + esc(d.who) + "</b>" : ""), "/app/help", vSteps(v)).replace(/<a class="ka-evback"[^>]*>.*?<\/a>/, "");
+      if (d.last && v.status === "requested" && v.wait === "pastor") h += '<div class="vz-last"><small>' + T("Mensaje del equipo", "Message from the team") + "</small><p>" + esc(d.last).replace(/\n/g, "<br>") + "</p></div>";
+      h += '<div class="vz-wrap">' + visitCard(v, true) + "</div>";
+      h += '<p class="cc-help">' + T("¿Prefiere la app? ", "Prefer the app? ") + '<a href="/instalar">' + T("Instálela aquí", "Install it here") + "</a> · " + T("Ayuda: ", "Help: ") + '<a href="tel:+19092759909">(909) 275-9909</a></p>';
+    }
+    root.innerHTML = h + "</div>";
+  }
+  document.addEventListener("click", function (e) {
+    var root = $("kvis"); if (!root || !root.contains(e.target)) return;
+    var a = e.target.closest("[data-a]"); if (!a || !/^vz/.test(a.dataset.a)) return;
+    e.preventDefault(); vzClick(a.dataset.a, a, true);
+  });
+
+  async function vzClick(k, a, pub) {
+    var S = A.vzCur; vzSync(S); var svcOk = function (x) { return (x || []).filter(function (r) { return r && r.t; }); };
+    var rp = function () { if (pub) paintVPublic(); else paint(); };
+    var h0 = a.innerHTML; function busy(on, t) { a.disabled = on; if (on && t) a.textContent = t; if (!on) a.innerHTML = h0; }
+    try {
+      if (k === "vzeditc") { S.editC = true; return rp(); }
+      if (k === "vzedits") { S.editS = true; return rp(); }
+      if (k === "vzsadd") { S.svc = (S.svc || []).concat([{ d: "sun", t: "" }]); return rp(); }
+      if (k === "vzsdel") { var all = []; for (var i = 0; $("vzs-d" + i); i++) all.push({ d: $("vzs-d" + i).value, t: $("vzs-t" + i).value }); all.splice(+a.dataset.n, 1); S.svc = all; return rp(); }
+      if (k === "vzpick") { S.pick = +a.dataset.n; return rp(); }
+      if (k === "vzmode") { S.mode = a.dataset.v || null; return rp(); }
+      if (k === "vztmode") { S.mode = a.dataset.v || null; return rp(); }
+      if (k === "vztm") { var e2 = a.dataset.v, ix = S.team.indexOf(e2); if (ix >= 0) S.team.splice(ix, 1); else S.team.push(e2); return rp(); }
+      if (k === "vzsend") {
+        if (!S.church || !S.church.street || !S.church.city) return vBad(T("Escriba la dirección y la ciudad de su iglesia.", "Enter your church's street address and city."));
+        S.svc = svcOk(S.svc); if (!S.svc.length) return vBad(T("Agregue al menos un horario de servicio.", "Add at least one service time."));
+        if (!S.d1 || !S.d1.date || !S.d1.time) return vBad(T("Escoja la fecha y la hora principal.", "Choose your first-choice date and time."));
+        busy(true, T("Enviando…", "Sending…"));
+        var r = await sb().rpc("cc_visit_new", { p_church: S.church, p_svc: S.svc, p_d1: S.d1, p_d2: S.d2 && S.d2.date ? S.d2 : null, p_body: (S.body || "").trim() || null });
+        if (r.error) throw r.error; kick(); A.vz = null; A.ccOne = null; loadCC(); KGO("/app/help/" + r.data, true); ccSuccess("visit", r.data); return;
+      }
+      if (k === "vzok") { busy(true, T("Confirmando…", "Confirming…")); await vReply("confirm"); return; }
+      if (k === "vzfix") {
+        if (!S.church.street || !S.church.city) return vBad(T("Escriba la dirección y la ciudad.", "Enter the street address and city."));
+        busy(true, T("Guardando…", "Saving…")); await vReply("update", { p_church: S.church, p_svc: svcOk(S.svc) }); return;
+      }
+      if (k === "vzprop") {
+        var ds = (S.dates || []).filter(function (w) { return w && w.date; });
+        if (!ds.length || !ds[0].time) return vBad(T("Escoja al menos una fecha con hora.", "Choose at least one date with a time."));
+        busy(true, T("Enviando…", "Sending…")); await vReply("propose", { p_dates: ds }); return;
+      }
+      if (k === "vztok" || k === "vztprop" || k === "vztcancel") {
+        if (k === "vztok" && !S.team.length) return vBad(T("Escoja quién va.", "Choose who is going."));
+        var dts = (S.dates || []).filter(function (w) { return w && w.date; });
+        if (k === "vztprop" && !dts.length) return vBad(T("Escoja al menos una fecha.", "Choose at least one date."));
+        if (k === "vztcancel" && !confirm(T("¿Cancelar esta visita? Al pastor le llega un aviso.", "Cancel this visit? The pastor will be notified."))) return;
+        busy(true, "…");
+        var r2 = await sb().rpc("staff_cc_visit_answer", { p_id: S.id, p_action: k === "vztok" ? "confirm" : k === "vztprop" ? "propose" : "cancel", p_pick: S.pick || 0, p_team: S.team, p_dates: dts.length ? dts : null, p_body: (S.body || "").trim() || null });
+        if (r2.error) throw r2.error; kick(); A.vzTm = null; A.ccT1 = null; A.ccTeam = null; paint(); return;
+      }
+      if (k === "vztdone") {
+        busy(true, "…"); var r3 = await sb().rpc("staff_cc_visit_done", { p_id: S.id, p_summary: (S.sum || "").trim() || null });
+        if (r3.error) throw r3.error; A.vzTm = null; A.ccT1 = null; A.ccTeam = null; paint(); return;
+      }
+      if (k === "vznew") {
+        if (!S.d1 || !S.d1.date || !S.d1.time) return vBad(T("Escoja la fecha y la hora.", "Choose the date and time."));
+        if (!S.team.length) return vBad(T("Escoja quién va.", "Choose who is going."));
+        busy(true, T("Enviando…", "Sending…"));
+        var r4 = await sb().rpc("staff_cc_visit_new", { p_kid: S.kid, p_when: S.d1, p_team: S.team, p_church: S.editC ? S.church : null, p_svc: S.editS ? svcOk(S.svc) : null, p_body: (S.body || "").trim() || null });
+        if (r4.error) throw r4.error; kick(); A.vzN = null; A.ccT1 = null; KGO("/app/team/cc/" + r4.data, true); return;
+      }
+    } catch (err) { busy(false); vBad(vErr(err)); }
+  }
+
 
   /* Equipo → Concierge */
   async function loadCCTeam() {
@@ -938,7 +1268,8 @@
     var h = '<div class="cc-who k-' + d.kind + '"><div class="cc-top">' + avatar({ full_name: d.name, photo_url: d.photo_url }) + "<div><b>" + esc(d.name) + "</b><span>" + esc([d.title, d.church, d.city].filter(Boolean).join(" · ")) + "</span></div></div>" +
       '<div class="cc-kd"><span class="kp2 k-' + d.kind + '">' + cci(d.kind) + esc(kindName(d.kind)) + "</span><span>" + T("Prefiere: ", "Prefers: ") + "<b>" + contactName(d.contact) + "</b></span></div>" +
       '<div class="cc-ct">' + (tel ? '<a href="tel:' + esc(tel) + '">' + cci("phone") + T("Llamar", "Call") + '</a><a href="sms:' + esc(tel) + '">' + cci("msg") + T("Texto", "Text") + "</a>" : "") + '<a href="mailto:' + esc(d.email) + '">' + cci("mail") + T("Correo", "Email") + "</a></div></div>";
-    h += '<div class="kc-sec">' + T("Estado", "Status") + '</div><div class="ka-seg">' + ["new", "progress", "done"].map(function (s) {
+    if (d.kind === "visit") h += visitTeamHTML(d);
+    else h += '<div class="kc-sec">' + T("Estado", "Status") + '</div><div class="ka-seg">' + ["new", "progress", "done"].map(function (s) {
       return '<button data-a="ccst" data-v="' + s + '" data-id="' + d.id + '" aria-pressed="' + (d.status === s) + '">' + ccStTeam(s) + "</button>"; }).join("") + "</div>";
     h += '<div class="kc-sec">' + T("Le da seguimiento", "Followed up by") + '</div><select class="kc-in" id="cc-as" data-id="' + d.id + '"><option value="">' + T("Sin asignar", "Unassigned") + "</option>" +
       (d.team || []).map(function (p) { return '<option value="' + esc(p.email) + '"' + (String(d.assigned_to || "").toLowerCase() === p.email ? " selected" : "") + ">" + esc(p.name) + "</option>"; }).join("") + "</select>";
@@ -1067,6 +1398,9 @@
     if (b.dataset.kiInstall && A.deferred) { A.deferred.prompt(); try { await A.deferred.userChoice; } catch (x) {} A.deferred = null; paintInst(); }
   });
 
+  document.addEventListener("input", function (e) { if (e.target && /^vz/.test(e.target.id || "") && A.vzCur) vzSync(A.vzCur); });
+  document.addEventListener("change", function (e) { if (e.target && /^vz/.test(e.target.id || "") && A.vzCur) vzSync(A.vzCur); });
+
   /* ---------- acciones ---------- */
   document.addEventListener("click", async function (e) {
     var root = $("kapp"); if (!root || !root.contains(e.target)) return;
@@ -1074,6 +1408,7 @@
     if (a.dataset.l) { window.L = a.dataset.l; try { localStorage.setItem("kai-lang", a.dataset.l); } catch (x) {} var lb = document.querySelector('.lang button[data-l="' + a.dataset.l + '"]'); if (lb) lb.click(); else paint(); return; }
     var k = a.dataset.a;
     if (/^cc/.test(k) && await ccClick(k, a)) return;
+    if (/^vz/.test(k)) { await vzClick(k, a, false); return; }
     if (k === "flip") { A.flip = !A.flip; paint(); return; }
     if (k === "qrfull") { qrFull(); return; }
     if (k === "pushon") { a.disabled = true; pushOn(); return; }
@@ -1204,6 +1539,8 @@
       if (teamMode) { appBar(); var nt = $("ka-navw"); if (!nt) { nt = document.createElement("div"); nt.id = "ka-navw"; document.body.appendChild(nt); } nt.innerHTML = navHTML("team"); return; }
       var ab = $("ka-appbar"); if (ab) ab.remove();
       instBanner(v);
+      if (v === "vis") { var tk = (location.pathname.match(/^\/visita\/([a-z0-9]{20,64})/i) || [])[1] || ""; try { document.title = T("Visita a su iglesia · KAI", "Visit to your church · KAI"); } catch (e) {} if (!A.vzP || A.vzP.token !== tk) { A.vzP = { on: 1, token: tk }; loadVPublic(); } A.vzP.on = 1; paintVPublic(); var nwv = $("ka-navw"); if (nwv) nwv.innerHTML = ""; return; }
+      if (A.vzP) A.vzP.on = 0;
       if (v === "inst") { try { document.title = T("Instalar la app · KAI", "Install the app · KAI"); } catch (e) {} paintInst(); var nw0 = $("ka-navw"); if (nw0) nw0.innerHTML = ""; return; }
       if (v !== "app") { var nw = $("ka-navw"); if (nw) nw.innerHTML = ""; return; }
       try { document.title = "KAI"; } catch (e) {}
