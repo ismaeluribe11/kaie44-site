@@ -54,13 +54,6 @@ window.KAIAPP_SCHEMA = (function () {
         { k: "church", l: ["Nombre de la iglesia o ministerio", "Church or ministry name"], w: 3, req: 1 },
         { k: "role", l: ["Su rol", "Your role"], w: 3, type: "select", req: 1, sort: 1, o: [["Founding Pastor", "Pastor(a) Fundador(a)", "Founding Pastor"], ["Apostle", "Apóstol", "Apostle"], ["Assistant Pastor", "Pastor(a) Asistente", "Assistant Pastor"], ["Bishop", "Obispo", "Bishop"], ["Deacon", "Diácono / Diaconisa", "Deacon"], ["Evangelist", "Evangelista", "Evangelist"], ["Missionary", "Misionero(a)", "Missionary"], ["Ordained Minister", "Ministro(a) Ordenado(a)", "Ordained Minister"], ["Pastor", "Pastor(a)", "Pastor"], ["Pastor Emeritus", "Pastor(a) Emérito(a)", "Pastor Emeritus"], ["other", "Otro", "Other"]] },
         { k: "role_other", l: ["Especifique su rol", "Please specify your role"], w: 6, req: 1, when: "role=other" },
-        { k: "founding_story", type: "area", req: 1, when: "role=Founding Pastor", l: ["Fundación de la iglesia y trasfondo ministerial", "Church Founding and Ministry Background"],
-          desc: [["Si usted es el pastor fundador de su iglesia actual, describa brevemente cómo se estableció la iglesia. Indique si fue enviado, comisionado o respaldado por otra iglesia o líder ministerial, o si la iglesia se estableció de manera independiente.",
-                  "Si la fundación implicó una transición desde otra congregación, describa las circunstancias de esa transición, incluida la comunicación con su liderazgo anterior y si queda algún asunto sin resolver.",
-                  "Reconocemos que las iglesias se establecen en circunstancias diferentes. Esta pregunta nos ayuda a comprender su trasfondo ministerial y las relaciones en torno a la fundación de su iglesia."],
-                 ["If you are the founding pastor of your current church, please briefly describe how the church was established. Include whether you were sent, commissioned, or supported by another church or ministerial leader, or whether the church was established independently.",
-                  "If the founding involved a transition from another congregation, please describe the circumstances of that transition, including communication with your former leadership and whether any concerns remain unresolved.",
-                  "We recognize that churches are established under different circumstances. This question helps us understand your ministry background and the relationships surrounding the founding of your church."]] },
         { k: "church_addr", when: "leads=y", l: ["Dirección de la iglesia", "Church address"], ml: ["Dirección de la iglesia", "Church address"], req: 1 },
         { k: "church_city", when: "leads=y", l: ["Ciudad", "City"], ml: ["Ciudad de la iglesia", "Church city"], w: 2, req: 1 },
         { k: "church_state", when: "leads=y", l: ["Estado", "State"], ml: ["Estado de la iglesia", "Church state"], w: 2, req: 1 },
@@ -76,10 +69,7 @@ window.KAIAPP_SCHEMA = (function () {
         { k: "svc_thu", type: "svc", when: "svc_days=thu", req: 1, w: 2, l: ["Jueves", "Thursday"], ml: ["Hora del servicio · Jueves", "Service time · Thursday"] },
         { k: "svc_fri", type: "svc", when: "svc_days=fri", req: 1, w: 2, l: ["Viernes", "Friday"], ml: ["Hora del servicio · Viernes", "Service time · Friday"] },
         { k: "svc_sat", type: "svc", when: "svc_days=sat", req: 1, w: 2, l: ["Sábado", "Saturday"], ml: ["Hora del servicio · Sábado", "Service time · Saturday"] },
-        { k: "attendance", when: "leads=y", l: ["Asistencia promedio", "Average attendance"], type: "radio", o: [["lt50", "Menos de 50", "Under 50"], ["50", "50 a 150", "50 to 150"], ["150", "150 a 500", "150 to 500"], ["500", "Más de 500", "Over 500"]] },
-        { k: "gov", when: "leads=y", l: ["Forma de gobierno", "Church government"], type: "radio", o: [["ind", "Independiente", "Independent"], ["elders", "Ancianos", "Elders"], ["board", "Junta directiva", "Board"], ["other", "Otra", "Other"]] },
-        { k: "gov_other", l: ["Especifique la forma de gobierno", "Please specify the church government"], w: 6, when: "gov=other" },
-        { k: "ministries", when: "leads=y", l: ["Ministerios activos", "Active ministries"], type: "checks", other: 1, o: [["kids", "Niños", "Children"], ["youth", "Jóvenes", "Youth"], ["couples", "Matrimonios", "Couples"], ["worship", "Alabanza", "Worship"], ["missions", "Misiones", "Missions"], ["groups", "Grupos pequeños", "Small groups"]] }
+        { k: "attendance", when: "leads=y", l: ["Asistencia promedio", "Average attendance"], type: "radio", o: [["lt50", "Menos de 50", "Under 50"], ["50", "50 a 150", "50 to 150"], ["150", "150 a 500", "150 to 500"], ["500", "Más de 500", "Over 500"]] }
       ] },
     { id: "a6", t: ["Trabajo y sostenimiento", "Work and support"],
       f: [
